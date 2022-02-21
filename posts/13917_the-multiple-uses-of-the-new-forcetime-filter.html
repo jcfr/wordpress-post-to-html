@@ -1,0 +1,119 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One of our customers asked for visualization of specific temporal geological
+  <span class="spellmod" title="">
+   datasets
+  </span>
+  using
+  <span class="spellver" title="">
+   ParaView.
+  </span>
+  More specifically, they
+  <span class="verupdated" title="">
+   wanted
+  </span>
+  to compare data between different time steps, and threshold data at any
+  <span class="spellmod" title="">
+   timestep
+  </span>
+  using scalars from a specific time step. A solution was quickly put in place, using the current ParaView plugin ForceTime which uses
+  <span class="ver" title="">
+   vtkForceTimeFilter
+  </span>
+  . For those who do not know this filter, it basically replaces any
+  <span class="spellmod" title="">
+   timestep
+  </span>
+  request by one specific timestep.
+ </p>
+ <p>
+  Here is how it was
+  <span class="spellmodupdated" title="">
+   supposed
+  </span>
+  to work
+  <span class="ver" title="">
+   :
+  </span>
+ </p>
+ <p>
+  <img alt="forceTime" class="alignnone wp-image-13990 " height="610" sizes="(max-width: 472px) 100vw, 472px" src="https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1.jpg 774w, https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1-232x300.jpg 232w, https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1-768x993.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1-220x285.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1-250x323.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1-355x459.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1-730x944.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/03/forceTime-1-90x116.jpg 90w" width="472"/>
+ </p>
+ <p>
+  This way, the final output contains the initial reader output, plus a data array from time step 0, enabling any kind of comparison or threshold.
+ </p>
+ <p>
+  We should have taken a look at the
+  <span class="ver" title="">
+   vtkForceTimeFilter
+  </span>
+  <span class="ver" title="">
+   code first, because
+  </span>
+  its implementation was definitely not supporting any kind of “diamond shape” pipeline, actually forcing the time in all the pipeline, in both
+  <span class="spellmod" title="">
+   branches.
+  </span>
+ </p>
+ <p>
+  The solution was a nice re-implementation of the
+  <span class="ver" title="There seem to be two words together here. Perhaps you should separate them and start another sentence.">
+   vtkForceTimeFilter
+  </span>
+  setting only the input time step in
+  <span class="spellver" title="">
+   RequestUpdateExtent,
+  </span>
+  then, in
+  <span class="spellver" title="Request Data, Request-Data, Requested, Restated, Reinstated, Ronstadt, Restarted, Resuscitated, Gestated, Restudied">
+   RequestData,
+  </span>
+  deep copying the data into a cache, and putting up the CONTINUE_EXECUTING flag. This triggers a new pass of the pipeline, enabling us to set the correct input time steps back in the subsequent
+  <span class="spellver" title="">
+   RequestUpdateExtent
+  </span>
+  call. Then the cache is used as an output, always generating the same data, whatever
+  <span class="spellmod" title="">
+   timestep
+  </span>
+  is asked.
+ </p>
+ <p>
+  This time-forced output could then be used in
+  <span class="ver" title="This is acceptable. However, if you are writing an academic paper, we suggest you replace it with &lt;i&gt;many&lt;/i&gt;, e.g.: &lt;i&gt;He has &lt;b&gt;many&lt;/b&gt; problems&lt;/i&gt; or &lt;i&gt;a great deal of&lt;/i&gt;, e.g.: &lt;i&gt;He had &lt;b&gt;a great deal of&lt;/b&gt; trouble with the question&lt;/i&gt;.">
+   lots of
+  </span>
+  ways,
+  <span class="ver" title="This abbreviation requires a period after each letter: *&lt;i&gt;e.g.&lt;/i&gt;">
+   eg
+  </span>
+  . with a multiple inputs calculator, enabling computation of rate based on data from a specific
+  <span class="spellmod" title="time step, time-step, misstep, tamest, dimmest, doorstep, mistype, teamster, domestic, demister, demisted">
+   timestep,
+  </span>
+  or even
+  <span class="spellmod" title="threshold, thresholds, threshold's, threshing, shareholding">
+   thresholding
+  </span>
+  the
+  <span class="spellmod" title="">
+   dataset
+  </span>
+  using data array from a specific
+  <span class="spellmod" title="">
+   dataset.
+  </span>
+ </p>
+ <p>
+  Along the way, and since this implementation is much more stable, we decided to put the class into
+  <span class="spellver" title="VT, VTOL, TKO, VAT, VDT, VJ, VET, VITO, VETO, VITA, VOTE, VATS, VETS, TX, TC, VD, VG, VDU, VGA, VIC, VAC, VEG, WOK, FTC, OTC, ETC, MTG, VAT'S, VET'S, VD'S">
+   VTK
+  </span>
+  and expose it in
+  <span class="spellver" title="Para View, Para-View, Preview, Purview, Privier, Previews, Prove, Review, Parade, Privies, Palaver, Parader, Parried, Parries, Preview's">
+   ParaView filters
+  </span>
+  .
+ </p>
+</div>

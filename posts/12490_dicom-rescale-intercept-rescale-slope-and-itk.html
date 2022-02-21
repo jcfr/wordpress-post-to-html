@@ -1,0 +1,110 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h2>
+  What is Rescale Intercept / Rescale Slope?
+ </h2>
+ <p>
+  <a href="http://dicomlookup.com/lookup.asp?sw=Tnumber&amp;q=%280028,1052%29">
+   Rescale intercept, (0028|1052),
+  </a>
+  and
+  <a href="http://dicomlookup.com/lookup.asp">
+   rescale slope (0028|1053)
+  </a>
+  are
+  <a href="http://en.wikipedia.org/wiki/DICOM">
+   DICOM
+  </a>
+  tags that specify the linear transformation from pixels in their stored on disk representation to their in memory representation.
+ </p>
+ <p style="text-align: center;">
+  U = m*SV + b
+ </p>
+ <p>
+  where
+  <em>
+   U
+  </em>
+  is in output units,
+  <em>
+   m
+  </em>
+  is the rescale slope,
+  <em>
+   SV
+  </em>
+  is the stored value, and
+  <em>
+   b
+  </em>
+  is the rescale intercept.  Other tags describe the stored value format further, such as Bits Allocated (0028|0100), Bits Stored (0028|0101), Pixel Representation (0028|0103), and Sample per Pixel (0028,0002).
+ </p>
+ <p>
+  Why have a different representation on disk versus in memory? A different range of values may be possible with the representation stored on disk versus in memory. An example:
+  <a href="https://en.wikipedia.org/wiki/X-ray_computed_tomography">
+   CT images
+  </a>
+  , whose pixel values are measured in
+  <a href="https://en.wikipedia.org/wiki/Hounsfield_scale">
+   Hounsfield units,
+  </a>
+  which can have negative values, are commonly stored with an unsigned integer. As a consequence, it is common for CT DICOM files to have a negative intercept.  The linear scaling is also applied in cases where a pixel may have a large range of values while storing the values with as few bits as possible and while avoiding quantization errors.  This is commonly applied in
+  <a href="https://en.wikipedia.org/wiki/Positron_emission_tomography">
+   PET imaging
+  </a>
+  where the range of activity values measured may exceed small integers. Also, the maximum PET activity may vary greatly from slice to slice; for example, a slice with a tumor may have very high values relative to a healthy tissue slice. For this reason, the rescale intercept / slope values often vary on a slice-by-slice basis for a PET image series.
+ </p>
+ <h2>
+  How is Rescale Intercept / Slope Handled in ITK?
+ </h2>
+ <p>
+  In ITK, the desired
+  <a href="http://www.itk.org/Doxygen/html/classitk_1_1Image.html">
+   itk::Image
+  </a>
+  pixel type is expressed as a template argument to the
+  <a href="http://www.itk.org/Doxygen/html/classitk_1_1ImageFileReader.html">
+   itk::ImageFileReader
+  </a>
+  . Internally, itk::ImageFileReader uses an
+  <a href="http://www.itk.org/Doxygen/html/classitk_1_1ImageIOBase.html">
+   itk::ImageIOBase
+  </a>
+  class to read the given file, which has a specific format. Usually, the file is read with the same representation as stored on disc, then it is cast to the desired itk::Image pixel type.
+ </p>
+ <p>
+  For DICOM files read with the GDCMImageIO, the pixel types are first read from their representation stored on disc, the
+  <a href="http://www.itk.org/Doxygen/html/classitk_1_1GDCMImageIO.html#acc567d502c751ef5a12fb917643b3048">
+   InternalComponentType
+  </a>
+  , and then the rescale intercept and rescale slope are applied.
+ </p>
+ <h2>
+  How do I write a DICOM file with ITK that has a non-identity Rescale Intercept / Slope?
+ </h2>
+ <p>
+  <span style="line-height: 1.6em;">
+   An important bug when writing DICOM files
+  </span>
+  <span style="line-height: 1.6em;">
+   was fixed in ITK with the release of 4.6.0.  The rescale slope and rescale intercept tags were not applied when a file was written back out with GDCMImageIO. When writing an image, DICOM tags are often partially re-used, including the tags that specify the on-disc representation. So, it is often desirable to re-apply the rescale intercept / slope tags.  To do so, make sure the itk::ImageFileWriter or itk::ImageSeriesWriter instance uses a GDCMImageIO with the correct InternalComponentType.  This can be achieved by re-using the GDCMImageIO instance applied when reading.
+  </span>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   For more information, see the
+   <a href="http://itk.org/Wiki/ITK/Examples/DICOM/ResampleDICOM">
+    wiki example
+   </a>
+   ,
+   <a href="http://itk.org/migrationv4/index.php?sid=2778900&amp;lang=en&amp;action=artikel&amp;cat=3&amp;id=155&amp;artlang=en">
+    Migration Guide entry
+   </a>
+   , and
+   <a href="http://itk.org/gitweb?p=ITK.git;a=commit;h=847ec2b79ac2cedaab6714678c0677793aa23a1e">
+    patch that fixed the bug
+   </a>
+   .
+  </span>
+ </p>
+</div>

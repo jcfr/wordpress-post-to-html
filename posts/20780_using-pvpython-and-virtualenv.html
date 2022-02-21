@@ -1,0 +1,439 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  If you have ever naively tried to build
+  <a href="https://www.paraview.org/">
+   ParaView
+  </a>
+  with Python wrapping enabled against a virtual environment you have created, and you have been disappointed with the results, then this post is for you.  For example, maybe your custom application depends on ParaView Python wrapping as well as a specific version of
+  <a href="http://www.numpy.org/">
+   Numpy
+  </a>
+  .  You may have thought it would be nice to create a virtual environment into which you could install Numpy, along with whatever other Python modules you like, then build ParaView against that environment, and like magic, the pvpython you built would allow you to import those modules.
+ </p>
+ <p>
+  So maybe it is fairly obvious at this point, but that approach does not work.  However, there is at least one way to use ParaView and it’s Python interpreter, pvpython, together with a custom virtual environment.  As long as you build ParaView against the same Python used to create that virtual environment, there’s a simple trick to be able to use all the modules from both worlds.
+ </p>
+ <p>
+  Let’s start by creating a virtual environment (read more about Virtualenv
+  <a href="https://virtualenv.pypa.io/en/stable/">
+   here
+  </a>
+  ) and installing some modules:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8851b23f843430640" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd /home/projects/CoolProject
+virtualenv coolVenv
+source coolVenv/bin/activate
+pip install numpy requests
+deactivate</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8851b23f843430640-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b23f843430640-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b23f843430640-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b23f843430640-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b23f843430640-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8851b23f843430640-1">
+        <span class="crayon-v">
+         cd
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         home
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         projects
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-e">
+         CoolProject
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b23f843430640-2">
+        <span class="crayon-e">
+         virtualenv
+        </span>
+        <span class="crayon-e">
+         coolVenv
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b23f843430640-3">
+        <span class="crayon-e">
+         source
+        </span>
+        <span class="crayon-v">
+         coolVenv
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         bin
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-e">
+         activate
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b23f843430640-4">
+        <span class="crayon-e">
+         pip
+        </span>
+        <span class="crayon-e">
+         install
+        </span>
+        <span class="crayon-e">
+         numpy
+        </span>
+        <span class="crayon-e">
+         requests
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b23f843430640-5">
+        <span class="crayon-v">
+         deactivate
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  At this point, you can build ParaView with Python wrapping enabled, just be sure that the Python you build against is the same one where the virtualenv module was installed.
+ </p>
+ <p>
+  Now, let’s write a small Python script to be run by the pvpython interpreter, where you also want to use those modules from your virtual environment:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8851b246837544256" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+from paraview.simple import *
+import numpy as np
+
+mySource = Cone()
+...</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8851b246837544256-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b246837544256-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b246837544256-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b246837544256-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b246837544256-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8851b246837544256-1">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         simple
+        </span>
+        <span class="crayon-e ">
+         import *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b246837544256-2">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         numpy
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         np
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b246837544256-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b246837544256-4">
+        <span class="crayon-v">
+         mySource
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Cone
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b246837544256-5">
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  That obviously isn’t going to work when you run it with pvpython because the numpy module will not be found. But the Virtualenv documentation has a
+  <a href="https://virtualenv.pypa.io/en/stable/userguide/#using-virtualenv-without-bin-python">
+   solution
+  </a>
+  for us. Just edit that script as follows:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8851b249783081325" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+activate_this = '/home/projects/CoolProject/coolVenv/bin/activate_this.py'
+execfile(activate_this, dict(__file__=activate_this))
+
+from paraview.simple import *
+import numpy as np
+
+mySource = Cone()
+...</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8851b249783081325-8">
+        8
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-1">
+        <span class="crayon-v">
+         activate_this
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         '/home/projects/CoolProject/coolVenv/bin/activate_this.py'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-2">
+        <span class="crayon-e">
+         execfile
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         activate_this
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         dict
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         __file__
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         activate_this
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-4">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         simple
+        </span>
+        <span class="crayon-e ">
+         import *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-5">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         numpy
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         np
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-7">
+        <span class="crayon-v">
+         mySource
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Cone
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8851b249783081325-8">
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  And that’s it! Any modules you have installed in your virtual environment will now be available. And by the way, this same trick works for vtkpython as well. Enjoy!
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

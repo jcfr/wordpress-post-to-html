@@ -1,0 +1,239 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The ubiquity of immersive systems is increasing. The availability of low-cost virtual reality (VR) systems [5] coupled with a growing population of researchers accustomed to newer interface styles makes this an opportune time to help domain science researchers cross the bridge to utilizing immersive interfaces. The next logical step is for scientists, engineers, doctors, etc. to incorporate immersive visualization into their exploration and analysis workflows; however, from past experience, we know that having access to equipment is not sufficient. There are also several software hurdles to overcome. The first hurdle is simply the lack of available usable software. Two other hurdles more specific to immersive visualization are: subdued immersion (e.g. the software might only provide a stereoscopic view, or might provide stereo with simple head tracking but no wand); and lack of integration with existing desktop workflows (e.g. a desktop computational fluid dynamics (CFD) workflow may require data conversions to operate with an immersive tool).
+ </p>
+ <p>
+  ParaView is a community based, multi-platform, open-source data analysis and visualization tool that scales from laptop to high performance supercomputers. ParaView has gained immense popularity amongst the scientific community as a universal visualization system. Early on we decided to integrate support for immersive environments directly into ParaView, rather than linking to an external library.  We felt that there were sufficient components in ParaView’s design that could be extended to support immersive rendering and interactions, and that limiting dependencies would make our efforts more impactful and sustainable for the long term.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Architecture
+    </span>
+   </strong>
+  </span>
+  <br/>
+  The Visualization Toolkit (VTK) is a freely available, open-source software system for visualization, image processing, and computer graphics. However, VTK is not an end-user application. Using VTK requires writing code to produce interesting results, which may not be trivial to a general user. ParaView provides a user friendly environment via its graphical user interface, allowing researchers immediate opportunities for performing visualization tasks. At a very high level, the overall ParaView architecture is represented in Figure 1.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_56494596.png" rel="noopener" target="_blank">
+   <img alt="" height="289" src="https://blog.kitware.com/source/files/Small.28_56494596.png" style="display: block; margin-left: auto; margin-right: auto;" width="501"/>
+  </a>
+  <em>
+   <strong>
+    Figure 1: High-level overview of the ParaView architecture.
+   </strong>
+  </em>
+ </p>
+ <p>
+  The Server Manager is the layer responsible for exchanging data and information between the client and the servers. As the name suggests, the Data Server is responsible for reading raw data, filtering, and writing out data which then can be rendered by the Render Server.  It should be noted that the Data Server and the Render Server modules can exist either across a network, or together with the GUI client on a single machine.  We determined the Render Server to be the apt place to drive Immersive displays. The typical use of the Render Server is for parallel rendering and image compositing; more broadly however, it is simply a framework where multiple views of same data can be rendered synchronously. The Client reads a configuration file and sets the appropriate display parameters on the Render Server. The parameters passed include coordinates of each display with reference to base coordinate of tracking system. A similar technique is used to pass device data to each of the participating nodes.  The client reads the device data from a locally- or remotely-connected device and sends it across to the rendering nodes. Either the Virtual Reality Peripheral Network (VRPN)[1] or the Virtual Reality User Interface (VRUI) device Daemon[2] protocols can be used to collect the input data. Figure 2 demonstrates the client receiving head tracking data via VRPN from a remote tracking device and routing it to cameras on every Render Server.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_806032121.png" rel="noopener" target="_blank">
+   <img alt="" height="261" src="https://blog.kitware.com/source/files/Small.28_806032121.png" style="display: block; margin-left: auto; margin-right: auto;" width="501"/>
+  </a>
+  <em>
+   <strong>
+    Figure 2: Client distributing head tracking data to render server cameras.
+   </strong>
+  </em>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Implementation
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   Off Axis Rendering
+  </strong>
+  <br/>
+  Like many computer graphics systems designed for desktop interaction, the VTK library calculates the perspective viewing matrix with the assumption that the viewer looks along an axis from the center of the image.  This assumption is generally acceptable for desktop interfaces, but breaks down when applied to immersive interfaces where the view is affected by the location and movement of the head.
+ </p>
+ <p>
+  We added a new rendering option that allows a VTK-camera to be set to “OffAxisProjection” mode, opening up new parameters that can be used to precisely set the projection matrix.  The key parameters required for this are the relationship between the eye and the screen.  This could be done in relative terms, but with the goal of having this work in large immersive displays, it is more natural to specify screen and eye positions relative to a specific origin.
+  <br/>
+  Therefore, the following new methods have been added to the VTK camera class:
+ </p>
+ <ul>
+  <li>
+   SetUseOffAxisProjection     &lt;bool&gt;
+  </li>
+  <li>
+   SetScreenBottomLeft          &lt;x&gt; &lt;y&gt; &lt;z&gt;
+  </li>
+  <li>
+   SetScreenBottomRight        &lt;x&gt; &lt;y&gt; &lt;z&gt;
+  </li>
+  <li>
+   SetScreenTopRight             &lt;x&gt; &lt;y&gt; &lt;z&gt;
+  </li>
+  <li>
+   SetEyePosition                   &lt;x&gt; &lt;y&gt; &lt;z&gt;
+  </li>
+ </ul>
+ <p>
+  These are sufficient for monoscopic rendering, but most immersive displays operate stereoscopically, so we need to provide an eye separation and the direction of the head to properly adjust the location of each eye:
+ </p>
+ <ul>
+  <li>
+   SetEyeSeparation                 &lt;distance&gt;
+  </li>
+  <li>
+   SetEyeTransformMatrix        &lt;homogeneous matrix&gt;
+  </li>
+ </ul>
+ <p>
+  With off-axis projection in place within VTK, adding immersive rendering to ParaView become a matter of configuring the screens and collecting and routing head tracking information to continuously set the proper rendering parameters.
+  <br/>
+  Additionally, we want to provide an immersive user  interface, so hand (or wand) tracking data is also typically collected. We can map that data through the ParaView proxy system to affect visualization tools.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_257472947.png" rel="noopener" target="_blank">
+   <img alt="" height="116" src="https://blog.kitware.com/source/files/Small.28_257472947.png" style="display: block; margin-left: auto; margin-right: auto;" width="515"/>
+  </a>
+  <em>
+   <strong>
+    Figure 3: Stereo rendering with head tracking using VTK in 4-sided VR environment.
+   </strong>
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_661979988.png" rel="noopener" target="_blank">
+   <img alt="" height="377" src="https://blog.kitware.com/source/files/Small.28_661979988.png" style="display: block; margin-left: auto; margin-right: auto;" width="499"/>
+  </a>
+  <em>
+   <strong>
+    Figure 4: ParaView running on a portable VR system
+   </strong>
+  </em>
+ </p>
+ <p>
+  <strong>
+   Interactor Styles
+  </strong>
+  <br/>
+  In addition to providing “OffAxisProjection,” we added support for new interactor styles  via ParaView’s newly-added VR Plugin.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_1768545084.png" rel="noopener" target="_blank">
+   <img alt="" height="296" src="https://blog.kitware.com/source/files/Small.28_1768545084.png" style="display: block; margin-left: auto; margin-right: auto;" width="499"/>
+  </a>
+  <em>
+   <strong>
+    Figure 5: ParaView VR Device Plugin (a) VRPN Server or VRUI DD Connections are specified here. (b) Device Events and corresponding Interaction-Styles are specified here.
+   </strong>
+  </em>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Results
+   </strong>
+  </span>
+  <br/>
+  Adding immersion to ParaView uses existing VR tracking protocols (VRPN and VRUI) in conjunction with ParaView’s current capabilities for multi-screen rendering to enable immersive viewing and interaction. As with open-source packages released by Kitware, Immersive ParaView also relies on CMake for compilation of the application. We tested our additions to ParaView using several different immersive environments including a portable IQ-station[5] (a low-cost display based on commercial off-the-shelf parts), and a four-sided CAVE. The four-sided CAVE was tested using a single render server with two NVidia QuadroPlex’s.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Future Directions
+   </strong>
+  </span>
+  <br/>
+  In our current implementation, every render node for the VR system receives the geometry at the highest resolution. This is very inefficient as data generated via simulations could be extremely large. For VR systems, interactive user experiences require rendering at a minimum of 15 frames-per-second. Thus, we would like to have a level-of-detail strategy where we can adaptively change the details of the geometry depending on the view. We hope to leverage recent work on multi-resolution geometry by Los Almos National Laboratory and Kitware [4] for this purpose. Also, on certain occasions we have observed poor tracking feedback, especially when using VRUI, which is supported only on Linux and Mac platforms; this is an issue that we are hoping will be resolved in next release of ParaView.
+ </p>
+ <p>
+  The user interface for manipulating the visualization uses the ParaView proxy system, which presently lacks a good user interface for creating and altering proxies.  A high-priority item is to provide an interface that allows users to specify proxy relationships from the main ParaView client interface.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Conclusion
+   </strong>
+  </span>
+  <br/>
+  Immersive ParaView makes strides towards a fully-featured, open-source visualization system that can leverage immersive technologies to serve broad scientific communities. It offers a low barrier to entry, drawing users to immersive displays through familiar software and migrating visualization sessions. As it attracts a user base and forms a community, we expect Immersive ParaView to become sustainable, gain support, and raise awareness and utilization of immersive displays. We ultimately aim to improve scientific workflows as low-cost VR systems, and have Immersive Paraview and other immersive visualization tools become integral components in scientists’ labs.
+ </p>
+ <p>
+  We would like to thank Idaho National Lab (INL) for their support of this effort.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    References
+   </span>
+  </strong>
+  <br/>
+  [1] Virtual Reality Peripheral Network (VPRN) http://www.cs.unc.edu/Research/vrpn
+  <br/>
+  [2] VRUI http://idav.ucdavis.edu/~okreylos/ResDev/Vrui
+  <br/>
+  [3] Visualization Toolkit (VTK) http://vtk.org
+  <br/>
+  [4]  J. Ahrens, J. Woodring, D. DeMarle, J. Patchett, and M. Maltrud. Interactive remote large-scale data visualization via prioritized multiresolution streaming. In UltraVis ’09: Proceedings of the 2009 Workshop on Ultrascale Visualization, pages 1–10, New York, NY, USA, 2009. ACM.
+  <br/>
+  [5] William R. Sherman, Patrick O’Leary, Eric T. Whiting, Shane Grover, Eric A. Wernert, “IQ-Station: a low cost portable immersive environment,” Proceedings of the 6th annual International Symposium on Advances in Visual Computing (ISVC’10). pp. 361–372, 2010.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/28_301916762.png" rel="noopener" target="_blank">
+   <img alt="" height="126" src="https://blog.kitware.com/source/files/Small.28_301916762.png" style="float: left;" width="100"/>
+  </a>
+  <em>
+   <strong>
+    Aashish Chaudhary
+   </strong>
+   is an R&amp;D Engineer in the Scientific Computing team at Kitware. Prior to joining Kitware, he developed a
+  </em>
+  <em>
+   graphics engine and open-source tools for information and geo-visualization. Some of his interests are software engineering, rendering, and visualization
+  </em>
+ </p>
+ <p>
+  <p>
+   <p>
+    <p>
+     <a href="/source/files/28_478700120.png" rel="noopener" target="_blank">
+      <img alt="" height="125" src="https://blog.kitware.com/source/files/Small.28_478700120.png" style="float: left;" width="100"/>
+     </a>
+     <em>
+      <strong>
+       Nikhil Shetty
+      </strong>
+      is an R&amp;D Engineer at Kitware and a Ph.D. student at University of Louisiana at Lafayette, where he also received his M.S. in Computer Science. Nikhil originally joined Kitware as an intern in May 2009 working on ParaView, and returned in May 2010 as a member of the Scientific Computing Group
+     </em>
+    </p>
+    <p>
+     <p>
+      <p>
+       <p>
+        <a href="/source/files/28_2130728370.png" rel="noopener" target="_blank">
+         <img alt="" height="127" src="https://blog.kitware.com/source/files/Small.28_2130728370.png" style="float: left;" width="101"/>
+        </a>
+        <em>
+         <strong>
+          Bill Sherman
+         </strong>
+         is Senior Technical Advisor in the Advanced Visualization Lab at Indiana University. Sherman’s primary area of interest is in applying immersive technologies to scientific visualizations. He has been involved in visualization and virtual reality technologies for over 20 years, and has been involved in establishing several immersive research facilities.
+        </em>
+       </p>
+       <p>
+        <p>
+         <p>
+          <em>
+          </em>
+         </p>
+        </p>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</div>

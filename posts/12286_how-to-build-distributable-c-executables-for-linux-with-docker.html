@@ -1,0 +1,196 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <b id="docs-internal-guid-4f41e2fa-9712-cc24-4295-3f4bd2c68b54" style="font-weight: normal;">
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    To create easily distributable C++ executables for Linux, the binaries’ dependencies should be minimized.  In order to reduce an executable’s dependencies, a binary can be created by linking static libraries. Static linking can be used with most libraries, including the C++ standard library, but it is not preferred with the standard system C library,
+   </span>
+   <a href="https://en.wikipedia.org/wiki/GNU_C_Library" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     glibc
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    .  Previously, we discussed how
+   </span>
+   <a href="https://blog.kitware.com/creating-static-executables-on-linux/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     static executables
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    can be used for the purpose of
+   </span>
+   <a href="https://blog.kitware.com/cross-compiling-for-android-with-docker/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     special-case test executables
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    , but static linking glibc
+   </span>
+   <a href="http://www.akkadia.org/drepper/no_static_linking.html" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     should be avoided
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    for the purpose of creating distributable binaries. To create distributable binaries, the executable can be built on an system with the oldest version of glibc possible; glibc is not forwards-compatible, but it has very good backwards compatibility. In this post, we describe how
+   </span>
+   <a href="https://www.docker.com/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     Docker
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    can help to efficiently build C++ executables locally or in the cloud with an old version of glibc.
+   </span>
+  </b>
+ </p>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <b id="docs-internal-guid-4f41e2fa-9712-cc24-4295-3f4bd2c68b54" style="font-weight: normal;">
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    We created
+   </span>
+   <a href="https://github.com/CastXML/CastXML" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     CastXML
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    binaries for
+   </span>
+   <a href="http://www.itk.org/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     ITK
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    with this method.  The binaries have cut ITK’s Python wrapping build time in half!
+   </span>
+  </b>
+  <br class="kix-line-break"/>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <b id="docs-internal-guid-4f41e2fa-9712-cc24-4295-3f4bd2c68b54" style="font-weight: normal;">
+   <a href="http://midas3.kitware.com/midas/folder/13152" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     <img alt="CastXMLBinaries.png" height="329px;" src="https://lh3.googleusercontent.com/czgkwp7x5amtA4ekzu6qhv61sxfbyhb_hFebW-C2ZSkEsxDk6Y0sEXZah3sLgfrTl0cNGwpBhoG62QKj5q9W2pbD0yB_NkJzsbiHrTyesQNkmik_aLKRJnrQ2h0L9w1fqnXcMkk" style="border: none; transform: rotate(0.00rad); -webkit-transform: rotate(0.00rad);" width="624px;"/>
+    </span>
+   </a>
+  </b>
+ </p>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <b id="docs-internal-guid-4f41e2fa-9712-cc24-4295-3f4bd2c68b54" style="font-weight: normal;">
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    A Linux distribution with one of the oldest available glibc libraries on DockerHub is
+   </span>
+   <a href="https://hub.docker.com/_/centos/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     CentOS
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    . The
+   </span>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: italic; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    centos:5
+   </span>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    image has glibc version 2.5. By building on this Docker image, the executable will run on an operating system with glibc 2.5 or later.
+   </span>
+  </b>
+ </p>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <b id="docs-internal-guid-4f41e2fa-9712-cc24-4295-3f4bd2c68b54" style="font-weight: normal;">
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    The
+   </span>
+   <a href="https://hub.docker.com/r/thewtex/centos-build/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     build environment image
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    we created has build tools like
+   </span>
+   <a href="https://cmake.org/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     CMake
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    ,
+   </span>
+   <a href="https://www.python.org/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     Python
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    , and
+   </span>
+   <a href="https://martine.github.io/ninja/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     Ninja
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    , but it also has a newer version of the GCC compiler. By installing
+   </span>
+   <a href="http://people.centos.org/tru/devtools-2/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     Dev Tools
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    , a newer toolchain with GCC 4.8 is available in
+   </span>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: italic; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    /opt
+   </span>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    . This compiler generates more optimized binaries than the version available in the package manager, and it has better support for newer language features, like the C++11 standard.
+   </span>
+   <a href="https://github.com/thewtex/CastXMLSuperbuild/blob/1c938cdf0c4a1fc295b968d2b89765b1f8abc370/CMakeLists.txt#L105-L108" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     Statically linking libstdc++
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    avoids version compatibility issues.
+   </span>
+  </b>
+ </p>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <b id="docs-internal-guid-4f41e2fa-9712-cc24-4295-3f4bd2c68b54" style="font-weight: normal;">
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    The Docker image can be used to efficiently build the distributable executables on a newer Linux system or Windows or Mac OSX. Also, the same
+   </span>
+   <a href="https://blog.kitware.com/automated-tests-on-github-for-your-itk-dependent-project-with-circleci-and-docker/" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     Docker image can be used for continuous integration testing
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    in the cloud, and it is even possible to use the
+   </span>
+   <a href="https://circleci.com/docs/build-artifacts" style="text-decoration: none;">
+    <span style="font-size: 14.666666666666666px; font-family: Arial; color: #1155cc; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap;">
+     continuous integration artifacts for distribution
+    </span>
+   </a>
+   <span style="font-size: 14.666666666666666px; font-family: Arial; color: #000000; background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline; white-space: pre-wrap;">
+    .
+   </span>
+  </b>
+ </p>
+</div>

@@ -1,0 +1,124 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Laparoscopic surgery is a minimally invasive surgical approach in which instruments are passed through ports placed at small incisions. Typically, a surgeon will use her own medical intuition and external landmarks on the patient to select the placement of the surgical ports through which to pass the surgical instruments. However, this port selection strategy can fail if the surgeon lacks experience, or the internal anatomy does not correspond to the external landmarks. In these cases, the surgeon finds that the pre-selected set of ports is not suitable for reaching a surgical site; the surgeon must then choose between making even more incisions for more ports, or abandoning the laparoscopic approach to perform a more invasive procedure.
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <strong>
+    A Port Placement Visualization Module for 3D Slicer
+   </strong>
+  </span>
+ </h3>
+ <p>
+  To help address this challenge, Kitware is developing a Port Placement module for the medical imaging tool, 3D Slicer. This module can assist in port placement planning by visualizing some ports and simulated surgical tools over preoperative medical imagery. The visualization allows the surgeon to see the result of a given selection of ports during preoperative planning; for instance, the surgeon might see that a simulated surgical tool cannot reach a surgical site without passing through a vital sensitive organ, so the surgeon can interactively adjust the port position until the visualization shows that the tool has unobstructed access to the surgical site. This functionality can lead to port placement planning that can help ensure that the surgeon will have the flexibility required to safely and successfully perform the surgical procedure.
+ </p>
+ <p>
+  This is implemented as a scriptable module, meaning it was implemented in Python and does not require compilation. The module implements all of its functionality using pre-existing 3D Slicer modules. A set of ports is specified as a list of fiducial nodes, which can be easily added to a scene with a click of the mouse. The surgical tools at each port are simulated as long, thin cylinders. Each tool can either be manually oriented within the module using the intuitive Transforms widget, or the surgeon can also specify a surgical target and click the “Aim Tools at Target” button to automatically orient all tools toward the target. If the surgeon wants to adjust a port’s placement, she can click and drag its corresponding fiducial marker and the simulated surgical tool will follow the mouse to the new position.
+ </p>
+ <p>
+  The Port Placement visualization module is available as a Slicer extension for Slicer 4.2.
+ </p>
+ <p>
+  <a href="/source/files/4_1238883388.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1238883388.jpg" style="height:310px; margin-left:125px; margin-right:125px; width:400px"/>
+  </a>
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <strong>
+    Automated Port Placement for Robotic Laparoscopic Surgery
+   </strong>
+  </span>
+ </h3>
+ <p>
+  Laparoscopic surgeons have gained even greater dexterity, accuracy, and vision at surgical sites via the assistance of robotic systems like Intuitive Surgical’s da Vinci System. However, there are unique challenges to surgical port placement planning for robotic surgery. For instance, it is difficult for a human to judge how much dexterity the robot will have at a surgical site due to complexity of the robot’s kinematic structure. It may seem that the robot can aptly perform a task through a given surgical port, but during the procedure it may turn out that the task is just out of the robot’s reachable workspace, or near a singularity (a robotic configuration where its degrees of flexibility are decreased). Furthermore, in order to move surgical tools inside the patient’s body, the robot must move its arms outside the patient.  This means that, in addition to the usual challenges of port placement planning, the surgeon must also ensure that the robot’s arms won’t collide with each other or the rest of the operating room during the procedure.
+ </p>
+ <p>
+  To assist with these issues, Kitware is also developing an easy-to-use system that can recommend a suitable port placement plan for a given robotic surgical procedure. The surgeon inputs a procedure  represented by a set of 6-D task frames of surgical interest that the robot tools need to reach, as well as a set of points to serve as candidate positions for surgical ports. The port placement plan returned by our procedure includes the positions of the surgical ports on the patient’s body, the robot arm configurations to reach these ports, and the position of the robot’s base on the operating room floor. This system will provide an intuitive interface to the surgeon for specifying the intended surgical task, and the system will choose a port placement plan that optimizes the surgeon’s dexterity at the surgical site.
+ </p>
+ <p>
+  The interface used by the surgeon to specify the surgical task will be implemented as a module for 3D Slicer. Surgical task frames will be specified using fiducial markers (markers currently support position and orientation, but orientation is not yet accessible via the Slicer GUI) and candidate port positions will be specified as curves or surfaces using control points (also with fiducial markers). The surgeon can load the patient’s preoperative medical imaging into 3D Slicer in order to visually guide their placement of surgical task frames and candidate port positions.
+ </p>
+ <p>
+  The automated port placement recommendation system is based on cutting-edge work in automated surgical planning [1]. The system uses knowledge of the robot’s kinematic structure and the surgeon’s requirements to return a plan that (1) reaches all specified surgical task frames, (2) maximizes the robot’s dexterity at those frames, and (3) maximizes the plan’s robustness to uncertainty in the surgical procedure due to noisy medical imaging and variability in patient anatomy.
+ </p>
+ <p>
+  The automated port placement system requires fast computation of the robot’s forward and inverse kinematics; we implemented the kinematics routines using the Eigen C++ linear algebra library [2]. Eigen provides a MATLAB-like interface to a wide variety of highly efficient linear algebra routines. The port placement system also requires performing a complex nonlinear optimization with many nonlinear constraints. We implemented the optimization using the open source nonlinear optimization library NLopt [3]. The NLopt library offers easy-to-use interfaces to a wide variety of cutting-edge local and global nonlinear optimization routines; for the port placement problem we use Constrained Optimization by Linear Approximations (COBYLA) [4] because it does not require specification of an analytical derivative. Currently, our automated port placement system can return a plan to reach 3 surgical task frames within 5 seconds.
+ </p>
+ <p>
+  <a href="/source/files/4_89414281.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_89414281.jpg" style="height:374px; margin-left:125px; margin-right:125px; width:400px"/>
+  </a>
+ </p>
+ <p>
+  We are currently adding support in our planning system for the third endoscopic arm of the da Vinci System. We are also developing the Slicer module that the surgeon will use for intuitive specification of the required surgical procedure. We soon will have a full port placement planning system that can assist surgeons by reducing surgical setup time and lowering the likelihood of misplaced ports – and scars caused by extra port incisions – in robotic laparoscopic surgery.
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <strong>
+    Acknowledgements
+   </strong>
+  </span>
+ </h3>
+ <p>
+  The authors would like to thank Dr. Hamidreza Azimian for his invaluable insight on port placement planning for robotic laparoscopic surgery. This work is supported by NA-MIC and the 3DSlicer community. This work was partially supported by NSF GRFP Grant No. DGE-1144081 and NIH/NIBIB Grant No. 1R43EB014074-01.
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <strong>
+    References
+   </strong>
+  </span>
+ </h3>
+ <ol>
+  <li>
+   H. Azimian, “Preoperative planning of robotics-assisted minimally invasive cardiac surgery under uncertainty,” Ph.D Thesis 2012.
+  </li>
+  <li>
+   G. Guennebaud, B. Jacob, “Eigen v3,” http://eigen.tuxfamily.org, 2010.
+  </li>
+  <li>
+   S.G. Johnson, “The NLopt nonlinear-optimization package,” http://ab-initio.mit.edu/nlopt.
+  </li>
+  <li>
+   M. J. D. Powell, "Direct search algorithms for optimization calculations," Acta Numerica 7, 287-336 (1998)
+  </li>
+ </ol>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1720241267.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1720241267.jpg" style="height:125px; width:100px"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   <em>
+    Luis Torres
+   </em>
+  </strong>
+  <em>
+   is a Ph.D. student at the University of North Carolina at Chapel Hill, where he conducts research in medical robotics. His recent focus has been on image-guided motion planning for snake-like robotic needles.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1847311315.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1847311315.jpg" style="height:125px; width:100px"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   <em>
+    Andinet Enquobahrie
+   </em>
+  </strong>
+  <em>
+  </em>
+  <em>
+   is a Technical Leader at Kitware. Andinet is responsible for technical contribution and management of image guided intervention and surgical simulation projects. His recent efforts are focused on use of PET-CT imaging to improve the clinical effectiveness of lesion biopsy, laparoscopic surgical procedures and tools for image-guided intervention application development and bioinformatics analysis.
+  </em>
+ </p>
+</div>

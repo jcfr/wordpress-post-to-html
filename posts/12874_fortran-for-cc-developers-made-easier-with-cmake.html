@@ -1,0 +1,276 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  Fortran for C/C++ developers made easier with CMake
+ </h1>
+ <p>
+  Love it or hate it, Fortran is the work horse of numerical computing. However, much of the software development in the high performance computing field is done in C and C++.  It is often required that C/C++ software be able to call and link to Fortran libraries. This presents many difficulties in creating cross platform software that will compile and run on Linux, Windows, and Mac OS/X. The CMake build system now contains many powerful features to make cross platform combined C/C++ and Fortran development easier than ever. The following list of CMake features are useful for combined C/C++ and Fortran linkage:
+ </p>
+ <ul>
+  <li>
+   For Windows C/C++ developers, the ability to easily use the MinGW gfortran compiler
+   <strong>
+    to create dlls and .lib
+   </strong>
+   files that can be used by the Windows  Visual Studio compiler.
+  </li>
+  <li>
+   The ability to build Fortran code, including Fortran 95 in the
+   <strong>
+    correct order
+   </strong>
+   depending on modules created and imported.
+  </li>
+  <li>
+   The ability to automatically determine the
+   <strong>
+    name mangling
+   </strong>
+   used in Fortran in order to be able to call the Fortran routine from C/C++.
+  </li>
+  <li>
+   The ability to detect and automatically determine the
+   <strong>
+    Fortran run time libraries
+   </strong>
+   required to link to a Fortran library from a C/C++ application.
+  </li>
+ </ul>
+ <p>
+  This article will describe how to apply those features in any CMake project requiring mixed C or C++ Fortran development.
+ </p>
+ <h2>
+  Using MinGW gfortran from Visual Studio
+ </h2>
+ <p>
+  If you are going to be using Fortran code or Fortran based library (for example the widely used Linear Algebra PACKage LAPACK from
+  <a href="http://www.netlib/lapack">
+   http://www.netlib/lapack
+  </a>
+  ) in a project, you will obviously need to be able to link your C code against your Fortran code or your Fortran based library. As you may know gfortran, a free GNU Fortran compiler, is now available on all major platforms. The main problem is if you are working under Microsoft Visual Studio, only commercial (and thus not free!) compilers are available: Intel Compilers, PGI compilers, Silverforst, etc. The gfortran compiler is indeed only available within Cygwin or MinGW, and no direct gfortran plugin for Visual Studio is available.  Integrating gfortran within VS is feasible but not trivial.
+ </p>
+ <p>
+  CMake now contains a new feature to make gfortran integration much easier.  The new functionality comes in two parts:
+ </p>
+ <ul>
+  <li>
+   The ability to create Visual Studio style .lib files from mingw gfortran created .dll shared libraries.
+  </li>
+  <li>
+   A new  CMake module called CMakeAddFortranSubdirectory.cmake. This module adds a subdirectory to a project that contains a Fortran only sub-project. The module will automatically enable Fortran support under Visual Studio by either using the current VS enabled Fortran Compiler  (INTEL Fortran, PGI Fortran, etc..) or directly use the MinGW gfortran compiler.
+  </li>
+ </ul>
+ <h3>
+  Creating Visual Studio .lib files from MinGW gfortran
+ </h3>
+ <p>
+  By default when building with the MinGW toolchain and the gfortran compiler, it of course produces GNU style .a libraries. However, if you want to use the MinGW compilers to create libraries that are usable from native Visual Studio (VS) compilers, you will need to create VS .lib files. To do this the VS lib.exe tool is used. As a result, to create VS .lib files you will need both the MinGW toolchain and a version of the VS tool chain on the computer.  However, since the goal is to use gfortran from VS, that means you should already have both installed.
+ </p>
+ <p>
+  As of CMake 2.8.7, if you are building a dll with gfortran, and you have a version of VS installed on the machine, if you set CMAKE_GNUtoMS=ON in the project or in the cache for the project, CMake will automatically create .lib import libraries for any dll’s created.
+ </p>
+ <p>
+  When on, the CMAKE_GNUtoMS flag will locate the lib.exe tool from Visual Studio and run it on the .dll.a archive created by the MinGW  tool chain. This will create a Visual Studio .lib import library matching the .dll. The MinGW Fortran libraries are required to be dlls because it is not possible to easily link the GNU Fortran runtime library into a Visual Studio project. However, if the library is built as a dll, then the GNU Fortran runtime will be built into the dll, and it will not be required for the Visual Studio C/C++ program to directly link to the GNU Fortran runtime.
+ </p>
+ <p>
+  To enable this, the project that is built needs to have the following flags:
+ </p>
+ <p>
+  -DCMAKE_GNUtoMS=ON and -DBUILD_SHARED_LIBS=ON  (or add_library with the SHARED option)
+ </p>
+ <h4>
+  Side note, dll’s and Intel Fortran
+ </h4>
+ <p>
+  One possible issue that you can run into if the project supports the Intel Fortran compiler as well as gfortran, you will need to make sure symbols are exported from the library to create the .lib file that goes with the .dll. The MinGW tool chain will work much like a Unix compiler and can export all the symbols from a dll automatically. With VS and the Intel windows compilers, you must explicitly instruct the compiler which symbols need to be exported.
+ </p>
+ <p>
+  This can be done by creating a .def  file that lists the symbols you want to export.  Alternatively, you can mark up the Fortran code with special comments. To markup Fortran code, a special comment is used as follows:
+ </p>
+ <p>
+  hello.f
+ </p>
+ <p>
+  !DEC$ ATTRIBUTES DLLEXPORT :: HELLO
+  <br/>
+  SUBROUTINE HELLO
+  <br/>
+  PRINT *, ‘Hello’
+ </p>
+ <h3>
+  cmake_add_fortran_subdirectory Function
+ </h3>
+ <p>
+  The CMake team is developing a new module called CMakeAddFortranSubdirectory.cmake. This module contains a function which works like add_subdirectory. The new function is called
+  <strong>
+   cmake_add_fortran_subdirectory
+  </strong>
+  .
+ </p>
+ <p>
+  The CMakeAddFortranSubdirectory.cmake module can be found in the master branch of CMake git.  You will need to use a nightly snapshot of CMake for your project because there are C++ changes required to make this feature fully functional.
+ </p>
+ <p>
+  To use the module add this include to your project:
+ </p>
+ <p>
+  include(CMakeAddFortranSubdirectory)
+ </p>
+ <p>
+  Then use the cmake_add_fortran_subdirectory instead of add_subdirectory. The directory passed into cmake_add_fortran_subdirectory must contain only Fortran code.  There cannot be c/c++ code in the subdirectory. When the MinGW Fortran build is activated, the libraries will be built as shared dlls by passing the BUILD_SHARED_LIBS=ON flag to the project contained in the subdirectory. In addition the new CMAKE_GNUtoMS=ON variable will also be passed to the project.
+ </p>
+ <p>
+  The function will first detect if the selected compiler tool chain supports direct Fortran compilation. If a valid Fortran compiler is found, then the function will simply pass the directory to add_subdirectory. This will allow the Intel Windows Fortran compiler to be used if it is available. On Unix/Linux/Mac systems, the function also acts as a pass through to add_subdirectory.
+ </p>
+ <p>
+  The “magic” happens when you are building a project on a machine with the Visual Studio compiler that does not have the Intel Fortran compiler installed. In this case, CMake will find the MinGW install directory, and use the ExternalProject command to build the Fortran sub directory with the MinGW tool chain. It will then create imported targets for the shared Fortran libraries within the subdirectory.  These imported targets can be linked to any CMake target as if they had been natively built with the Visual Studio compiler.
+ </p>
+ <p>
+  Unlike the usual ExternalProject command usage, the targets can be used with in the same project. This is because it is known exactly where the final product of the build will reside. However, you will have to give some extra information to the cmake_add_fortran_subdirectory so that it can create the import libraries. The usage of the function is as follows:
+ </p>
+ <p>
+  cmake_add_fortran_subdirectory(
+  <br/>
+  &lt;subdir&gt;                           # name of subdirectory
+  <br/>
+  PROJECT &lt;project_name&gt;  # project name in subdir top CMakeLists.txt
+  <br/>
+  ARCHIVE_DIR &lt;dir&gt;          # dir where project places .lib files
+  <br/>
+  RUNTIME_DIR &lt;dir&gt;          # dir where project places .dll files
+  <br/>
+  LIBRARIES &lt;lib&gt;…            # names of library targets to import
+  <br/>
+  LINK_LIBRARIES               # link interface libraries for LIBRARIES
+  <br/>
+  [LINK_LIBS &lt;lib&gt; &lt;dep&gt;…]…
+  <br/>
+  CMAKE_COMMAND_LINE …  # extra command line flags to pass to cmake
+  <br/>
+  )
+ </p>
+ <p>
+ </p>
+ <p>
+  Relative paths in ARCHIVE_DIR and RUNTIME_DIR are interpreted with respect to the build directory corresponding to the source directory  in which the function is invoked.
+ </p>
+ <p>
+  Here is a simple project that builds LAPACK as a subdirectory:
+ </p>
+ <p>
+ </p>
+ <p>
+  cmake_minimum_required(VERSION 2.8.7.20120206)
+  <br/>
+  project(fortranc)
+  <br/>
+  include(CMakeAddFortranSubdirectory)
+  <br/>
+  # add the lapack subdirectory as a fortran project
+  <br/>
+  # the subdir is lapack, the project is LAPACK
+  <br/>
+  cmake_add_fortran_subdirectory(lapack
+  <br/>
+  PROJECT LAPACK  # project name in toplevel CMakeLists.txt in lapack
+  <br/>
+  ARCHIVE_DIR lapack/lib # .lib location relative to root binary tree
+  <br/>
+  RUNTIME_DIR lapack/bin # .dll location relative to root binary tree
+  <br/>
+  LIBRARIES blas lapack # target libraries created
+  <br/>
+  LINK_LIBRARIES  # link interface libraries
+  <br/>
+  LINK_LIBS lapack blas  # lapack needs blas to link
+  <br/>
+  )
+ </p>
+ <p>
+  add_executable(testc test.c)
+  <br/>
+  target_link_libraries(testc lapack)
+ </p>
+ <p>
+  This example can be downloaded here:
+  <a class="moz-txt-link-freetext" href="http://www.cmake.org/files/lapack_test.tar.gz">
+   http://www.cmake.org/files/lapack_test.tar.gz
+  </a>
+ </p>
+ <p>
+  The visual studio project looks like this:
+ </p>
+ <p>
+  <img alt="" height="496" src="https://blog.kitware.com/blog/files/4_345917017.png" width="587"/>
+ </p>
+ <p>
+  (Example LAPACK application built and compiled in the VS 9 IDE using MinGW for the Fortran compiler)
+ </p>
+ <h2>
+  Building Fortran in the correct order
+ </h2>
+ <p>
+  Fortran 90 supports a module system that allows Fortran to import and export modules from source files. This adds a huge complexity to the build problem as the Fortran code must be compiled in the correct order to ensure that module files are available for import after they have been exported, but before they are imported. To accomplish this, CMake contains a full Fortran parser. When CMake computes depend information at build time, it will parse all of the Fortran sources. The parser determines which files are producers and which files are the consumers, and then it uses that information to order the build. There is no user interaction with CMake in order to use this feature. It is only used with Makefile builds. The Intel VS Fortran IDE plugin handles this itself.
+ </p>
+ <h2>
+  Automatically detect the Fortran runtime library and use it
+ </h2>
+ <p>
+  A tricky part of using Fortran from C/C++ is the linking of the Fortran runtime libraries. The usual mode of operation for a Fortran developer is to run the Fortran compiler in a verbose mode, and look for the –L and –l flags used by the compiler. The flags are then used with the C/C++ compiler.  This process is iterated over until the build works. The problem is that you have to do that for each platform supported. CMake will automatically do this for a project that builds both C or C++ and Fortran. To enable this feature, you need only to specify Fortran and C or C++ in the project command:
+ </p>
+ <p>
+  project(foobar Fortran C)
+  <br/>
+  add_library(foo foo.f)
+  <br/>
+  add_executable(bar bar.c)
+  <br/>
+  target_link_libraries(bar foo)
+ </p>
+ <h2>
+  Automatically Determine Symbol Mangling Used by Fortran Compiler
+ </h2>
+ <p>
+  To use Fortran for C/C++ code, it is required to know what symbol decoration the Fortran compiler uses. Different compilers append or prepend “_”, or use upper or lower case for the function names. CMake contains a module that can be used to determine the mangling scheme used by the compiler. This can then be used to create C/C++ header files defining macros that perform the correct mapping for the C/C++ code.
+ </p>
+ <p>
+  cmake_minimum_required(VERSION 2.8.6)
+  <br/>
+  project(fortranc Fortran C)
+  <br/>
+  include(FortranCInterface)
+  <br/>
+  FortranCInterface_HEADER(FC.h MACRO_NAMESPACE “FC_”)
+  <br/>
+  #This creates a “FC.h” header that defines mangling macros
+  <br/>
+  # FC_GLOBAL(), FC_GLOBAL_(), FC_MODULE(), and FC_MODULE_().
+ </p>
+ <p>
+  For more information run cmake –help-module FortranCInterface, or see the online documentation for the FortranCInterface module.
+ </p>
+ <h2>
+  What CMake Does NOT Do for You
+ </h2>
+ <p>
+  Although CMake does make calling Fortran from C/C++ easier by taking care of many of the compiler issues. There are still coding level issues that must be dealt with. For example, Fortran arrays are not stored in the same way as C arrays, and passing strings and other values between the languages can be tricky.  A great reference on those details can be found here:
+  <a class="moz-txt-link-freetext" href="http://www.math.utah.edu/software/c-with-fortran.html">
+   http://www.math.utah.edu/software/c-with-fortran.html.
+  </a>
+ </p>
+ <h2>
+  Summary
+ </h2>
+ <p>
+  In summary, CMake has a rich set of tools to enable the cross platform development of C/C++ code that compiles and links to Fortran source code. CMake can determine compiler symbol mangling as well as the correct run time libraries required to use the Fortran code from C/C++. The new cmake_add_fortran_subdirectory function currently under development will give VS studio users a free Fortran compiler available for use from within the Visual Studio IDE using the MinGW gfortran compiler. If you are interested in this feature and have suggestions we would like to have your input before the next release of CMake.
+ </p>
+ <p>
+  To make sure I did not make any mistakes with my discussion about Fortran and LAPACK, I asked Julie Langou the current maintainer of LAPACK to review this blog post before I shared it. Julie had some great suggestions and we are now working on an extended version of this blog in article form.  I will post again when that article is published.
+ </p>
+ <p>
+  I would also like to thank the Dakota and Trilinos teams at Sandia National labs for funding much of the Fortran support found in CMake.
+ </p>
+ <p>
+  Thanks, and happy C/C++/Fortran hacking!
+ </p>
+</div>

@@ -1,0 +1,108 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  On a former
+  <a href="https://blog.kitware.com/vtk-technical-highlight-dual-depth-peeling/">
+   blog post
+  </a>
+  we discussed about the addition of dual-depth peeling to VTK  (
+  <em>
+   vtkDualDepthPeelingPass
+  </em>
+  ).  As mentioned there, dual-depth peeling roughly doubled the frame rate of correctly-ordered translucent-geometry rendering when compared to legacy depth-peeling.
+ </p>
+ <p>
+  Rendering correctness in a rasterized scene containing translucent geometry and volumes has been a long standing issue in VTK.  Understandably so, it is not simple to architecturally achieve this given the necessity for various rendering  passes and resource sharing across different mappers.  Likewise, achieving any reasonable performance is challenging.  Recently, thanks to the performance improvements of dual-depth peeling we were able to extend the rendering pass to correctly handle intermixed translucent geometry with volumes.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18541" style="width: 518px">
+  <img alt="" class="wp-image-18541" height="371" sizes="(max-width: 508px) 100vw, 508px" src="https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-300x219.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-300x219.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-768x562.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-1024x749.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-220x161.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-250x183.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-355x260.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-730x534.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp-90x66.png 90w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_nodepthp.png 1523w" width="508"/>
+  <p class="wp-caption-text">
+   Industrial CT scan of a human tooth.  Dentin and pulp rendered as a volume (orange) while an iso-contour of the enamel is rendered as translucent geometry (blue).  The volume is not included in the depth-peeling pass so the compositing order is incorrect (the volume appears always on top of the translucent geometry).
+  </p>
+ </div>
+ <h3>
+  Volume-peeling: additions to the dual depth-peeling algorithm
+ </h3>
+ <p>
+  Dual-depth peeling for geometry computes color and depth of front and back layers (peels)  in a single render pass, computed colors are accumulated in separate buffers and the updated depths are used to feed the next pair of peels in a following render pass.  In order to handle volumes, the resulting depths obtained from a geometry-peeling pass are used as entry/exit points for ray-casting in an additional pass where the volume mapper is invoked, essentially rendering the peels of volume contained within peels of geometry.  As with translucent geometry,  a single render-pass accommodates both front and back ray-casting of the current peels. Sections of the volume not enclosed within translucent geometry are rendered altogether in a separate pass at the beginning (before the peeling passes) and the computed fragment colors are used to initialize the front and back rendering targets.
+ </p>
+ <p>
+  The following example shows some of the passes to render a frame from
+  <a href="https://gitlab.kitware.com/vtk/vtk/blob/master/Rendering/Volume/Testing/Cxx/TestGPURayCastDepthPeeling.cxx">
+   TestGPURayCastDepthPeeling
+  </a>
+  .  This test renders a volume vase enclosed in two transparent polygonal spheres.
+ </p>
+ <p>
+  Initial volumetric pass rendering sections not enclosed in translucent geometry (
+  <em>
+   PeelVolumesOutsideTranslucentRange()
+  </em>
+  ):
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18536" style="width: 628px">
+  <img alt="" class="wp-image-18536" height="307" sizes="(max-width: 618px) 100vw, 618px" src="https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-300x149.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-300x149.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-768x382.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-1024x510.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-220x110.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-250x124.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-355x177.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-730x363.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front-90x45.png 90w, https://blog.kitware.com/wp-content/uploads/2017/06/external_back_front.png 1205w" width="618"/>
+  <p class="wp-caption-text">
+   Back and front accumulation buffers are shown in the left and right images respectively.
+  </p>
+ </div>
+ <p>
+  First volumetric peel (
+  <em>
+   PeelVolumetricGeometry()
+  </em>
+  ), the resulting depths from the first translucent geometry peel (
+  <em>
+   PeelTranslucentGeometry()
+  </em>
+  ) are used as entry/exit points for ray-casting:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18537" style="width: 628px">
+  <img alt="" class="wp-image-18537" height="307" sizes="(max-width: 618px) 100vw, 618px" src="https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-300x149.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-300x149.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-768x382.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-1024x510.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-220x110.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-250x124.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-355x177.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-730x363.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front-90x45.png 90w, https://blog.kitware.com/wp-content/uploads/2017/06/pp1_back_front.png 1205w" width="618"/>
+  <p class="wp-caption-text">
+   Resulting fragment colors from back (left) and front (right) ray-casting. The front color is directly written to the front accumulation buffer while the back color is accumulated in a following pass.
+  </p>
+ </div>
+ <p>
+  ￼￼Final state of the accumulation buffers before its final composition:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18538" style="width: 628px">
+  <img alt="" class="wp-image-18538 " height="307" sizes="(max-width: 618px) 100vw, 618px" src="https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-300x149.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-300x149.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-768x382.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-1024x510.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-220x110.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-250x124.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-355x177.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-730x363.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front-90x45.png 90w, https://blog.kitware.com/wp-content/uploads/2017/06/final_back_front.png 1205w" width="618"/>
+  <p class="wp-caption-text">
+   Back buffer (left) and front buffer (right).
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_18539" style="width: 434px">
+  <img alt="" class="wp-image-18539" height="424" sizes="(max-width: 424px) 100vw, 424px" src="https://blog.kitware.com/wp-content/uploads/2017/06/final_render-300x300.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/final_render-300x300.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-220x220.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-250x250.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-355x355.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-50x50.png 50w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-96x96.png 96w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render-128x128.png 128w, https://blog.kitware.com/wp-content/uploads/2017/06/final_render.png 600w" width="424"/>
+  <p class="wp-caption-text">
+   Final result
+  </p>
+ </div>
+ <h4>
+  Additions to the API
+ </h4>
+ <p>
+  Volume-peeling is currently off by default and needs to be explicitly enabled.  As with the rest of the API, it is directly exposed through the renderer.
+ </p>
+ <p>
+  <code>
+   vtkNew&amp;lt;vtkRenderer&amp;gt; ren;
+   <br/>
+   ren-&amp;gt;SetUseDepthPeelingForVolumes(true);
+  </code>
+ </p>
+ <h4>
+  Performance notes
+ </h4>
+ <p>
+  As before, performance highly depends on the geometry complexity (for higher complexity, higher number of passes are required for a full set of correctly ordered fragments).  In addition, when volume-peeling is enabled performance will also depend on the ray-sampling distance.  Our initial benchmark suggests that the time spent rendering volume peels is far greater than the time spent drawing the translucent geometry, so adjusting volume mapper settings will have a significant impact on performance. In addition, the accumulated time spent peeling the volumes is around 75% greater than the time required to render them without peeling. This appears to be due to the overhead of repeatedly initializing the ray-casting code as we switch between volumetric and translucent geometry, so limiting the number of peels (and thus ray-cast initializa￼tions) will have significant performance impacts.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18542" style="width: 518px">
+  <img alt="" class="wp-image-18542 " height="371" sizes="(max-width: 508px) 100vw, 508px" src="https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-300x219.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-300x219.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-768x562.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-1024x749.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-220x161.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-250x183.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-355x260.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-730x534.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp-90x66.png 90w, https://blog.kitware.com/wp-content/uploads/2017/06/front_bottom_dp.png 1523w" width="508"/>
+  <p class="wp-caption-text">
+   With volume-peeling on, correctly ordering translucent geometry and volume layers.
+  </p>
+ </div>
+ <h3>
+ </h3>
+</div>

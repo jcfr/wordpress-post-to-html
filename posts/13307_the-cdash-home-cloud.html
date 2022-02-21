@@ -1,0 +1,88 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Imagine running a little program on your computer to volunteer your computing power to help keep your favorite open source project in tip-top shape. Extend that to a swarming cloud of volunteers running builds at your request and submitting results to your project’s dashboard. Soon, with the help of CTest and CDash, you’ll be able to do just that.
+ </p>
+ <p>
+  We’ve created a feature in CDash called “build management”. This feature allows users to request that a project build be done on any client that has volunteered its resources. You can try it out today if you have a checkout of CDash from svn trunk. This feature is not fully implemented in the current CDash 1.6 release, so you’ll have to use the bleeding edge code to try it out.
+ </p>
+ <p>
+  The feature works through a polling protocol. A client machine runs a CTest script that performs the following steps. First, the client machine submits an xml file describing its resources to CDash (submitinfo). The client then queries CDash to get its corresponding “site id” (getsiteid). The client then starts executing a loop, in which it queries CDash for a job to do (getjob). If the client is given a job to perform by CDash it does the job and reports the results, and then continues the loop. Otherwise, the client sleeps for a while and then continues the loop.
+ </p>
+ <p>
+  With several client machines connected and looping, querying CDash for jobs to do, CDash can match build requests to waiting clients.
+ </p>
+ <p>
+  After clients are set up and looping, a project administrator may go to his “My CDash” page and schedule a build by clicking on the “Schedule Build” icon. If no clients are currently connected, then CDash will not allow you to schedule builds. If clients are connected, you should see a list of available clients, what OS each is running, and what compilers each has available. As the build scheduler, you choose a client to run the build on and click the “Schedule” button at the bottom of the page.
+ </p>
+ <p>
+  After you schedule a build, the next time a client asks for a job to do, CDash assigns it a job, sending a CTest script back as the result. The client then executes that script, which yields a new submission to the dashboard from that client.
+ </p>
+ <p>
+  As part of scheduling a build, you may: specify an alternate repository from which to clone or checkout, specify initial CMakeCache.txt entries, add a build name suffix to identify an experiment in the dashboard results and choose which configuration to build and test. Other settings are also available in the CDash schedule build interface on the manageClient.php page.
+ </p>
+ <p>
+  When submitting an xml file to CDash, use the normal ctest_submit function in the CTest script. To query CDash for information, use “file(DOWNLOAD” in the CTest script.
+ </p>
+ <p>
+  At present, running CDash as a build management system involves setting things up on the server (server admin and project admin) and on each client machine (volunteers) that will be participating, as well as scheduling builds manually (project admin). However, the vision for this feature moving forward, is to make running CDash as a build management system as automatic as possible. Anybody should be able to request a test run of the project on any client that is presently available. Right now, only project administrators have the privilege of scheduling builds. It should eventually even be possible to have CDash observe whenever a commit is made to a project’s repository and immediately start doling out build instructions to waiting clients.
+ </p>
+ <p>
+  See the CDash Wiki page for more (and evolving) information on build management. This feature is still in its infancy and we could use your help to shape its future. Try it out and send us feedback on the CDash mailing list with the subject “CDash Schedule Builds Feedback”.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     SCHEDULING BUILDS FOR YOUR CDASH PROJECT
+    </strong>
+   </span>
+  </span>
+  <br/>
+  First, you have to coordinate with your CDash server administrator to set $CDASH_MANAGE_CLIENTS to 1 in either the cdash/config.php or cdash/config.local.php file.
+ </p>
+ <p>
+  Next, as project administrator, go to the Edit Project page and check on the settings on the Repository tab. The “Repository” and “Repository Viewer Type” settings need to be set. If you don’t really have a repository viewer, choose a type from that list that matches your repository anyway. CDash uses that setting to generate the correct checkout and update commands in the scripts that it sends to volunteer clients.
+ </p>
+ <p>
+  You can see a part of the script that CDash will send to the clients on the “Clients” tab of the Edit Project page. You may even customize it by modifying the script or adding to it as necessary for your project.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" src="https://blog.kitware.com/source/files/3_451494458_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+  Next, make sure the CTestConfig file checked into your repository is correct. You may download an initial copy from CDash if you don’t already have one. Click on the “Miscellaneous” tab and look for the CTestConfig download link.
+  <br/>
+  Next, set up some volunteers running “looping scripts”. On each volunteer client machine, you should create a “Client” directory, and then two sub-directories in Client named “base” and “tmp”
+ </p>
+ <p>
+  In the Client directory, we need a site description xml file and a looping script. On my client machines, I name the xml file “$SITE.cdash.xml” and I name the script “CDashClient.ctest”. The xml file should contain contents like this:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 650px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      &lt;?xml version=”1.0″ encoding=”UTF-8″?&gt;
+      <br/>
+      &lt;cdash&gt;
+      <br/>
+      &lt;system&gt;
+      <br/>
+      &lt;platform&gt;Mac&lt;/platform&gt;
+      <br/>
+      &lt;version&gt;SnowLeopard&lt;/version&gt;
+      <br/>
+      &lt;bits&gt;64&lt;/bits&gt;
+      <br/>
+      &lt;basedirectory&gt;/Users/davidcole/Client/base&lt;/basedirectory&gt;
+      <br/>
+      &lt;/system&gt;
+      <br/>
+      &lt;compiler&gt;
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+</div>

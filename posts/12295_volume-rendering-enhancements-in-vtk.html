@@ -1,0 +1,296 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span id="docs-internal-guid-06be85b5-3623-d0ad-2b5e-2cbdda28c4b6">
+   <span style="font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+    VTK is undergoing an overhaul in its backend rendering engine to provide faster high-performance rendering and support the latest hardware infrastructures. One of the many areas of improvement in VTK is its volume rendering capabilities. Back in October 2014, we introduced the new vtkOpenGLGPUVolumeRayCastMapper under the vtkRenderingOpenGLNew module. Since then, the new mapper has been through tremendous improvement. This write-up will highlights some of these improvements.
+   </span>
+  </span>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+     The temporary module vtkRenderingOpenGLNew has been obsoleted in VTK version 6.3. The new mapper along with its helper classes are now part of the vtkRenderingVolumeOpenGL2 module. This means the new volume mapper is available to all applications that use VTK with its OpenGL2 rendering backend. Most of the initial features of the new vtkOpenGLGPUVolumeRayCastMapper are demonstrated in the Kitware Source article from October 2014 titled
+     <a href="https://blog.kitware.com/volume-rendering-improvements-in-vtk/" rel="noopener" target="_blank">
+      “Volume Rendering Improvements in VTK”
+     </a>
+     . These include supporting a wide array of data types, cropping using a set of 6 planes to define 27 cropping regions, clipping using arbitrary clipping planes, opacity blend modes, masking and gradient magnitude based opacity modulation.
+    </span>
+   </span>
+  </p>
+  <h2 dir="ltr" style="line-height: 1.38; margin-top: 10pt; margin-bottom: 0pt; text-align: justify;">
+  </h2>
+  <h2 dir="ltr" style="line-height: 1.38; margin-top: 10pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 17.333333333333332px; font-family: 'Trebuchet MS'; color: #000000; background-color: transparent; font-weight: bold; vertical-align: baseline; white-space: pre-wrap;">
+     Multi-Component data support
+    </span>
+   </span>
+  </h2>
+  <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+     Often times, there is a need to visualize volumetric data using multiple channels at the same time. The vtkGPUVolumeRayCastMapper now supports volumes with more than one component.
+    </span>
+   </span>
+  </p>
+  <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+     There are two different modes supported: Representing components independently (the default) or defining a relationship among them. The representation can be defined by calling the (Set/Get)IndependentComponents function on the vtkVolumeProperty. By default, this property is enabled and each component’s value is mapped through the color and opacity lookup tables provided. When IndependentComponents is disabled, the following logic is used:
+    </span>
+   </span>
+  </p>
+  <ul style="margin-top: 0pt; margin-bottom: 0pt;">
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Volumes with 2 dependent components: The first component defines the final rendered color value based on a lookup table; whereas the second component determines the final opacity opacity value for that voxel.
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Volumes with 4 dependent components: The first three components are used to directly represent red, green and blue color channels respectively while the last component is mapped through the opacity lookup table to define opacity value for the voxel.
+      </span>
+     </span>
+    </p>
+   </li>
+  </ul>
+  <p>
+  </p>
+  <div>
+   <p>
+   </p>
+   <p>
+    <span style="color: #000000; font-family: 'Trebuchet MS'; font-size: 17.333333333333332px; font-weight: bold; line-height: 1.38; text-align: justify; white-space: pre-wrap; background-color: transparent;">
+     Performance optimization
+    </span>
+   </p>
+  </div>
+  <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+     One major code optimization was in the computation of the lighting model. This improvement led to about 300% improvement in performance for the new renderer. The new mapper performs about 35% faster than its OpenGL version 1 counterpart and about 135% faster than the vtkFixedPointVolumeRayCastMapper, with shading enabled.
+    </span>
+   </span>
+  </p>
+  <p>
+  </p>
+  <h2 dir="ltr" style="line-height: 1.38; margin-top: 10pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 17.333333333333332px; font-family: 'Trebuchet MS'; color: #000000; background-color: transparent; font-weight: bold; vertical-align: baseline; white-space: pre-wrap;">
+     OpenGL 3.2 core context
+    </span>
+   </span>
+  </h2>
+  <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+     The new volume mapper supports the OpenGL 3.2 Core context. Much of the calculations including bias and scale computations are offloaded to the GPU for faster computation.
+    </span>
+   </span>
+  </p>
+  <p>
+  </p>
+  <h2 dir="ltr" style="line-height: 1.38; margin-top: 10pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 17.333333333333332px; font-family: 'Trebuchet MS'; color: #000000; background-color: transparent; font-weight: bold; vertical-align: baseline; white-space: pre-wrap;">
+     Depth and Color data
+    </span>
+   </span>
+  </h2>
+  <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+     vtkGPUVolumeRayCastMapper now has added functionality of being able to export the color and depth textures as vtkTextureObject / vtkImageData post rendering. This allows the mapper to be used in various deferred rendering setups including remote compositing and rendering. To enable this feature one must set the boolean “RenderToImage” on the mapper. When rendering to image, the mapper renders to a FrameBufferObject. The textures can then be retrieved using GetDepthImage / GetColorImage methods.
+    </span>
+   </span>
+  </p>
+  <h2 dir="ltr" style="line-height: 1.38; margin-top: 10pt; margin-bottom: 0pt; text-align: justify;">
+   <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+    <span style="font-size: 17.333333333333332px; font-family: 'Trebuchet MS'; color: #000000; background-color: transparent; font-weight: bold; vertical-align: baseline; white-space: pre-wrap;">
+     Other updates
+    </span>
+   </span>
+  </h2>
+  <ul style="margin-top: 0pt; margin-bottom: 0pt;">
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       New OpenGL2 GPU volume mapper respects Interpolation Type (Linear or Nearest). Default is Nearest as the one used by the OpenGL GPU mapper.
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed lighting bug. Number of lights kept increasing in the scene every time the volume property was modified.
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Saving and Restoring GL state properly for textures
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Changed some GL texture format information to support OpenGL 3 context
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed extensions not being reported correctly for OpenGL2 backend
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed few failing tests specifically on Mesa
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Added convenience API to vtkSmartVolumeMapper
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed volume cropping bugs
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed crash when the underlying context changes
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed Mac OSX specific volume rendering issues
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Improved interactive performance for large volumes
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed extents not getting updated in presence of other filters
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed window color adjustments
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed issue with noise textures
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Added volume rendering benchmarking tests
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Added new volume tests. Now testing various features that were not tested before (52 volume tests now)
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Fixed graphics resource release issues
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       vtkGPUVolumeRayCastMapper now uses vtkTextureObject
+      </span>
+     </span>
+    </p>
+   </li>
+   <li dir="ltr" style="list-style-type: disc; font-size: 14.666666666666666px; font-family: Calibri; color: #000000; background-color: transparent; vertical-align: baseline;">
+    <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+     <span id="docs-internal-guid-06be85b5-361d-fc94-4070-c601d8670d35">
+      <span style="font-size: 14.666666666666666px; background-color: transparent; vertical-align: baseline; white-space: pre-wrap;">
+       Using the shader cache for volume rendering
+      </span>
+     </span>
+    </p>
+   </li>
+  </ul>
+ </p>
+</div>

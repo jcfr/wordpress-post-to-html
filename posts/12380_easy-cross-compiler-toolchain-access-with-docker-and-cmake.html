@@ -1,0 +1,389 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  In the past, cross-compiling was often an art that required a
+  <a class="reference external" href="http://www.urbandictionary.com/define.php?term=Unix%20beard" style="font-size: 13px; line-height: 1.6em;">
+   Unix beard
+  </a>
+  , a considerable amount of time, and a chicken to sacrifice. Assembling the cross-compiler toolchain was often a lengthy manual configuration process that was, at best, poorly documented. A number of recent projects make cross-compilers more readily available, but they still usually only work on a few versions of select Linux distributions.
+  <a class="reference external" href="https://docker.com" style="font-size: 13px; line-height: 1.6em;">
+   Docker
+  </a>
+  images make cross-compiling toolchains easily accessible from any recent Linux distribution and even MacOSX and Windows. When combined with
+  <a class="reference external" href="http://cmake.org" style="font-size: 13px; line-height: 1.6em;">
+   CMake
+  </a>
+  , which has very good cross-compilation support, it is easy to take C/C++-based code and build it for almost anything.
+ </p>
+ <p>
+  <a class="reference external" href="http://kitware.com/blog/home/post/877">
+   Previously
+  </a>
+  , we described how to build
+  <a class="reference external" href="http://itk.org">
+   ITK
+  </a>
+  code for Windows from a Debian Jessie Linux distribution. While building the cross-compiler was relatively straight forward, we can get the toolchain with one simple command on any host with Docker installed:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82175c34460897469" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker pull thewtex/cross-compiler-windows-x86</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e82175c34460897469-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e82175c34460897469-1">
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-e">
+         pull
+        </span>
+        <span class="crayon-v">
+         thewtex
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         cross
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         compiler
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         x86
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  To perform an Experimental
+  <a class="reference external" href="https://open.cdash.org/index.php?project=Insight">
+   dashboard
+  </a>
+  build with the source code cloned at
+  <cite>
+   ~/src/ITK
+  </cite>
+  :
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82175c3c607276509" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker run --rm -it -v ~/src/ITK:/usr/src/ITK:ro thewtex/cross-compiler-windows-x86
+mkdir ITK-build
+cd ITK-build/
+cmake -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -G Ninja ../ITK
+ctest -D Experimental -j6</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e82175c3c607276509-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82175c3c607276509-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82175c3c607276509-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82175c3c607276509-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82175c3c607276509-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e82175c3c607276509-1">
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-v">
+         run
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-v">
+         rm
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         it
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ~
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         src
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ITK
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         usr
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         src
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ITK
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-e">
+         ro
+        </span>
+        <span class="crayon-v">
+         thewtex
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         cross
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         compiler
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         x86
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82175c3c607276509-2">
+        <span class="crayon-e">
+         mkdir
+        </span>
+        <span class="crayon-v">
+         ITK
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         build
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82175c3c607276509-3">
+        <span class="crayon-e">
+         cd
+        </span>
+        <span class="crayon-v">
+         ITK
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         build
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82175c3c607276509-4">
+        <span class="crayon-v">
+         cmake
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         DCMAKE_TOOLCHAIN_FILE
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-v">
+         CMAKE_TOOLCHAIN_FILE
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         G
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         Ninja
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-e">
+         ITK
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82175c3c607276509-5">
+        <span class="crayon-v">
+         ctest
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         D
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Experimental
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         j6
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  This will run build
+  <a class="reference external" href="https://registry.hub.docker.com/u/thewtex/cross-compiler-windows-x86/">
+   the Docker image
+  </a>
+  , which has the
+  <a class="reference external" href="http://www.cmake.org/cmake/help/v3.2/variable/CMAKE_TOOLCHAIN_FILE.html">
+   CMAKE_TOOLCHAIN_FILE
+  </a>
+  location configured in
+  <a class="reference external" href="https://github.com/thewtex/cross-compilers/blob/master/windows-x86/Dockerfile#L57-L58">
+   an environmental variable
+  </a>
+  . The
+  <cite>
+   -G Ninja
+  </cite>
+  flag tells CMake to use the
+  <a class="reference external" href="http://martine.github.io/ninja/">
+   Ninja
+  </a>
+  Generator.
+ </p>
+ <p>
+  Happy cross-compiling!
+ </p>
+</div>

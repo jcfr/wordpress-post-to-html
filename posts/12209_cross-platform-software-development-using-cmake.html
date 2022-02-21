@@ -1,0 +1,2978 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <div class="article" lang="en">
+  <div class="simplesect" lang="en">
+   <p>
+    When looking through a large list of projects, one thing becomes apparent: a description of the build process always is stored in a group of files. These files can be simple shell scripts, Makefiles, Jam files, complex scripts based on projects like Autoconf and Automake or tool-specific files.
+   </p>
+   <p>
+    Recently another player came into the software building game, CMake. CMake is not directly a build process, because it uses native build tools, such as Make or even Microsoft Visual Studio. With support for numerous platforms, in-source and out-of-source builds, cross-library dependency checking, parallel building and simple configuration of header files, it significantly reduces the complexity of cross-platform software development and maintenance processes.
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb44b18">
+    </a>
+    Build Systems
+   </div>
+   <p>
+    Looking at most software development projects, you are undoubtedly faced with a common problem. You have a bunch of source files, some depend on each other, and you want to make some final binary. Sometimes you want to do something more complicated, but in most cases, that is it.
+   </p>
+   <p>
+    So, you have this little project and you want to build it using your Linux desktop. You sit down and quickly write the following Makefile:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e80349660448" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+main.o: main.c main.h
+        cc -c main.c
+MyProgram: main.o
+        cc -o MyProgram main.o -lm -lz</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e80349660448-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e80349660448-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e80349660448-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e80349660448-4">
+          4
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e80349660448-1">
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           o
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           h
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e80349660448-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           cc
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e80349660448-3">
+          <span class="crayon-v">
+           MyProgram
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           o
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e80349660448-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           cc
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           o
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           MyProgram
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           o
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           lm
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           lz
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    Once this file is ready, all you have to do is type
+    <strong>
+     make
+    </strong>
+    and the project is built. If any file is modified, all the necessary files also are rebuilt. Great, you can now congratulate yourself and go have a drink.
+   </p>
+   <p>
+    Except your boss comes by and says, “We just got this great new XYZ computer and you need to build the software on it.” So, you copy files there, type
+    <strong>
+     make
+    </strong>
+    and receive the following error message:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e87873782137" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cc: Command not found</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e87873782137-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e87873782137-1">
+          <span class="crayon-v">
+           cc
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           Command
+          </span>
+          <span class="crayon-st">
+           not
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           found
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    You know there is a compiler on that XYZ computer and it is called cc-XYZ, so you modify Makefile and try again. But that system does not have zlib. So, you remove
+    <strong>
+     -lz
+    </strong>
+    and play with source code and on it goes.
+   </p>
+   <p>
+    As you see, the problem with the Makefile approach is that once the file is moved to new platform, where the compiler name is not cc or where compile flags are different or even where the syntax of the compile line is different, make breaks.
+   </p>
+   <p>
+    As a more elaborate example of this problem, let us check our favorite compression library, zlib. Zlib is a fairly simple library, consisting of 17 C source files and 11 header files. Compiling zlib is straightforward. All you need to do is compile each C file and then link them all together. You can write a Makefile for it, but then you have to modify it on every single platform.
+   </p>
+   <p>
+    Tools such as Autoconf and Automake do a good job of solving some of these problems on UNIX and UNIX-like platforms. They are, however, usually too complex. To make things even worse, in most projects developers end up writing shell scripts inside Autoconf input files. The results then quickly become dependent on assumptions the developer made. Because the result of Autoconf depends on the shell, these configuration files do not run on platforms where the Bourne Shell or another standard /bin/sh is not available. Autoconf and Automake also depend on several tools installed on the system.
+   </p>
+   <p>
+    CMake is a solution to these problems. As opposed to other similar tools, CMake makes few assumptions about the underlying system. It is written in fairly standard C++, so it should run on almost any modern platform. It does not use any other tool except the native build tools of the system.
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb45098">
+    </a>
+    Installing CMake
+   </div>
+   <p>
+    For several platforms, such as Debian GNU/Linux, CMake is available as a standard package. For most other platforms, including UNIX, Mac OS X and Microsoft Windows, CMake binaries can be downloaded from the
+    <a href="http://www.cmake.org/">
+     CMake Web site
+    </a>
+    . To check if CMake is installed, you can run the command
+    <strong>
+     cmake –help
+    </strong>
+    . This will display the version of CMake and the usage information. If the location to the CMake executable is not in the system path, you can run it by specifying the full path to the executable.
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb45250">
+    </a>
+    Simple CMake
+   </div>
+   <p>
+    Now that CMake is installed, we can use it for our projects. For this, we have to prepare the CMake input file, which is called CMakeLists.txt. For example, this is a simple CMakeLists.txt for a possible project:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e8b244857645" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+PROJECT(MyProject C)
+ADD_LIBRARY(MyLibrary STATIC libSource.c)
+ADD_EXECUTABLE(MyProgram main.c)
+TARGET_LINK_LIBRARIES(MyProgram MyLibrary z m)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e8b244857645-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e8b244857645-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e8b244857645-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e8b244857645-4">
+          4
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e8b244857645-1">
+          <span class="crayon-e">
+           PROJECT
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-i">
+           MyProject
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           C
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e8b244857645-2">
+          <span class="crayon-e">
+           ADD_LIBRARY
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           MyLibrary
+          </span>
+          <span class="crayon-m">
+           STATIC
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           libSource
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           c
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e8b244857645-3">
+          <span class="crayon-e">
+           ADD_EXECUTABLE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           MyProgram
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           c
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e8b244857645-4">
+          <span class="crayon-e">
+           TARGET_LINK_LIBRARIES
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           MyProgram
+          </span>
+          <span class="crayon-i">
+           MyLibrary
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-i">
+           z
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           m
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    Using CMake to build the project is extremely easy. In the directory containing CMakeLists.txt, supply the following two commands, where
+    <span class="emphasis">
+     <em>
+      path
+     </em>
+    </span>
+    is the path to the source code.
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e8e703777585" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cmake &lt;span class="emphasis"&gt;&lt;em&gt;path&lt;/em&gt;&lt;/span&gt;
+make</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e8e703777585-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e8e703777585-2">
+          2
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e8e703777585-1">
+          <span class="crayon-v">
+           cmake
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           &lt;
+          </span>
+          <span class="crayon-e">
+           span
+          </span>
+          <span class="crayon-t">
+           class
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-s">
+           "emphasis"
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+          <span class="crayon-o">
+           &lt;
+          </span>
+          <span class="crayon-v">
+           em
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+          <span class="crayon-v">
+           path
+          </span>
+          <span class="crayon-o">
+           &lt;
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           em
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+          <span class="crayon-o">
+           &lt;
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           span
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e8e703777585-2">
+          <span class="crayon-v">
+           make
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    The cmake step reads the CMakeLists.txt file from the source directory and generates appropriate Makefiles for the system, in the current directory. CMake also maintains a list of all header files that objects depend on, so dependency checking can be assured. If you need to add more source files, simply add them to the list. Once Makefiles are generated, you do not have to run CMake any more, because the dependency to CMakeLists.txt also are in the generated Makefiles. If you want to make sure that dependencies are regenerated, you can always run
+    <strong>
+     make depend
+    </strong>
+    .
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb455c0">
+    </a>
+    CMake Commands
+   </div>
+   <p>
+    CMake is in essence a simple interpreter. CMake input files have an extremely simple but powerful syntax. It consists of commands, primitive flow control constructs, macros and variables. All commands have exactly the same syntax:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e90352895944" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+COMMAND_NAME(ARGUMENT1 ARGUMENT2 ...)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e90352895944-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e90352895944-1">
+          <span class="crayon-e">
+           COMMAND_NAME
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           ARGUMENT1
+          </span>
+          <span class="crayon-i">
+           ARGUMENT2
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    For example, the ADD_LIBRARY command specifies that a library should be created. The first argument is the name of the library, the second optional argument is whether the library is static or shared and the remaining arguments are a list of sources. Do you want a shared library? Simply
+    <strong>
+     SHARED
+    </strong>
+    instead of
+    <strong>
+     STATIC
+    </strong>
+    . The list of all commands can be seen in the CMake documentation.
+   </p>
+   <p>
+    A few flow control constructs, such as IF and FOREACH are used. The IF construct uses one of several types of expressions, such as boolean (NOT, AND, OR), check if command exists (COMMAND) and check if file exists (EXISTS). Expressions, however, cannot contain other commands. An example of a commonly used IF statement would be:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e93588041796" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+IF(UNIX)
+  IF(APPLE)
+    SET(GUI "Cocoa"
+  ELSE(APPLE)
+    SET(GUI "X11"
+  ENDIF(APPLE)
+ELSE(UNIX)
+  IF(WIN32)
+    SET(GUI "Win32"
+  ELSE(WIN32)
+    SET(GUI "Unknown"
+  ENDIF(WIN32)
+ENDIF(UNIX)
+MESSAGE("GUI system is ${GUI}")</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-8">
+          8
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-9">
+          9
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-10">
+          10
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-11">
+          11
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-12">
+          12
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-13">
+          13
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e93588041796-14">
+          14
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-1">
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           UNIX
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           APPLE
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           SET
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-i">
+           GUI
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "Cocoa"
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           ELSE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           APPLE
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           SET
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-i">
+           GUI
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "X11"
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           APPLE
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-7">
+          <span class="crayon-st">
+           ELSE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           UNIX
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-8">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           WIN32
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-9">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           SET
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-i">
+           GUI
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "Win32"
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-10">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           ELSE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           WIN32
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-11">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           SET
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-i">
+           GUI
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "Unknown"
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-12">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           WIN32
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-13">
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           UNIX
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e93588041796-14">
+          <span class="crayon-e">
+           MESSAGE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-s">
+           "GUI system is ${GUI}"
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0003 seconds] -->
+   <p>
+   </p>
+   <p>
+    This example shows a simple use of IF statements and variables.
+   </p>
+   <p>
+    FOREACH is used in the same fashion. The FOREACH command’s arguments include the variable that traverses, and the list of items to traverse. For example, if a list of executables needs to be created, where every executable is created from a source file with the same name, the following FOREACH would be used:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e95952928794" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+SET(SOURCES source1 source2 source3)
+FOREACH(source ${SOURCES})
+  ADD_EXECUTABLE(${source} ${source}.c)
+ENDFOREACH(source)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e95952928794-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e95952928794-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e95952928794-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e95952928794-4">
+          4
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e95952928794-1">
+          <span class="crayon-e">
+           SET
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           SOURCES
+          </span>
+          <span class="crayon-e">
+           source1
+          </span>
+          <span class="crayon-e">
+           source2
+          </span>
+          <span class="crayon-v">
+           source3
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e95952928794-2">
+          <span class="crayon-st">
+           FOREACH
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           source
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           SOURCES
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e95952928794-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           ADD_EXECUTABLE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           source
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           source
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           c
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e95952928794-4">
+          <span class="crayon-st">
+           ENDFOREACH
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           source
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    Macros use a syntax of both commands and flow control constructs. To define a macro, the MACRO construct is used. Let’s say we often create executables that link to some libraries. The following example macro, then makes our life a bit easier. In the example, CREATE_EXECUTABLE is the name of macro and the rest are arguments. Within the macro, all arguments are presented as variables. Once the macro is created, it can be used as a regular command. The definition and use of a CREATE_EXECUTABLE macro would be:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e97487100379" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+MACRO(CREATE_EXECUTABLE NAME
+  SOURCES LIBRARIES)
+  ADD_EXECUTABLE(${NAME} ${SOURCES})
+  TARGET_LINK_LIBRARIES(${NAME} 
+    ${LIBRARIES})
+ENDMACRO(CREATE_EXECUTABLE)
+ADD_LIBRARY(MyLibrary libSource.c)
+CREATE_EXECUTABLE(MyProgram main.c MyLibrary)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e97487100379-8">
+          8
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-1">
+          <span class="crayon-e">
+           MACRO
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           CREATE_EXECUTABLE
+          </span>
+          <span class="crayon-e">
+           NAME
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-2">
+          <span class="crayon-e">
+          </span>
+          <span class="crayon-e">
+           SOURCES
+          </span>
+          <span class="crayon-v">
+           LIBRARIES
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           ADD_EXECUTABLE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           NAME
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           SOURCES
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           TARGET_LINK_LIBRARIES
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           NAME
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-h">
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           LIBRARIES
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-6">
+          <span class="crayon-e">
+           ENDMACRO
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           CREATE_EXECUTABLE
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-7">
+          <span class="crayon-e">
+           ADD_LIBRARY
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           MyLibrary
+          </span>
+          <span class="crayon-v">
+           libSource
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           c
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e97487100379-8">
+          <span class="crayon-e">
+           CREATE_EXECUTABLE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           MyProgram
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           MyLibrary
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0003 seconds] -->
+   <p>
+   </p>
+   <p>
+    Macros, however, are not equivalent to procedures or functions from programming languages and do not allow recursion.
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb45ae8">
+    </a>
+    Conditional Compiling
+   </div>
+   <p>
+    An important feature of a good build process is the notion of turning on and off parts of the build. The build process also should be able to find and set locations to the system resources your project needs. All these functions are achieved in CMake using conditional compiling. Let me demonstrate with an example. Let’s say your project has two modes, regular and debug. Debug mode adds debug code to all the regular code. So, your code is full of sections, such as:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e99935340117" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#ifdef DEBUG 
+  fprintf(stderr, 
+          "The value of i is: %d\n", i);
+#endif /* DEBUG */</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e99935340117-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e99935340117-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e99935340117-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e99935340117-4">
+          4
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e99935340117-1">
+          <span class="crayon-p">
+           #ifdef DEBUG
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e99935340117-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           fprintf
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           stderr
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e99935340117-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "The value of i is: %d\n"
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           i
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e99935340117-4">
+          <span class="crayon-p">
+           #endif /* DEBUG */
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    In order to tell CMake to add -DDEBUG to compile lines, you can use the SET_SOURCE_FILE_PROPERTIES with the COMPILE_FLAGS property. But you probably do not want to edit the CMakeLists.txt file every time you switch between debug and regular builds. The OPTION command creates a boolean variable that can be set before building the project. The syntax for the previous example would look like this:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e9b472784502" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+OPTION(MYPROJECT_DEBUG
+  "Build the project using debugging code"
+  ON)
+IF(MYPROJECT_DEBUG)
+  SET_SOURCE_FILE_PROPERTIES(
+    libSource.c main.c
+    COMPILE_FLAGS -DDEBUG)
+ENDIF(MYPROJECT_DEBUG)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9b472784502-8">
+          8
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-1">
+          <span class="crayon-e">
+           OPTION
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           MYPROJECT
+          </span>
+          <span class="crayon-sy">
+           _
+          </span>
+          DEBUG
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "Build the project using debugging code"
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           ON
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-4">
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           MYPROJECT_DEBUG
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           SET_SOURCE_FILE_PROPERTIES
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           libSource
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-7">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           COMPILE_FLAGS
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DDEBUG
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9b472784502-8">
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           MYPROJECT_DEBUG
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    Now, you ask, “how do I set this variable?” CMake comes with three flavors of GUI. On UNIX-like systems, there is a Curses GUI called ccmake. It is text-based and can be run through a remote connection. CMake also has GUIs for Microsoft Windows and Mac OS X.
+   </p>
+   <p>
+    When using CMake-generated Makefiles, if you have already run CMake for the first time, all you have to type is
+    <strong>
+     make edit_cache
+    </strong>
+    . This command runs an appropriate GUI. In all the GUIs, you have the option of setting variables. As you will see right away, CMake has several default options, for example, EXECUTABLE_OUTPUT_PATH and LIBRARY_OUTPUT_PATH (where executables and libraries go) and, in our case, MYPROJECT_DEBUG. After changing a value of some variable, you press the configure button or [c] (on ccmake).
+   </p>
+   <p>
+    In GUIs you can set several different types of entries. MYPROJECT_DEBUG is a boolean variable. Another common type variable is a path, which specifies the location of some file on the system. Say our program relies on the location of the file Python.h. We would put in the CMakeLists.txt file the following command, which tries to find a file:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28e9e504380732" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+FIND_PATH(PYTHON_INCLUDE_PATH Python.h
+  /usr/include
+  /usr/local/include)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9e504380732-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9e504380732-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28e9e504380732-3">
+          3
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28e9e504380732-1">
+          <span class="crayon-e">
+           FIND_PATH
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           PYTHON_INCLUDE_PATH
+          </span>
+          <span class="crayon-v">
+           Python
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           h
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9e504380732-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           include
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28e9e504380732-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           local
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           include
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    But this command looks only in /usr/include and /usr/local/include, so you have to specify some other locations. Because it can be wasteful to specify all these locations in every single project, you can include other CMake files, called modules. CMake comes with several useful modules, from the type that search for different packages to the type that actually perform some tasks or define macros. For the list of all modules, check the Modules subdirectory of CMake. One example is a module called FindPythonLibs.cmake, which finds Python libraries and header files on almost every system. If, however, CMake does not find the file you need, you can always specify it in the GUI. If you are used to an Autoconf approach, where you specify configuration options on the command-line, you can use command line access to CMake variables. The following line sets the MYPROJECT_DEBUG variable to OFF:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28ea0988731442" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cmake -DMYPROJECT_DEBUG:BOOL=OFF</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea0988731442-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28ea0988731442-1">
+          <span class="crayon-v">
+           cmake
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DMYPROJECT_DEBUG
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-t">
+           BOOL
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-v">
+           OFF
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb45f60">
+    </a>
+    What about Subdirectories?
+   </div>
+   <p>
+    As a software developer, you probably organize source code in subdirectories. Different subdirectories can represent libraries, executables, testing or even documentation. We now can enable or disable subdirectories to build parts of our project and skip other parts. To tell CMake to process a subdirectory, use the SUBDIRS command. This command tells CMake to go to the specified subdirectory and find the CMakeLists.txt file. Using this command, we can now make our project a bit more organized. We move all the library files to the library subdirectory Library, and the top-level CMakeLists.txt now looks like this:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28ea2216821136" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+PROJECT(MyProject C)
+SUBDIRS(SomeLibrary)
+INCLUDE_DIRECTORIES(SomeLibrary)
+ADD_EXECUTABLE(MyProgram main.c)
+TARGET_LINK_LIBRARIES(MyProgram MyLibrary)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea2216821136-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea2216821136-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea2216821136-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea2216821136-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea2216821136-5">
+          5
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28ea2216821136-1">
+          <span class="crayon-e">
+           PROJECT
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-i">
+           MyProject
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           C
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea2216821136-2">
+          <span class="crayon-e">
+           SUBDIRS
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           SomeLibrary
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea2216821136-3">
+          <span class="crayon-e">
+           INCLUDE_DIRECTORIES
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           SomeLibrary
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea2216821136-4">
+          <span class="crayon-e">
+           ADD_EXECUTABLE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           MyProgram
+          </span>
+          <span class="crayon-v">
+           main
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           c
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea2216821136-5">
+          <span class="crayon-e">
+           TARGET_LINK_LIBRARIES
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           MyProgram
+          </span>
+          <span class="crayon-v">
+           MyLibrary
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    The INCLUDE_DIRECTORIES command tells the compiler where to find header files for main.c. So, even if your project has five hundred subdirectories and you move all your sources in, you will not have any problems getting dependencies to work. CMake does all this for you.
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb46118">
+    </a>
+    Back to Zlib
+   </div>
+   <p>
+    So, now we want to “cmakify” zlib. Start with a simple CMakeLists.txt file:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28ea5474446628" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+PROJECT(ZLIB)
+# source files for zlib
+SET(ZLIB_SRCS
+adler32.c   gzio.c      
+inftrees.c  uncompr.c
+compress.c  infblock.c
+infutil.c   zutil.c
+crc32.c     infcodes.c 
+deflate.c   inffast.c  
+inflate.c   trees.c
+)
+ADD_LIBRARY(zlib ${ZLIB_SRCS})
+ADD_EXECUTABLE(example example.c)
+TARGET_LINK_LIBRARIES(example zlib)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-8">
+          8
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-9">
+          9
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-10">
+          10
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-11">
+          11
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-12">
+          12
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-13">
+          13
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea5474446628-14">
+          14
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-1">
+          <span class="crayon-e">
+           PROJECT
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           ZLIB
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-2">
+          <span class="crayon-p">
+           # source files for zlib
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-3">
+          <span class="crayon-e">
+           SET
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           ZLIB_SRCS
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-4">
+          <span class="crayon-v">
+           adler32
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           gzio
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-5">
+          <span class="crayon-v">
+           inftrees
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           uncompr
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-6">
+          <span class="crayon-v">
+           compress
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           infblock
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-7">
+          <span class="crayon-v">
+           infutil
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           zutil
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-8">
+          <span class="crayon-v">
+           crc32
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           infcodes
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-9">
+          <span class="crayon-v">
+           deflate
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           inffast
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-10">
+          <span class="crayon-v">
+           inflate
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           trees
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           c
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-11">
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-12">
+          <span class="crayon-e">
+           ADD_LIBRARY
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           zlib
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           ZLIB_SRCS
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-13">
+          <span class="crayon-e">
+           ADD_EXECUTABLE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           example
+          </span>
+          <span class="crayon-v">
+           example
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           c
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea5474446628-14">
+          <span class="crayon-e">
+           TARGET_LINK_LIBRARIES
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           example
+          </span>
+          <span class="crayon-v">
+           zlib
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0004 seconds] -->
+   <p>
+   </p>
+   <p>
+    Now you can build it. However, there are couple of little things to remember.First, zlib needs unistd.h on some platforms. So, we add this test:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28ea7195785578" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+INCLUDE (
+  ${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
+CHECK_INCLUDE_FILE(
+  "unistd.h" HAVE_UNISTD_H)
+IF(HAVE_UNISTD_H)
+  ADD_DEFINITION(-DHAVE_UNISTD_H)
+ENDIF(HAVE_UNISTD_H)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea7195785578-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea7195785578-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea7195785578-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea7195785578-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea7195785578-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea7195785578-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea7195785578-7">
+          7
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28ea7195785578-1">
+          <span class="crayon-e">
+           INCLUDE
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea7195785578-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           CMAKE_ROOT
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           Modules
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           CheckIncludeFile
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           cmake
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea7195785578-3">
+          <span class="crayon-e">
+           CHECK_INCLUDE_FILE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea7195785578-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "unistd.h"
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           HAVE_UNISTD_H
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea7195785578-5">
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           HAVE_UNISTD_H
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea7195785578-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           ADD_DEFINITION
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DHAVE_UNISTD_H
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea7195785578-7">
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           HAVE_UNISTD_H
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    Also, we have to do something about shared libraries on Windows. Zlib needs to be compiled with
+    <strong>
+     -DZLIB_DLL
+    </strong>
+    , for proper export macros. So, we add the following option:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28ea9032859038" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+OPTION(ZLIB_BUILD_SHARED
+  "Build ZLIB shared" ON)
+IF(WIN32)
+  IF(ZLIB_BUILD_SHARED)
+    SET(ZLIB_DLL 1)
+  ENDIF(ZLIB_BUILD_SHARED)
+ENDIF(WIN32)
+IF(ZLIB_DLL)
+  ADD_DEFINITION(-DZLIB_DLL)
+ENDIF(ZLIB_DLL)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-8">
+          8
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-9">
+          9
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ea9032859038-10">
+          10
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-1">
+          <span class="crayon-e">
+           OPTION
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           ZLIB_BUILD
+          </span>
+          <span class="crayon-sy">
+           _
+          </span>
+          SHARED
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           "Build ZLIB shared"
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           ON
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-3">
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           WIN32
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           ZLIB_BUILD_SHARED
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           SET
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           ZLIB
+          </span>
+          <span class="crayon-sy">
+           _
+          </span>
+          DLL
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-cn">
+           1
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           ZLIB_BUILD_SHARED
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-7">
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           WIN32
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-8">
+          <span class="crayon-st">
+           IF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           ZLIB_DLL
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-9">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           ADD_DEFINITION
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DZLIB_DLL
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ea9032859038-10">
+          <span class="crayon-st">
+           ENDIF
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           ZLIB_DLL
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0003 seconds] -->
+   <p>
+   </p>
+   <p>
+    This works, but there is a better way. Instead of passing ZLIB_DLL and HAVE_UNISTD_H as compiler flags, we can configure an include file. We do that by preparing an input file with tags for CMake. An example of the include file for zlib would be zlibConfig.h.in:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28eab352892161" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#ifndef _zlibConfig_h
+#define _zlibConfig_h
+#cmakedefine ZLIB_DLL
+#cmakedefine HAVE_UNISTD_H
+#endif</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28eab352892161-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28eab352892161-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28eab352892161-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28eab352892161-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28eab352892161-5">
+          5
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28eab352892161-1">
+          <span class="crayon-p">
+           #ifndef _zlibConfig_h
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28eab352892161-2">
+          <span class="crayon-p">
+           #define _zlibConfig_h
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28eab352892161-3">
+          <span class="crayon-p">
+           #cmakedefine ZLIB_DLL
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28eab352892161-4">
+          <span class="crayon-p">
+           #cmakedefine HAVE_UNISTD_H
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28eab352892161-5">
+          <span class="crayon-p">
+           #endif
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    Here, the
+    <strong>
+     \#cmakedefine VAR
+    </strong>
+    is replaced with
+    <strong>
+     \#define VAR
+    </strong>
+    or with
+    <strong>
+     /* \#undef VAR */
+    </strong>
+    , depending on whether VAR is defined. We tell CMake to create the file zlibConfig.h using the following CMake command:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41ce8d28ead294536519" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+CONFIGURE_FILE(&amp;gt;
+  ${ZLIB_SOURCE_DIR}/zlibDllConfig.h.in
+  ${ZLIB_BINARY_DIR}/zlibDllConfig.h)</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ead294536519-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ead294536519-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41ce8d28ead294536519-3">
+          3
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41ce8d28ead294536519-1">
+          <span class="crayon-e">
+           CONFIGURE_FILE
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-o">
+           &amp;
+          </span>
+          <span class="crayon-v">
+           gt
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ead294536519-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           ZLIB_SOURCE_DIR
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           zlibDllConfig
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           h
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-st">
+           in
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41ce8d28ead294536519-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           ZLIB_BINARY_DIR
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           zlibDllConfig
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           h
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb3cfe8">
+    </a>
+    To Infinity and Further
+   </div>
+   <p>
+    With the information in this article you will be able to start using CMake for most of your everyday tasks. Except, now you are able to connect to your friend’s AIX system and build your project, if your code is portable enough. Also, the CMake files are much easier to read than Makefiles, so your friend can check what you missed.
+   </p>
+   <p>
+    This example, however, only scratches the surface; CMake is capable of doing several other tasks. With its face-lift in version 1.6, it can now do platform independent TRY_RUN and TRY_COMPILE builds, which come in handy when you want to test the capabilities of the system. It natively supports only C and C++, but there is limited support for building Java files. With a little effort, you can build anything from Python- or Emacs-compiled scripts to LaTeX documents. By using CMake with the testing framework Dart, you can do platform-independent regression testing. If you want to go even further, you can use CMake’s C API to write a plug-in for CMake, which adds your own command to the list of existing commands.
+   </p>
+   <p>
+    CMake is being actively used in several projects such as VTK and ITK. Its benefits are enormous in traditional software development, however they become even more apparent, when portability is necessary. By using CMake for software development, your code will be significantly more “open”, because it will build on a variety of platforms.
+   </p>
+  </div>
+  <div class="simplesect" lang="en">
+   <div class="titlepage">
+    <a name="N0xa50890.0xb3d1a0">
+    </a>
+    Resources:
+   </div>
+   <ul>
+    <li>
+     <a href="http://www.gnu.org/software/autoconf">
+      Autoconf
+     </a>
+    </li>
+    <li>
+     <a href="http://www.gnu.org/software/automake">
+      Automake
+     </a>
+    </li>
+    <li>
+     <a href="http://www.cmake.org/">
+      CMake
+     </a>
+    </li>
+    <li>
+     <a href="http://public.kitware.com/Dart">
+      public.kitware.com/Dart
+     </a>
+    </li>
+    <li>
+     <a href="http://www.itk.org/">
+      ITK
+     </a>
+    </li>
+    <li>
+     <a href="http://www.python.org/">
+      Python
+     </a>
+    </li>
+    <li>
+     <a href="http://www.vtk.org/">
+      VTK
+     </a>
+    </li>
+    <li>
+     <a href="http://www.gzip.org/zlib">
+      ZLib
+     </a>
+    </li>
+   </ul>
+   <p>
+    <span class="bold">
+     <strong>
+      Andrej Cedilnik
+     </strong>
+    </span>
+    (
+    <a href="mailto:andy.cedilnik@kitware.com">
+     andy.cedilnik@kitware.com
+    </a>
+    ) is a senior software engineer at Kitware Inc., a small business devoted to imaging, visualization and computer graphics. He is one of the developers behind CMake, and in his spare time he is a Linux evangelist.
+   </p>
+   <p>
+    <strong>
+     Source
+    </strong>
+    :
+    <a href="http://www.linuxjournal.com/article.php?sid=6700">
+     <span style="color: #006699;">
+      www.linuxjornal.com
+     </span>
+    </a>
+   </p>
+  </div>
+ </div>
+</div>

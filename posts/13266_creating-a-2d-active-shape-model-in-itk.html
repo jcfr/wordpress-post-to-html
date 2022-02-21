@@ -1,0 +1,712 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ITK is an excellent example of an open-source framework in extreme programming. Strengths of the toolkit include superb documentation and list serve support, and a supportive and vibrant programming community. One missing area of documentation in the ITK software guide includes the implementation of itk::GeodesicActiveContourShapePriorLevelSetImageFilter. The generation of the active shape model (ASM) in this example is provided with no example code or images. Here, we provide sample images and commented code to generate an ASM using itk::ImagePCAShapeModelEstimator. We use the challenging problem of segmenting the femoral condyle cartilage of the knee in our example.
+ </p>
+ <p>
+  Many classic described segmentation algorithms such as active contours (snakes), level set, and watershed rely on edge-based criteria [1-4].  For segmentation of articular femoral knee cartilage, a solely edge-based algorithm is inadequate because of the poor contrast at the cartilage and soft tissue interfaces.  One approach is to use a priori information to create an active shape model to help guide segmentation [5].
+ </p>
+ <p>
+  The goal of an active shape model is to appropriately describe all of the allowed statistical variation of some generic shape.  The model is formed by using a training set of objects that are already segmented either manually or by some other automated or semi-automated method. The variation among the set of these previously segmented shapes is used to describe the variation of the shape model and therefore the training set needs to be a good representation of the overall distribution of allowable shapes.  This can be accomplished with a large sample size or good variation among the training images.
+ </p>
+ <p>
+  Principal component analysis (PCA) is used to decompose the large variation in the natural shapes of a given object into a set of variables that describe the majority of the variation.  The basic steps of PCA include aligning the training images, finding the corresponding landmarks, computing the covariance matrix of these landmarks, and finally finding the determinate of the covariance matrix.
+ </p>
+ <p>
+  In the first step of PCA, the training images should be transformed iteratively to maximize their overlapping area.  In the classical implementation, the N
+  <sub>
+   0
+  </sub>
+  iteration consisted of the training images being registered with the first training image using a similarity transform that can rotate, scale, and translate the image.  After this first iteration, the mean image is computed.  For the following iterations, the training images are registered to the mean image, which is then recomputed. This process eventually converges and results in a set of training images aligned with maximal overlap. A subset of aligned training images used to create the femoral cartilage shape model are shown in Figure1.
+ </p>
+ <p>
+  From this updated set of transformed, registered training images, a mean model is made by taking the mean of each pixel in the training set.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="133" src="https://blog.kitware.com/source/files/28_1632101103.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+ </p>
+ <p>
+  In classical shape model construction, the first step of the creation of an active shape model is the identification of a set of landmarks along the outline of the shape, or in this case, femoral cartilage.  Landmarks are a set of points (x,y) in the training images that describe the outline of the shapes. Each image should have the same number of landmarks and they should correspond to the same location on the general shape. The itk:ImagePCAShapeModelEstimator, however, implements automatic landmark detection by sending the images through a distance filter that changes pixel values to their distance from the border of the shape.  Pixels inside the shape are given a negative distance and pixels outside the shape are given a positive distance. Each pixel location (i,j) in the set of training images corresponds to a landmark.
+ </p>
+ <p>
+  Each of these landmarks is then tracked on each training image. The N landmarks are represented by variables X
+  <sub>
+   0
+  </sub>
+  , X
+  <sub>
+   1
+  </sub>
+  , …, X
+  <sub>
+   n-1
+  </sub>
+  . Each training image is subtracted from the mean image so that the data is normalized for principal component analysis.
+ </p>
+ <p>
+  <img alt="" height="71" src="https://blog.kitware.com/source/files/28_1616815342.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+ </p>
+ <p>
+  The nxn covariance matrix is then computed.  The size of this matrix is equal to N
+  <sup>
+   2
+  </sup>
+  where N is the number of landmarks.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="71" src="https://blog.kitware.com/source/files/28_1063105181.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+  <br/>
+  After principal component analysis is performed by finding the determinate of the covariance matrix, we have a set of eigenvalues and corresponding eigenvectors [6,7].  All of the training images can be reconstructed by combining a linear combination of the eigenvectors and the mean image.  An ample number of eigenvectors are chosen such that the sum of their eigenvalues yield a large portion of variation.
+ </p>
+ <p>
+  This model is used with a normal active contour algorithm to help constrain the region, growing to only statistically likely representations of the shape [8]. For an implementation of this segmentation, see the ITK Software Guide’s description of GeoesdicActiveContoursWithShapeGuidance [9].
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="351" src="https://blog.kitware.com/source/files/28_2044340344.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1 Subsample of the training images used
+  </em>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Implementation
+    </span>
+   </strong>
+  </span>
+  <br/>
+  Before a set of training images can be used, they must be registered to maximize overlap, which can be done manually by centering each image over a predefined landmark or other methods. For large datasets, an automated registration method is preferable. In this example, itk::TranslationTransform based on ImageRegistration1.cxx in the ITK example library is used. Each training image is registered through multiple iterations.
+ </p>
+ <p>
+  For the first round, the fixed image was chosen to be the first image in the training set, and the remaining training images were defined as the moving images. For the nth iteration, the mean image of the registered n-1 iteration was defined as the fixed image and the registered n-1 iteration images were defined as moving images. This process will
+  <br/>
+  eventually result in a set of training images that are registered to each other.
+ </p>
+ <p>
+  After the training images have been aligned through registration, an active shape model can be built.
+ </p>
+ <p>
+  First, the number of training images being used and the prefix of training images’ file names are set.  In this example, there are six training images names fixed1.jpg, fixed2.jpg,…fixed6.jpg. The number of principal components is also set.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   int NUMTRAININGIMAGES = 6;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   int NUMPC = 3;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   std::string IMAGENAME = “fixed”;
+  </span>
+ </p>
+ <p>
+  The input to the PCAShapeModelEstimator is expected to be signed distance images. The signed distance image is the distance to the edge of the shape.  A negative distance is given for pixels inside the shape and a positive distance is given for pixels outside the shape.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   typedef itk::SignedDanielssonDistanceMapImageFilter
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   &lt; OutputImageType,MapOutputImageType&gt; FilterType;
+  </span>
+ </p>
+ <p>
+  Finally, for the ImagePCAShapeModelEstimator a typedef is created and a smart pointer instance of this filter is generated. The number of training images and principal components are set.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   typedef itk::ImagePCAShapeModelEstimator
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   &lt;MapOutputImageType, InternalImageType&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   PCAEstimatorType;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   PCAEstimatorType::Pointer model =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   PCAEstimatorType::New();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   model-&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   SetNumberOfTrainingImages(NUMTRAININGIMAGES);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   model-&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   SetNumberOfPrincipalComponentsRequired(NUMPC);
+  </span>
+ </p>
+ <p>
+  Next, each training image is first read and tresholded to ensure it is a binary image, sent through the signed danielsson distance filter, and then set as the k
+  <sup>
+   th
+  </sup>
+  input to the PCAShapeModelEstimator.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   for ( unsigned int k=0; k &lt; NUMTRAININGIMAGES; k++ )
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   ThresholdingFilterType::Pointer thresholder =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   ThresholdingFilterType::New();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetLowerThreshold( 255 );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetUpperThreshold( 255 );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetOutsideValue(  0  );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetInsideValue(  255 );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   ReaderType::Pointer reader = ReaderType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   FilterType::Pointer filter = FilterType::New();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   reader-&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   SetFileName(trainingImageNames[k].c_str());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetInput(reader-&gt;GetOutput());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   filter-&gt;SetInput(thresholder-&gt;GetOutput());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   filter-&gt;Update();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   model-&gt;SetInput(k, filter-&gt;GetOutput());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   }
+  </span>
+ </p>
+ <p>
+  Next, update is called to invoke the estimator.  When it is finished, its print method is called to output information about the filter.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   model-&gt;Update();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   model-&gt;Print(std::cout);
+  </span>
+ </p>
+ <p>
+  The principal component and mean image are saved.  The 0th output of the ImagePCAShapeModelEstimator is the mean image, and the nth principal component image is the n+1th output of the filter. The principal component images’ names are created using itkNumericSeriesFileNames.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   WriterType::Pointer writer = WriterType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   writer-&gt;SetFileName(“meanImage.mha”);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   writer-&gt;SetInput(model-&gt;GetOutput(0));
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   writer-&gt;Update();
+  </span>
+ </p>
+ <p>
+  The eigenvalues are printed to the console.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   vnl_vector&lt;double&gt; eigenValues(NUMPC);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   eigenValues = model-&gt;GetEigenValues();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   std::cout &lt;&lt; eigenValues &lt;&lt; std::endl;
+  </span>
+ </p>
+ <p>
+  Finally, each of the principal components are written.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   for (unsigned int i = 0; i &lt; NUMPC; i++)
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   //normalizing the images
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   DivideFilterType::Pointer divider =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   DivideFilterType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   divider-&gt;SetInput(model-&gt;GetOutput(i+1));
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   divider-&gt;SetScale(1.0/sqrt(eigenValues(i)));
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   WriterType::Pointer myWriter =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   WriterType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   myWriter-&gt;SetFileName
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   (outputImageNames[i].c_str());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   myWriter-&gt;SetInput(model-&gt;GetOutput(i+1));
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   myWriter-&gt;Update();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   }
+  </span>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Viewing Variations of the Shape Model
+   </strong>
+  </span>
+  <br/>
+  The variations of the shape model can be viewed to verify accuracy and to visually appreciate the source of deviation in the model.  In theory, we can view any linear combination of the principal components, but in practice it is easier to view each principal component individually. The following code can be found in ViewShapeModel.cxx and is used to view any real number multiples of standard deviations of a principal component.
+ </p>
+ <p>
+  The mean image and principal component image are read.  The MultiplyByConstantImageFilter is used to multiply the scale constant to the principal component image.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   Typedef itk::MultiplyByConstantImageFilter
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   &lt;InternalImageType,float,InternalImageType&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   MultType;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   MultType::Pointer multFilter = MultType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   MultType::Pointer multFilter2 = MultType::New();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   multFilter-&gt;SetInput(reader2-&gt;GetOutput());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   multFilter-&gt;SetConstant((float)SCALE_CONSTANT);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   multFilter2-&gt;SetInput(reader3-&gt;GetOutput());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   multFilter2-&gt;SetConstant((float)SCALE_CONSTANT);
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   try
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   multFilter-&gt;Update();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   multFilter2-&gt;Update();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   }
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   catch( itk::ExceptionObject &amp; err )
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   std::cout
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   &lt;&lt; “multFilter exception caught !”
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   &lt;&lt; std::endl;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   std::cout &lt;&lt; err &lt;&lt; std::endl;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   }
+  </span>
+ </p>
+ <p>
+  The AddImageFilter is used to add the offset to the mean image to get the positive deviation from the mean shape.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   typedef itk::AddImageFilter&lt;InternalImageType,
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   InternalImageType, InternalImageType&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   AddFilterType;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   AddFilterType::Pointer addFilter =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   AddFilterType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   addFilter-&gt;SetInput1(reader1-&gt;GetOutput());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   addFilter-&gt;SetInput2(multFilter-&gt;GetOutput());
+  </span>
+ </p>
+ <p>
+  The SubtractImageFilter is used to subtract the offset from the mean image to get the negative deviation from the mean shape.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   typedef itk::SubtractImageFilter&lt;InternalImageType,
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   InternalImageType, InternalImageType&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   SubFilterType;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   SubFilterType::Pointer subFilter =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   SubFilterType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   subFilter-&gt;SetInput1(reader1-&gt;GetOutput());
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   subFilter-&gt;SetInput2(multFilter2-&gt;GetOutput());
+  </span>
+ </p>
+ <p>
+  The outputs of the filters are thresholded.  A value of zero should correspond with the the boudnary of the shape.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   typedef itk::BinaryThresholdImageFilter&lt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   InternalImageType, OutputImageType&gt;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   ThresholdingFilterType;
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   ThresholdingFilterType::Pointer thresholder = ThresholdingFilterType::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   ThresholdingFilterType::Pointer thresholder2 = ThresholdingFilterType::New();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetLowerThreshold( low );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetUpperThreshold( high );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetOutsideValue(  0  );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetInsideValue(  255 );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder-&gt;SetInput(addFilter-&gt;GetOutput());
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   thresholder2-&gt;SetLowerThreshold( low );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder2-&gt;SetUpperThreshold( high );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   thresholder2-&gt;SetOutsideValue(  0  );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder2-&gt;SetInsideValue(  255 );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   thresholder2-&gt;SetInput(subFilter-&gt;GetOutput());
+  </span>
+ </p>
+ <p>
+  The output images are then written
+ </p>
+ <p>
+  writer-&gt;SetInput( thresholder-&gt;GetOutput() );
+  <br/>
+  writer-&gt;SetFileName(outputfile1);
+ </p>
+ <p>
+  writer2-&gt;SetInput( thresholder2-&gt;GetOutput() );
+  <br/>
+  writer2-&gt;SetFileName(outputfile2);
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Results
+   </span>
+   <br/>
+  </strong>
+  The mean image for the femoral cartilage is shown in Figure 2.  It clearly resembles the average of all the training images.  The first principle component contains the majority of the variation.  Using the first four principle components, about 98% of the variation of the knee cartilage can be represented [8-9].
+ </p>
+ <p>
+  Figure 3 shows the first four principle components influence on the mean shape and the percent of the variation they describe.  The first principle component controls the shift in the mass of the cartilage from the left to the right side.  The influence of the other components is less easily describable, but can be easily observed.
+ </p>
+ <p>
+  There are some common pitfalls in using active shape models for segmentation.  One is not having an adequately sized training set. Here, our training image set contains only 6 images to demonstrate implementation of the code and not the method’s accuracy. As our training image set is limited in size, this is a primitive example with decreased accuracy. In practice, an image set should contain an order of magnitude of 100 images to capture the necessary statistical variance in the shape to have acceptable segmentation accuracy.
+ </p>
+ <p>
+  Another pitfall is lacking significant overlap in the training images. This will manifest itself as a completely black mean image or a mean image with a smaller than expected mass.  Finally, attempting to segment an object that is outside the deformability of the shape model can result in poor results; for example, attempting to segment severely degenerative cartilage with an active shape model created entirely from individuals with normal cartilage.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="235" src="https://blog.kitware.com/source/files/28_55653013.png" style="display: block; margin-left: auto; margin-right: auto;" width="350"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2 Mean image for femoral articular knee cartilage.
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <em>
+  </em>
+ </p>
+ <p>
+  <img alt="" height="201" src="https://blog.kitware.com/source/files/28_1969648825.png" style="display: block; margin-left: auto; margin-right: auto;" width="350"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3 Effect of the first four principal components
+  </em>
+  <br/>
+  <em>
+   (X±2σ).  λ1-λ4 from left-to-right.  Percent variation represented
+  </em>
+  <br/>
+  <em>
+   is calculated by dividing the corresponding Eigenvalue by the
+  </em>
+  <br/>
+  <em>
+   sum of all Eigenvalues.
+  </em>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    References
+   </strong>
+  </span>
+  <br/>
+  [1]   Sethian, J.A. “Level Set Methods: An Act of Violance.  Cambridge University Press, 1996.
+  <br/>
+  [2]   Caselles V, Kimmel R, and Sapiro G.  “Geodesic Active Contours”.  International Journal of Computer Vision.  22(1), 61-79(1997).
+  <br/>
+  [3]   Kass M, Witkin A, Terzopoulos D.  “Snakes: Active Contour Models”.  International Journal of Computer Vision.  1(4), 321-331(1988).
+  <br/>
+  [4]   Beucher S and Meyer F.  “The Morphological Approach of Segmentation:  The Watershed Transformation”.  Mathematical Morphology in Image Processing, E.  Dougherty, ed., chapter 12, pp. 43-481, New York: Marcel Dekker, 1992.
+  <br/>
+  [5]   Cootes T, Taylor C, Cooper D, and Graham J. “Active Shape Models—Their Training and Application”.  Computer Vision and Image Understanding Vol. 61, No. 1, January, pp. 38-59, 1995.
+  <br/>
+  [6]   Flury, Bernhard and Riedwyl, Hans.  Multivariate Statistics a practical approach. New York, NY: Chapman and Hall 1988.
+  <br/>
+  [7] Smith, Lindsay. “A tutorial on Principal Component
+  <br/>
+  Analysis”. 26 February, 2002. &lt;http://www.cs.otago.ac.nz/cosc453/student_tutorials/principal_components.pdf&gt;
+  <br/>
+  [8]  Leventon M, Grimson W, and Faugeras O. “Statistical shape influence in geodesic active contours.  In Proc. IEEE Conference on Computer Vision and Pattern Recognition.  Volumne 1. Pp. 316-323, 2000.
+  <br/>
+  [9]   Ibàñez L, Schroeder W, Ng L, Cates J. The ITK Software Guide Second Edition. November 21, 2005.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="187" src="https://blog.kitware.com/source/files/28_1661299487.png" style="float: left;" width="150"/>
+ </p>
+ <p>
+  <strong>
+   John Durkin
+  </strong>
+  is currently an M.D. student at the University of Pittsburgh School of Medicine.  He received his B.S. in Computer Engineering from Penn State University in 2010, where he used ITK in his honors thesis work on knee cartilage segmentation.  His research interests include developing automated methods for diagnosing ciliary motion defects using computer vision and image processing techniques.
+ </p>
+ <p>
+  <p>
+   <p>
+    <p>
+     <p>
+      <img alt="" height="188" src="https://blog.kitware.com/source/files/28_1267749351.png" style="float: left;" width="150"/>
+     </p>
+     <p>
+      <strong>
+       Ken Urish
+      </strong>
+      is an Orthopedic Surgery resident at the Penn State Milton S. Hershey Medical Center. He completed a combined M.D. Ph.D. degree at the University of Pittsburgh. During his thesis, he used ITK and VTK to design software for high throughput automated microscopy. His current research interests include using quantitative MRI analysis for early detection of osteoarthritis. He is a major supporter of ITK’s philosophy – open source is open science.
+     </p>
+     <p>
+      <p>
+       <p>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</div>

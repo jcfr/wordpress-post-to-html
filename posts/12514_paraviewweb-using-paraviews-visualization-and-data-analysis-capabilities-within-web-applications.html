@@ -1,0 +1,98 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p dir="ltr" id="docs-internal-guid-7e234282-3b79-bec8-059b-e1872f39555a">
+  <strong>
+   Background
+  </strong>
+ </p>
+ <p dir="ltr">
+  <a href="http://www.paraview.org/web/">
+   ParaViewWeb
+  </a>
+  is a collection of components that enable the use of ParaView's visualization and data analysis capabilities within Web applications. More specifically, ParaViewWeb uses ParaView to generate data products on the server-side and to rapidly deliver those data products over the Internet to a Web client.
+ </p>
+ <p dir="ltr">
+  ParaViewWeb was developed as a framework used to leverage the power of VTK and ParaView in an interactive manner, and it is part of ParaView’s distributed binaries for Linux and Mac. ParaViewWeb relies on HTML 5.0 technologies, such as WebSockets and WebGL, which enable a subset of desktop and mobile Web browsers. ParaViewWeb provides for communication with a ParaView server running on a remote visualization node or cluster using a lightweight JavaScript API. Using this API, Web applications can easily embed interactive 3D visualization components.
+ </p>
+ <p dir="ltr">
+  <strong>
+   ParaViewWeb and Python
+  </strong>
+ </p>
+ <p dir="ltr">
+  ParaViewWeb’s framework leverages Python. Accordingly, ParaViewWeb’s processing and visualization capabilities can be used in any existing python framework, such as iPython. ParaViewWeb uses a simple Python script to expose ParaView’s HPC large data analysis and visualization capabilities through a Web server. ParaViewWeb allows the end-user to perform computationally intensive analysis and visualization tasks within a Web browser by relying on a remote, and possibly distributed, ParaView server for parallel processing and/or rendering.
+ </p>
+ <p dir="ltr">
+  <strong>
+   Framework and Application
+  </strong>
+ </p>
+ <p dir="ltr">
+  ParaViewWeb is both a framework and an application. The application for ParaviewWeb is the WebVisualizer. Essentially, WebVisualizer provides a Web-based front-end to ParaView. WebVisualizer was developed to analyze extremely large datasets using distributed memory computing resources. It can be run on supercomputers to analyze datasets of exascale size, as well as on laptops for smaller data. With WebVisualizer, end-users can quickly build visualizations to analyze their data using qualitative and quantitative techniques. This data exploration can be done interactively in 3D.
+ </p>
+ <p dir="ltr">
+ </p>
+ <p dir="ltr">
+  <img alt="Displaying ParaViewWebVisualizer.png" height="424px;" src="https://lh6.googleusercontent.com/1X2z6gnRmJm-R4tUYF755_15iCo0PPwVIbJnsW9Kbo_h_ICFbdAPPUEedcbOKVGa-9KylONXBMpDdhvDJrJCeno7YKNcLzq8nGM8KKbsuU2Ts3cVbfCL9P1Wyxe-Bpvvzg" style="border:none;" width="624px;"/>
+ </p>
+ <p dir="ltr">
+ </p>
+ <p dir="ltr">
+  <strong>
+   Single and Multi-User Deployment
+  </strong>
+ </p>
+ <p dir="ltr">
+  ParaViewWeb can be deployed for one user or multiple users. The figure below illustrates how a single end-user or developer of an existing ParaViewWeb application (e.g., pv_web_visualizer.py) can begin interacting with a local ParaViewWeb server.
+ </p>
+ <p dir="ltr">
+ </p>
+ <p dir="ltr">
+  <img height="132px;" src="https://lh6.googleusercontent.com/IhZbkwz0cVDm0i3_8IgGsKtKfx-VX9EoYk03K-E_Q5_EKT2_zX-Nug6dfcHlWmRzNZRNMXREw9mo8-DG5HqkGYvc0azW5dbD3iY7s-2Y0tg-PYBHbV_Dv28prriegeOgFA" style="border:none;" width="479px;"/>
+ </p>
+ <p dir="ltr" style="text-align: center;">
+  <em>
+   Single end-user ParaViewWeb technologies and layers.
+  </em>
+ </p>
+ <p dir="ltr" style="text-align: center;">
+ </p>
+ <p dir="ltr">
+  In order to support the connection of several end-users in different visualization sessions, the server must provide a single entry point to establish a connection, as well as a mechanism to start a new visualization session on demand.
+ </p>
+ <p dir="ltr">
+  The figure below illustrates a multi-user setup where Apache is used as a front-end application to deliver the static content (HTML, JavaScript, CSS, images) and to forward the WebSocket communication to the appropriate back-end visualization session.
+ </p>
+ <p>
+ </p>
+ <p dir="ltr">
+  <img height="133px;" src="https://lh5.googleusercontent.com/NqFsneTgrvttJI9sJYUcQicmw3VzrXEb2-K6MqhF7wQmO3S2-wQSOyNfbQ-QVYWEpCPINrNohxpJDu-dpqoRxrLge_5WqhnjyAeyesQmfWy58mnK6CLm8ZmKJNcFEKUbKg" style="border:none;" width="624px;"/>
+ </p>
+ <p dir="ltr" style="text-align: center;">
+  <em>
+   Multi-user ParaViewWeb technologies and layers.
+  </em>
+ </p>
+ <p dir="ltr" style="text-align: center;">
+ </p>
+ <p dir="ltr">
+  A launcher process is used to dynamically start the pvpython process with appropriate arguments for the visualization session. Even though this setup is more complex than the ad-hoc, single end-user setup, it remains easy and practical to implement for a variety of institutions.
+ </p>
+ <p dir="ltr">
+  <strong>
+   Evolution of ParaViewWeb
+  </strong>
+ </p>
+ <p dir="ltr">
+  We recently redesigned ParaViewWeb and made advances to the ParaViewWeb server-side infrastructure, in addition to the Web Visualizer client-side application. Our goals were to make ParaViewWeb easy to build, easy to secure, and easy to deploy. We also wanted ParaViewWeb to be able to leverage new technologies and to enforce best practice for client/server architecture. The redesign has brought many improvements to ParaViewWeb.
+ </p>
+ <p dir="ltr">
+  One major improvement is the migration from WAMP (Web Application Messaging Protocol) v1 to WAMP v2, using the latest Autobahn Python. This migration allow us to be compatible with Crossbar.io (http://crossbar.io) and leverage the work made on alternative protocols such as long-polling for browsers that do not support WebSockets like IE9. Another major improvement is that the new infrastructure has enhanced security to prevent the evaluation of arbitrary strings (Python “eval”) during server-side proxy creation.
+ </p>
+ <p>
+  In addition, the server-side proxy management has also been improved to allow clients to get and set nearly any property available to Python scripts on the server. The server-side color management protocols have also been redesigned to support the ability to color by a vector component or by magnitude, as well as to define and choose custom color palettes. Furthermore, the WebVisualizer application UI has been redesigned to take advantage of the many recent server-side improvements and to provide a cleaner look and feel.
+ </p>
+ <p>
+  While the new architecture allows ad-hoc usage of ParaViewWeb services with distributed binaries, it also makes it simple to embed real-world, 3D visualizations in any Web application!
+ </p>
+</div>

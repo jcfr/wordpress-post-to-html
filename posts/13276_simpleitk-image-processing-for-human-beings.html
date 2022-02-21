@@ -1,0 +1,162 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The year 2011 has been a great one for ITK. The large-scale effort of revising, accelerating and simplifying the toolkit is coming to fruition with the upcoming release of ITKv4. Among the many interesting novelties of ITKv4, one that we anticipate making a big impact is the new simplified API layer that has been developed on top of ITK, under the project name of SimpleITK (
+  <a href="http://www.simpleitk.org">
+   http://www.simpleitk.org
+  </a>
+  ).
+ </p>
+ <p>
+  As most ITK users already know, at its core, ITK is implemented in C++ using many advanced programming features to deliver performance, flexibility and efficiency. However, many application developers prefer to work in interpreted languages or other programming languages, such as Python and Java, which the existing WrapITK module enables. Additionally, many users wish to take advantage of the power of ITK with minimal complexity. SimpleITK has been developed to satisfy the needs of these users, particularly those interested in rapid prototyping and education. Please note that WrapITK continues to be under active development and will be broadly distributed as well as part of ITKv4.
+ </p>
+ <p>
+  SimpleITK is a cross-language programming interface to ITK, whose primary goal is to provide a high level of usability. SimpleITK facilitates rapid prototyping and use of ITK’s algorithms from an interactive interpreter. To expose a simplified version of ITK functionalities, SimpleITK is built internally by a code generation infrastructure comprising CMake, Lua, and JSON. A large set of commonly used ITK image processing filters are presented at the SimpleITK level as C++ classes that perform the equivalent image processing operations.
+ </p>
+ <p>
+  SimpleITK provides support for 2D and 3D images, and a selected set of pixel types for them. Different image filters may support different collections of pixel types, in many cases due to computational requirements. The library is wrapped for interpreted languages by using SWIG.
+ </p>
+ <p>
+  In particular, the following wrappings are available: Python, Java, Tcl, Lua, R and Ruby.
+ </p>
+ <p>
+  For the purpose of simplification, SimpleITK does not expose all the features of ITK, including exposure of the pipeline architecture, support for streaming, and support for very large images. It is anticipated that once users become sophisticated enough to need these features, they will be ready to take advantage of ITK proper.
+ </p>
+ <p>
+  Like ITK, the SimpleITK library is copyrighted by the Insight Software Consortium and is distributed under the Apache 2.0 License. Following open source traditions, we anticipate that SimpleITK will build a blossoming community of users and new developers who can use, debug, maintain, and extend the software. SimpleITK embraces the same Agile programming practices used by ITK, which collapse the usual software creation methodology into a simultaneous and iterative process of design-implement-test-release. In particular, SimpleITK uses an extensive testing process (using CDash) featuring nightly and continuous builds.
+ </p>
+ <p>
+  SimpleITK was funded by the National Library of Medicine under the American Recovery and Reinvestment Act (ARRA), along with many other improvements to ITK that are part of the ITKv4 revision, simplification and refactoring initiative.
+ </p>
+ <p>
+  Since many developers believe in the maxima “Talk is cheap, show me the code” (Linus Torvals), here are some code snippets from the examples that should give you a rapid overview of how SimpleITK will change the world:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 600px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      #include &lt;SimpleITK.h&gt;
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      namespace sitk = itk::simple;
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      int main ( int argc, char* argv[] ) {
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      sitk::Image image =
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      sitk::ReadImage( std::string( argv[1] ) );
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      sitk::PixelIDValueType inputPixelID =
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      image.GetPixelIDValue();
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      image = sitk::SmoothingRecursiveGaussian
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      ( image, atof ( argv[2] ) );
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      image = sitk::Cast( image, inputPixelID );
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      sitk::WriteImage(image,std::string(argv[3]));
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      return 0;
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      }
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Or the equivalent in Python:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 600px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      import SimpleITK as sitk
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      import sys
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      reader = sitk.ImageFileReader()
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      reader.SetFileName ( sys.argv[1] )
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      image = reader.Execute()
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      pixelID = image.GetPixelIDValue()
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      gaussian = sitk.SmoothingRecursiveGaussianImageFilter()
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      gaussian.SetSigma ( float ( sys.argv[2] ) )
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      image = gaussian.Execute ( image )
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      writer = sitk.ImageFileWriter()
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      writer.SetFileName ( sys.argv[3] )
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier;">
+      writer.Execute ( image )
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  We encourage you to give SimpleITK a try and provide feedback to the ITK developers’ mailing list on how the SimpleITK API can be improved and extended.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_610536234.gif" style="border: 0pt none; float: left;" width="80"/>
+ </p>
+ <p>
+  Luis Ibáñez is a Technical Leader at Kitware, Inc . He is one of the main developers of the Insight Toolkit (ITK). Luis is a strong supporter of Open Access publishing and the verification of reproducibility in scientific publications.
+ </p>
+ <p>
+ </p>
+</div>

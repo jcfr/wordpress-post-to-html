@@ -1,0 +1,306 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Many traumatic brain injury (TBI) cases involve blunt force damage resulting from the brain hitting the skull due to rapid acceleration/deceleration, e.g., during car accidents. The damage exists as lesions with hemorrhagic and nonhemmorhagic components. In order to plan treatment for TBI, patients typically receive an MRI scan on initial presentation in the clinic, and another one four-to-eight months later. The clinical goal is to distinguish areas in these scans that represent permanent damage from those that represent transient effects (see Figure 1). Determining the regions where the hemorrhage has receded can be particularly useful in predicting long-term outcome. However, the geometry of the lesion, the deformation of the brain due to swelling, the presence of the lesion, and the infiltration of the hemorrhage into the brain can cause drastic changes between these scans and confound the determination of correspondence and hemorrhage recession.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_877675442.jpg" style="border: 0pt none; display: block; margin-left: auto; margin-right: auto;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1. MRI scans from a TBI patient. Left: Initial scan. Right: Rigidly registered scan acquired eight months later. The TBI lesion is circled in both. Notice the presence of brain deformations, the change in the lesion’s shape, and the conversion of some tissue from a diseased state (hemorrhagic) to a healthy state. Traditional registration methods fail to align these data: the mapping from one to the other cannot be fully explained by a spatial transform.
+  </em>
+ </p>
+ <p>
+  Using data from TBI patients from the University of California at Los Angeles, Kitware and the University of North Carolina at Chapel Hill have been developing registration algorithms that can help distinguish permanent damage from transient effects in longitudinal MRI scans.
+ </p>
+ <p>
+  Our methods can distinguish global tissue deformations, local changes in the geometry of a lesion, and local changes in the composition of the tissue and the lesion. We refer to this collection of changes as “geometric metamorphosis.” These changes are also evident in tumor cases where post-treatment assessment requires determination of changes in tumor geometry, tumor infiltration, scarring, and overall brain morphology. Similarly, in stroke cases, there is a clinical need to predict chronic changes in blood perfusion from acute scans.
+ </p>
+ <p>
+  Working as a team, we have produced a paper that details our algorithms and provides extensive experimental results. That paper has been accepted for publication at the Medical Image Computing and Computer-Assisted Intervention (MICCAI) conference to be held in Toronto, Canada, September 18-22, 2011. [Neithammer2011]
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Related Works
+   </strong>
+  </span>
+  <br/>
+  Most image transformation models will fail in the presence of lesions that infiltrate or recede from healthy tissue and that deform the healthy tissue, as is common with tumors and other lesions. Direct application of a classical, deformable registration method will likely produce unrealistic deformation estimates. To overcome this limitation, deformable registration methods with weak and strong models of appearance change have also been proposed [3, 6]; proposed changes include models of tumor growth, for example. However, these methods are application-specific and degrade when their tumor growth model does not match the changes in the specific patient being registered.
+ </p>
+ <p>
+  Others [4, 7, 1] attempt to pre-mask areas in and around each lesion that cannot be matched. However, areas within these regions do not then contribute to the computation of the deformable registration. Therefore, registration in and around the lesion, where it may be clinically most important, may be poor. Our method explicitly includes a geometric model of the pathology so that its deformations can be explicitly captured in conjunction with the deformations of the underlying image.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: small;">
+     Methods
+    </span>
+   </strong>
+  </span>
+  <br/>
+  The basis of our work is that a registration method should be able to distinguish image appearance changes arising from the composition of (a) background deformations of the image with (b) foreground deformations of an embedded geometric object, e.g., a tumor. We model these transformations through a large displacement diffeomorphic metric mapping (LDDMM) [5]. LDDMM, however, is an inexact matching registration algorithm that only allows for the deformation of the source image and not for a change of its appearance.
+ </p>
+ <p>
+  In order to explicitly model appearance changes, we augment the LDDMM registration model with an extra control to model foreground deformation of a geometric model, which induces image appearance changes through an image composition model.
+ </p>
+ <p>
+  Specifically, we define the geometric metamorphosis problem as the minimization of:
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_1642422376.jpg" style="border: 0pt none; display: block; margin-left: auto; margin-right: auto;" width="550"/>
+ </p>
+ <p>
+  where
+  <em>
+   I
+   <sub>
+    0
+   </sub>
+  </em>
+  is the source image that is being warped to the target image
+  <em>
+   I
+   <sub>
+    1
+   </sub>
+  </em>
+  and
+  <em>
+   I(1)
+  </em>
+  represents the warped source image.
+  <em>
+   T
+   <sub>
+    1
+   </sub>
+  </em>
+  is the geometric model of the lesion in
+  <em>
+   I
+   <sub>
+    0
+   </sub>
+  </em>
+  ;
+  <em>
+   T
+   <sub>
+    2
+   </sub>
+  </em>
+  is the geometric model of the lesion in
+  <em>
+   I
+   <sub>
+    1
+   </sub>
+  </em>
+  ; and
+  <em>
+   I
+   <sup>
+    τ
+   </sup>
+   (1)
+  </em>
+  represents the warped
+  <em>
+   T
+   <sub>
+    1
+   </sub>
+  </em>
+  .
+  <em>
+   v
+  </em>
+  is the foreground (non-lesion) deformation field.
+  <em>
+   v
+   <sub>
+    τ
+   </sub>
+  </em>
+  is the background (lesion) deformation field. Note that the geometric model
+  <em>
+   T
+   <sub>
+    1
+   </sub>
+  </em>
+  and its image
+  <em>
+   I
+   <sup>
+    τ
+   </sup>
+  </em>
+  are subject to both deformations, whereas the source image is only subjected to the background deformation.
+  <em>
+   L
+  </em>
+  is a differential operator that controls the spatial regularity of these deformation fields.
+  <em>
+   σ
+  </em>
+  controls the weighting of the image match term.
+  <em>
+   w
+  </em>
+  ∈ (0, 1) controls the trade-off between background and foreground deformations.
+  <em>
+   Sim
+  </em>
+  denotes a similarity measure of choice; we use the
+  <em>
+   L
+   <sub>
+    2
+   </sub>
+  </em>
+  distance measure. Two similarity terms are used to assure matching of (a) the regions that correspond in both images and (b) the geometric models.
+  <em>
+   I
+   <sup>
+    c
+   </sup>
+   (•, •, •)
+  </em>
+  denotes the image composition model. Additional detail is given in the full version of our paper [2].
+ </p>
+ <p>
+  References
+  <br/>
+  [1] Brett, M., Lee, A., Rorden, C., Ashburner, J.: Spatial normalization of brain images with focal lesions using cost function
+  <br/>
+  masking. Neuroimage 14(2), 486-500(2001)
+  <br/>
+  [2] Niethammer, M., Hart, G., Pace, D., Vespa, P., Irimia, A., Van Horn, J., and Aylward, S., Geometric Metamorphosis. To
+  <br/>
+  Appear, Medical Image Computing and Computer-Assisted Interventions, Toronto, September, 2011
+  <br/>
+  [3] Hogea, C., Davatzikos, C., Biros, G.: An image-driven parameter estimation problem for a reaction-diffusion glioma growth
+  <br/>
+  model with mass effects. Journal of Mathematical Biology 56(6), 793-825 (2008)
+  <br/>
+  [4] Lamecker, H., Pennec, X.: Atlas to image-with-tumor registration based on demons and deformation inpainting. In: Proc.
+  <br/>
+  MICCAI Workshop on Computational Imaging Biomarkers for Tumors – From Qualitative to Quantitative (CIBT’2010) (2010)
+  <br/>
+  [5] Miller, M.I., Younes, L.: Group actions, homeomorphisms, and matching: A general framework. International Journal of
+  <br/>
+  Computer Vision 41(1/2), 61-84 (2001) [6] Prastawa, M., Bullitt, E., Gerig, G.: Simulation of brain tumors in MR images for
+  <br/>
+  evaluation of segmentation efficacy. Medical image analysis 13(2), 297-311 (2009)
+  <br/>
+  [7] Stefanescu, R., Commowick, O., Malandain, G., Bondiau, P., Ayache, N., Pennec, X.: Non-rigid atlas to subject registration
+  <br/>
+  with pathologies for conformal brain radiotherapy. In: Barillot,C., Haynor, D.R., Hellier, P. (eds.) Medical Image Computing
+  <br/>
+  and Computer-Assisted Intervention, MICCAI 2004. pp. 704-711 (2004)
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_1326921872.JPG" style="float: left; border: 0pt none;" width="75"/>
+ </p>
+ <p>
+  <em>
+   <strong>
+    Stephen Aylward
+   </strong>
+   is Kitware’s Director of Medical Imaging Research. He is also an adjunct professor at UNC, an Associate
+  </em>
+  <em>
+   Editor of IEEE transactions on Medical Imaging, and PI for a wide range of NIH-funded research efforts.
+  </em>
+ </p>
+ <p>
+  <p>
+   <p>
+    <em>
+    </em>
+   </p>
+   <p>
+    <img alt="" src="https://blog.kitware.com/source/files/3_1181635986.JPG" style="float: left; border: 0pt none;" width="75"/>
+   </p>
+   <p>
+    <em>
+     <strong>
+      Gabe Hart
+     </strong>
+     joined Kitware in June, 2010 as an R&amp;D engineer in the medical imaging group. Prior to joining, he studied medical image analysis at UNC, Chapel Hill. He splits his time between the ITKVideo and SimpleITK groups in the ITK v4.0 team and the NAMIC algorithms research team.
+    </em>
+   </p>
+   <p>
+    <p>
+     <p>
+      <em>
+      </em>
+     </p>
+     <p>
+      <img alt="" src="https://blog.kitware.com/source/files/3_1075443335.jpg" style="float: left; border: 0pt none;" width="75"/>
+     </p>
+     <p>
+      <em>
+       <strong>
+        Marc Niethammer
+       </strong>
+       is an Assistant Professor at the University of North Carolina in the Department of Computer Science and the
+      </em>
+      <em>
+       Biomedical Research Imaging Center. He received his Ph.D. in Electrical and Computer Engineering from the Georgia Institute of
+      </em>
+      <em>
+       Technology and post-doctoral training at Harvard Medical School/Brigham and Women’s Hospital.
+      </em>
+     </p>
+     <p>
+      <em>
+      </em>
+     </p>
+     <p>
+      <img alt="" src="https://blog.kitware.com/source/files/3_971177680.JPG" style="float: left; border: 0pt none;" width="75"/>
+     </p>
+     <p>
+      <em>
+       <strong>
+        Danielle Pace
+       </strong>
+       is a Research and Development Engineer in Kitware’s medical imaging team. She joined Kitware’s North Carolina office in July 2010, and works on both research in deformable image registration and software engineering for 3D Slicer and Kitware’s commercial consulting projects.
+      </em>
+     </p>
+     <p>
+      <p>
+       <p>
+        <em>
+        </em>
+       </p>
+       <p>
+        <img alt="" src="https://blog.kitware.com/source/files/3_288274998.jpg" style="float: left; border: 0pt none;" width="75"/>
+       </p>
+       <p>
+        <em>
+         <strong>
+          Jack Van Horn
+         </strong>
+         is an Assistant Professor of Neurology at UCLA. He completed his doctoral work at the University of London, he
+        </em>
+        <em>
+         has over 20 years of experience in the field of human neuroimaging, neurology, cognitive neuroscience, and large-scale data
+        </em>
+        <em>
+         analysis and visualization.
+        </em>
+       </p>
+       <p>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</div>

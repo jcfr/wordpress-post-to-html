@@ -1,0 +1,135 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  This blog entry is the last in a series of three articles reporting on the results of our ongoing collaboration with
+  <em>
+   Commissariat à l’Energie Atomique
+  </em>
+  (CEA),
+  <em>
+   Direction des Applications Militaires Île-de-France
+  </em>
+  (DIF), France, where a domain-specific visualization tool based on VTK and ParaView server is developed. In the
+  <a href="https://blog.kitware.com/annotation-features-added-to-vtk/">
+   first article
+  </a>
+  , we explained how we extended the annotation capabilities of VTK by either integrating into VTK routines that had been developed in-house at CEA/DIF, or by writing new functionalities altogether. In the
+  <a href="https://blog.kitware.com/new-mesh-selection-and-extrusion-capabilities-in-vtk/">
+   second article
+  </a>
+  , we reported on new capabilities which we added into VTK 5.10, in the field of mesh manipulation.
+ </p>
+ <p>
+  In this third article, we finally describe how we enhanced the Youngs material interface reconstruction filter, of which an earlier version had been contributed to VTK by CEA/DIF in 2009. We also report on the introduction of a corresponding filter into ParaView, with the addition of a custom panel due to the complexity of the input parameters to this filter.
+ </p>
+ <p>
+  <strong>
+   <span style="text-decoration: underline; font-size: medium;">
+    Youngs Material Interface Reconstruction in VTK
+   </span>
+  </strong>
+ </p>
+ <p>
+  The
+  <span style="font-family: terminal,monaco; font-size: small;">
+   vtkYoungsMaterialInterface
+  </span>
+  filter reconstructs material interfaces from a mesh containing mixed cells (i.e., a mesh where several materials are or can be mixed within each individual cell). It is based on a method attributed to D.L. Youngs (
+  <em>
+   “Time-dependent multi-material flow with large distortion,”
+  </em>
+  Num. Meth. Fluid Dynamics, Academic Press, New York, 1982), then generalized to arbitrary cell types; it works on both 2D and 3D meshes.In each cell, this algorithm builds linear interfaces between the materials present in the cell by: 1) assigning to each material present in this cell an area fraction of the cell equal to its volume fraction (a number between 0 and 1); and 2) creating linear inter-material boundaries that are normal to vectors specified per-cell and per-material. As a result, the reconstructed material interfaces are not, as a rule, continuous across cell boundaries. However, the reconstructed interfaces provide a quantitative visualization of the volume fractions involved which is more meaningful than a mere display of those volume fractions individually.
+ </p>
+ <p>
+  <iframe frameborder="0" height="275" src="http://player.vimeo.com/video/42561962" style="display: block; margin-left: auto; margin-right: auto;" width="500">
+  </iframe>
+ </p>
+ <p>
+  <a class="actionUpload">
+   The animation above illustrates the use of
+  </a>
+  <span style="font-size: small; font-family: terminal,monaco;">
+   <a class="actionUpload">
+    vtkYoungsMaterialInterface
+   </a>
+  </span>
+  <a class="actionUpload">
+   at various time steps of a two-dimensional simulation of two-material instabilities displaying only one material and its reconstructed interface.
+  </a>
+ </p>
+ <p>
+  As part of the current collaboration, we integrated the algorithmic improvements that had been made at CEA/DIF since 2009 into an enhanced  class. We also re-implemented the novel parallel aggregation into an ancillary
+  <span style="font-size: small;">
+   <a class="actionUpload">
+    vtkPYoungsMaterialInterface
+   </a>
+  </span>
+  class in order to remove the parallel dependencies from the main implementation. In addition, we added regression tests for this class, which probably because of its complexity, had never been systematically tested since its introduction into VTK. Finally, and because of the complexity in the utilization of this filter, we created a Python script that demonstrates most of its features; it is available in VTK 5.10 under
+  <span style="font-family: terminal,monaco; font-size: small;">
+   Examples/Graphics/Python/
+  </span>
+  .
+  <a class="actionUpload">
+   <br/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   <span style="text-decoration: underline; font-size: medium;">
+    Youngs Material Interface Reconstruction in ParaView
+   </span>
+  </strong>
+ </p>
+ <p>
+  This filter also has a number of control parameters, such as the ability to handle axis-symmetric cases; the option to either construct the interface alone or to “fill” it with the corresponding material; support for various interface and normal ordering strategies, among others. These various input parameters result in a filter that is already quite complicated to use in VTK, as it allows for several modes of operation that are not all valid on any given type of input. Of particular importance is the fact that individual volume fraction (scalar) and normal (vector) arrays must be assigned to each material, whose number and names vary with the input itself. In addition, the algorithm accepts an (optional) ordering array as an additional input parameter, also defined on a per-material basis, to specify the order in which materials should be processed when reconstructing the interfaces; this operation is generally not commutative when there are more than two materials involved.
+ </p>
+ <p>
+  <a href="/blog/files/128_265201125.png" rel="noopener" target="_blank">
+   <img alt="" height="395" src="https://blog.kitware.com/blog/files/Small.128_265201125.png" style="display: block; margin-left: auto; margin-right: auto;" width="284"/>
+  </a>
+  <br/>
+  Due to the complexity of setting the control parameters,
+  <span style="font-size: small; font-family: terminal,monaco;">
+   vtkYoungsMaterialInterface
+  </span>
+  had not yet been exposed through the ParaView GUI. As part of our work with CEA/DIF, we remedied to that situation by choosing a mode of operation that is typical in the use of this filter, namely one where the input dataset is a composite where each block only contains cells where a given material is present. This slight requirement involves, at worst, a preliminary pass of a Threshold filter followed by a Group filter, in order to create exactly that kind of input. This constraint on the input allowed us to design and implement a custom panel, illustrated above, which can handle the unusual requirements of the Youngs material interface reconstruction filter when it comes to setting
+  <span style="font-family: terminal,monaco; font-size: small;">
+   OrderingArrays
+  </span>
+  and
+  <span style="font-size: small; font-family: terminal,monaco;">
+   NormalArrays
+  </span>
+  properties.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/128_1035960808.PNG" rel="noopener" target="_blank">
+   <img alt="" height="159" src="https://blog.kitware.com/blog/files/Small.128_1035960808.PNG" style="display: block; margin-left: auto; margin-right: auto;" width="470"/>
+  </a>
+ </p>
+ <p style="font-family: terminal,monaco;">
+  <span style="font-family: tahoma,arial,helvetica,sans-serif; font-size: small;">
+   This new filter is now available in ParaView, under the name
+  </span>
+  <span style="font-family: tahoma,arial,helvetica,sans-serif; font-size: small;">
+   YoungsMaterialInterface
+  </span>
+  <span style="font-family: tahoma,arial,helvetica,sans-serif; font-size: small;">
+   . The three pictures above show an example of a three-dimensional, two-material Youngs interface reconstruction created with ParaView at three different time steps in the simulation of a the fall of a meteorite inside the ocean. The Eulerian simulation uses mixed cells which result in volume fractions being assigned to each material within each cell.
+  </span>
+ </p>
+ <p>
+  <strong>
+   <span style="text-decoration: underline; font-size: medium;">
+    Acknowledgments
+   </span>
+  </strong>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   This work was made possible thanks to a contract with CEA, Direction des Applications Militaires Île-de-France (DIF), Bruyères-le-Châtel, 91297 Arpajon, France. We extend special thanks to Daniel Aguilera, Thierry Carrard, and Claire Guilbaud, for this fruitful collaboration. We are looking forward to continued collaboration with CEA/DIF in this and other areas of scientific visualization.
+  </span>
+ </p>
+</div>

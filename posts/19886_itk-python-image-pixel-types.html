@@ -1,0 +1,1444 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  Don’t worry about the pixel type
+ </h1>
+ <h1>
+ </h1>
+ <p>
+  In previous posts about the
+  <a href="https://itk.org/">
+   Insight Toolkit (ITK)
+  </a>
+  , we talked about
+  <a href="https://blog.kitware.com/itk-is-on-pypi-pip-install-itk-is-here">
+   installing ITK Python packages from PyPI
+  </a>
+  ,
+  <a href="https://blog.kitware.com/convert-itk-data-structures-to-numpy-arrays">
+   sharing data between ITK and NumPy
+  </a>
+  , and even
+  <a href="https://blog.kitware.com/python-packages-for-itk-modules">
+   create your own ITK module with its Python wrapping automatically generated
+  </a>
+  .
+ </p>
+ <p>
+  This post will use examples from the
+  <a href="https://blog.kitware.com/convert-itk-data-structures-to-numpy-arrays">
+   NumPy post
+  </a>
+  and explain in more detail how ITK Python filter instantiation works!
+ </p>
+ <p>
+  First, make sure that ITK Python package is installed:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e87d4a3cf936999571" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+python -m pip install --upgrade pip
+python -m pip install itk</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3cf936999571-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3cf936999571-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e87d4a3cf936999571-1">
+        <span class="crayon-v">
+         python
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         m
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         pip
+        </span>
+        <span class="crayon-v">
+         install
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-e">
+         upgrade
+        </span>
+        <span class="crayon-e">
+         pip
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3cf936999571-2">
+        <span class="crayon-v">
+         python
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         m
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         pip
+        </span>
+        <span class="crayon-e">
+         install
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  An example used in a previous post showed how to process an image with ITK Python. The code used was:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e87d4a3d7387047050" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#!/usr/bin/env python
+
+import itk
+
+image = itk.imread("input_filename.png")
+median = itk.MedianImageFilter.New(image, Radius = 2)
+itk.imwrite(median, "output_filename.png")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3d7387047050-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3d7387047050-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3d7387047050-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3d7387047050-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3d7387047050-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3d7387047050-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3d7387047050-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e87d4a3d7387047050-1">
+        <span class="crayon-c">
+         #!/usr/bin/env python
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3d7387047050-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3d7387047050-3">
+        <span class="crayon-r">
+         import
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         itk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3d7387047050-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3d7387047050-5">
+        <span class="crayon-v">
+         image
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         imread
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "input_filename.png"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3d7387047050-6">
+        <span class="crayon-v">
+         median
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         MedianImageFilter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         image
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Radius
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3d7387047050-7">
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         imwrite
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         median
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "output_filename.png"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_19957" style="width: 1034px">
+  <img alt="" class="size-large wp-image-19957" height="464" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-1024x464.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-1024x464.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-300x136.png 300w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-768x348.png 768w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-220x100.png 220w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-250x113.png 250w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-355x161.png 355w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-730x331.png 730w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK-BrainSlice-OriginalSlice-MedianImageFilter-Radius2-90x41.png 90w" width="1024"/>
+  <p class="wp-caption-text">
+   Left) Brain MRI – sagittal section; Right) Same section after median image filter (Radius=2)
+  </p>
+ </div>
+ <p>
+  In the example above, the function
+  <em>
+   imread()
+  </em>
+  will automatically detect the pixel type and dimensions of the image. If the input image was an RGB image with
+  <em>
+   unsigned char
+  </em>
+  components, the pixel type in the image object will also be RGB with
+  <em>
+   unsigned char
+  </em>
+  components. For the ITK developers used to C++, this is a major difference. When using ITK in C++, filter template parameters have to be specified.
+ </p>
+ <p>
+  When calling
+  <em>
+   itk.MedianImageFilter.New()
+  </em>
+  , the image type is not specified either. Using a similar mechanism than the function
+  <em>
+   imread()
+  </em>
+  allows the correct filter to automatically be instantiated for the input image type.
+ </p>
+ <p>
+  This is called
+  <em>
+   implicit instantiation
+  </em>
+  . A developer can write an entire processing pipeline without needing to specify the image pixel type and dimension.
+ </p>
+ <h1>
+  Advanced usage
+ </h1>
+ <p>
+  In certain cases, you want to choose the pixel type of the image that is read. The functions
+  <em>
+   imread()
+  </em>
+  and
+  <em>
+   imwrite()
+  </em>
+  give you this flexibility:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e87d4a3da187548720" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+PixelType = itk.ctype("unsigned char") # shorthand: itk.UC
+itk.imread(‘my_file.png’, PixelType)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3da187548720-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3da187548720-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e87d4a3da187548720-1">
+        <span class="crayon-v">
+         PixelType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ctype
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "unsigned char"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # shorthand: itk.UC
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3da187548720-2">
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         imread
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        ‘
+        <span class="crayon-v">
+         my_file
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-i">
+         png
+        </span>
+        ’
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         PixelType
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  The RGB image would in this case be converted to a grayscale image with pixels of type
+  <em>
+   unsigned char
+  </em>
+  . The image dimension is automatically detected.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_19959" style="width: 1034px">
+  <img alt="" class="size-large wp-image-19959" height="241" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-1024x241.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-1024x241.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-300x71.png 300w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-768x181.png 768w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-220x52.png 220w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-250x59.png 250w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-355x84.png 355w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-730x172.png 730w, https://blog.kitware.com/wp-content/uploads/2017/11/ITK_Logo_LargeAndBWLogo-90x21.png 90w" width="1024"/>
+  <p class="wp-caption-text">
+   Left) ITK Logo; Right) Image read with
+   <em>
+    imread()
+   </em>
+   specifying pixel type
+   <em>
+    unsigned char
+   </em>
+  </p>
+ </div>
+ <p>
+  Similarly, some filters require the user to specify its parameter types. This is the case for
+  <em>
+   itk.CastImageFilter
+  </em>
+  . In the following example, we read an image that could be of any dimension. We then convert the image from
+  <em>
+   unsigned char
+  </em>
+  to
+  <em>
+   float
+  </em>
+  , and save the result.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e87d4a3dd282833011" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#!/usr/bin/env python
+
+import itk
+
+PixelType = itk.ctype(“unsigned char”)
+image = itk.imread("input_filename.png", PixelType)
+dimension = image.GetImageDimension()
+InputImageType = type(image)
+OutputPixelType = itk.ctype(“float”)
+OutputImageType = itk.Image[OutputPixelType, dimension]
+cast = itk.CastImageFilter[InputImageType, OutputImageType].New(image)
+itk.imwrite(cast, "output_filename.png")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3dd282833011-12">
+        12
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-1">
+        <span class="crayon-c">
+         #!/usr/bin/env python
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-3">
+        <span class="crayon-r">
+         import
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         itk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-5">
+        <span class="crayon-v">
+         PixelType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ctype
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        “
+        <span class="crayon-e">
+         unsigned
+        </span>
+        <span class="crayon-i">
+         char
+        </span>
+        ”
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-6">
+        <span class="crayon-v">
+         image
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         imread
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "input_filename.png"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         PixelType
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-7">
+        <span class="crayon-v">
+         dimension
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         image
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetImageDimension
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-8">
+        <span class="crayon-v">
+         InputImageType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         type
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         image
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-9">
+        <span class="crayon-v">
+         OutputPixelType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ctype
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        “
+        <span class="crayon-k ">
+         float
+        </span>
+        ”
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-10">
+        <span class="crayon-v">
+         OutputImageType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Image
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         OutputPixelType
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         dimension
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-11">
+        <span class="crayon-v">
+         cast
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         CastImageFilter
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         InputImageType
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         OutputImageType
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         image
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3dd282833011-12">
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         imwrite
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         cast
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "output_filename.png"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+ </p>
+ <h1>
+  Limitations
+ </h1>
+ <p>
+  Certain filters only accept certain types of images. In Python, a developer can write an entire pipeline without ever specifying the pixel type of the image. However, when running the pipeline, the script could fail because an image with the wrong pixel type is set as the input of a filter. For example
+  <em>
+   itk.MedianImageFilter
+  </em>
+  cannot process RGB images. If one tried to run the first example on an RGB image, the script will fail and print the following error message.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e87d4a3e0355469962" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+RuntimeError: No suitable template parameter can be found.</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e0355469962-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e87d4a3e0355469962-1">
+        <span class="crayon-v">
+         RuntimeError
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         No
+        </span>
+        <span class="crayon-e">
+         suitable
+        </span>
+        <span class="crayon-e">
+         template
+        </span>
+        <span class="crayon-e">
+         parameter
+        </span>
+        <span class="crayon-e">
+         can
+        </span>
+        <span class="crayon-e">
+         be
+        </span>
+        <span class="crayon-v">
+         found
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  To list the types that a filter supports, you can call the method
+  <em>
+   GetTypes()
+  </em>
+  :
+  <em>
+   <br/>
+  </em>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e87d4a3e2420729611" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+itk.MedianImageFilter.GetTypes()
+
+&lt;itkTemplate itk::MedianImageFilter&gt;
+Options:
+  [&lt;class 'itkImagePython.itkImageF2'&gt;, &lt;class 'itkImagePython.itkImageF2'&gt;]
+  [&lt;class 'itkImagePython.itkImageF3'&gt;, &lt;class 'itkImagePython.itkImageF3'&gt;]
+  [&lt;class 'itkImagePython.itkImageSS2'&gt;, &lt;class 'itkImagePython.itkImageSS2'&gt;]
+  [&lt;class 'itkImagePython.itkImageSS3'&gt;, &lt;class 'itkImagePython.itkImageSS3'&gt;]
+  [&lt;class 'itkImagePython.itkImageUC2'&gt;, &lt;class 'itkImagePython.itkImageUC2'&gt;]
+  [&lt;class 'itkImagePython.itkImageUC3'&gt;, &lt;class 'itkImagePython.itkImageUC3'&gt;]</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e2420729611-10">
+        10
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-1">
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         MedianImageFilter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetTypes
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-3">
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         itkTemplate
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         MedianImageFilter
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-4">
+        <span class="crayon-v">
+         Options
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageF2'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageF2'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageF3'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageF3'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageSS2'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageSS2'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageSS3'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageSS3'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageUC2'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageUC2'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e87d4a3e2420729611-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageUC3'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'itkImagePython.itkImageUC3'
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+ </p>
+ <p>
+  Finally, programmatically, you can get the template parameter of an image with
+  <em>
+   itk.template(image)
+  </em>
+  . This returns a tuple containing the different template parameters:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e87d4a3e4656777466" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+(&lt;itkTemplate itk::Image&gt;, (&lt;itkCType signed short&gt;, 3))</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e87d4a3e4656777466-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e87d4a3e4656777466-1">
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         itkTemplate
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Image
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         itkCType
+        </span>
+        <span class="crayon-e">
+         signed
+        </span>
+        <span class="crayon-v">
+         short
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  One can access the different values of the tuple, and use them, for example, to define a new type.
+ </p>
+ <h1>
+  Conclusion
+ </h1>
+ <p>
+  ITK’s Python wrapping can implicitly determine an appropriate image processing filter with compile-time optimization for your input image. You can forget about the types of the images when it does not matter, or specify it when it does. Do not hesitate to refer to the
+  <a href="http://itkpythonpackage.readthedocs.io/en/latest/Quick_start_guide.html">
+   ITK Python Quick Start Guide
+  </a>
+  and
+  <a href="https://discourse.itk.org/">
+   ITK Discourse forum
+  </a>
+  to find more information.
+ </p>
+</div>

@@ -1,0 +1,2803 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  In this post we describe
+  <a href="https://github.com/Microsoft/vcpkg">
+   Vcpkg
+  </a>
+  , a tool created by Microsoft that helps acquire and build open source C and C++ libraries.
+ </p>
+ <p>
+  On Windows, downloading, building, and installing the libraries that a project requires can be difficult and time-consuming. First, you must locate and download each library from its own server or repository. Next, you must configure and build the libraries, each of which may use its own build system. Finally, you must set up your project to be able to find each library’s headers and to link to each library.
+ </p>
+ <p>
+  Vcpkg attempts to simplify the process of installing libraries on Windows to a single command line. Furthermore, by setting up the build environment using a CMake toolchain file, Vcpkg eliminates the need to manually define paths to libraries when configuring CMake-based projects.
+ </p>
+ <p>
+  We experimented using Vcpkg while developing a commercial project. The project relies on
+  <a href="http://www.grpc.io/">
+   gRPC
+  </a>
+  , an open source RPC framework, which proved difficult to build manually on Windows.
+ </p>
+ <p>
+  At the time of this writing, over
+  <a href="https://github.com/Microsoft/vcpkg/tree/master/ports">
+   600 libraries
+  </a>
+  are available in the Vcpkg ecosystem, including popular ones such as Boost, OpenCV, OpenSSL, and zlib. Vcpkg requires Visual Studio 2015 Update 3 or Visual Studio 2017.
+ </p>
+ <h1>
+  Example: Install and use zlib
+ </h1>
+ <p>
+  Vcpkg is best demonstrated by an example. Follow the steps below to install zlib and build a project that uses the installed zlib.
+ </p>
+ <h3>
+  Install Visual Studio
+ </h3>
+ <p>
+  Download and install Visual Studio from
+  <a href="https://www.visualstudio.com/">
+   https://www.visualstudio.com/
+  </a>
+  .
+ </p>
+ <h3>
+  Set up Vcpkg:
+ </h3>
+ <ul>
+  <li>
+   Clone the repository at
+   <a href="https://github.com/Microsoft/vcpkg.git">
+    https://github.com/Microsoft/vcpkg.git
+   </a>
+  </li>
+  <li>
+   Run:
+   <br/>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c457121466041" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+C:\dev\vcpkg&gt; .\bootstrap-vcpkg.bat</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41c8195c457121466041-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41c8195c457121466041-1">
+          <span class="crayon-v">
+           C
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+          <span class="crayon-v">
+           dev
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+          <span class="crayon-v">
+           vcpkg
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+          <span class="crayon-v">
+           bootstrap
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           vcpkg
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           bat
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+  </li>
+ </ul>
+ <p>
+  The bootstrap script builds
+  <span style="font-family: courier">
+   vcpkg.exe
+  </span>
+  and
+  <span style="font-family: courier">
+   vcpkgmetricsuploader.exe
+  </span>
+  and copies them into
+  <span style="font-family: courier">
+   C:\dev\vcpkg
+  </span>
+  and
+  <span style="font-family: courier">
+   C:\dev\vcpkg\scripts
+  </span>
+  , respectively.
+  <span style="font-family: courier">
+   vcpkgmetricsuploader.exe
+  </span>
+  sends usage information about
+  <span style="font-family: courier">
+   vcpkg.exe
+  </span>
+  to Microsoft.
+ </p>
+ <h3>
+  Install 64-bit zlib:
+ </h3>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c46a165098757" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+C:\dev\vcpkg&gt; vcpkg search zlib
+liblzma 5.2.3-2 Compression library with an API similar to that of zlib.
+zlib 1.2.11-3 A compression library
+
+If your library is not listed, please open an issue at and/or consider making a pull request:
+
+ https://github.com/Microsoft/vcpkg/issue</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c46a165098757-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46a165098757-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46a165098757-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46a165098757-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46a165098757-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46a165098757-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46a165098757-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c46a165098757-1">
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vcpkg
+        </span>
+        <span class="crayon-e">
+         search
+        </span>
+        <span class="crayon-e">
+         zlib
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46a165098757-2">
+        <span class="crayon-i">
+         liblzma
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         5.2.3
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Compression
+        </span>
+        <span class="crayon-e">
+         library
+        </span>
+        <span class="crayon-e">
+         with
+        </span>
+        <span class="crayon-e">
+         an
+        </span>
+        <span class="crayon-e">
+         API
+        </span>
+        <span class="crayon-e">
+         similar
+        </span>
+        <span class="crayon-st">
+         to
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         that
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46a165098757-3">
+        <span class="crayon-i">
+         zlib
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.2.11
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         A
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         compression
+        </span>
+        <span class="crayon-e">
+         library
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46a165098757-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46a165098757-5">
+        <span class="crayon-st">
+         If
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         your
+        </span>
+        <span class="crayon-e">
+         library
+        </span>
+        <span class="crayon-st">
+         is
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         not
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         listed
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         please
+        </span>
+        <span class="crayon-e">
+         open
+        </span>
+        <span class="crayon-e">
+         an
+        </span>
+        <span class="crayon-e">
+         issue
+        </span>
+        <span class="crayon-e">
+         at
+        </span>
+        <span class="crayon-st">
+         and
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-st">
+         or
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         consider
+        </span>
+        <span class="crayon-i">
+         making
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         a
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         pull
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46a165098757-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46a165098757-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         https
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-c">
+         //github.com/Microsoft/vcpkg/issue
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c46d035172863" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+C:\dev\vcpkg&gt;vcpkg install zlib --triplet x64-windows
+The following packages will be built and installed:
+zlib[core]:x64-windows
+Starting package 1/1: zlib:x64-windows
+Building package zlib:x64-windows...
+-- CURRENT_INSTALLED_DIR=C:/dev/vcpkg/installed/x64-windows
+-- DOWNLOADS=C:/dev/vcpkg/downloads
+-- CURRENT_PACKAGES_DIR=C:/dev/vcpkg/packages/zlib_x64-windows
+-- CURRENT_BUILDTREES_DIR=C:/dev/vcpkg/buildtrees/zlib
+-- CURRENT_PORT_DIR=C:/dev/vcpkg/ports/zlib/.
+-- Using cached C:/dev/vcpkg/downloads/zlib1211.tar.gz
+-- Testing integrity of cached file...
+-- Testing integrity of cached file... OK
+-- Extracting done
+-- Applying patch C:/dev/vcpkg/ports/zlib/cmake_dont_build_more_than_needed.patch
+-- Applying patch C:/dev/vcpkg/ports/zlib/cmake_dont_build_more_than_needed.patch done
+-- Downloading https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-win.zip...
+-- Downloading https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-win.zip... OK
+-- Testing integrity of downloaded file...
+-- Testing integrity of downloaded file... OK
+-- Configuring x64-windows-rel
+-- Configuring x64-windows-rel done
+-- Configuring x64-windows-dbg
+-- Configuring x64-windows-dbg done
+-- Build x64-windows-rel
+-- Build x64-windows-rel done
+-- Build x64-windows-dbg
+-- Build x64-windows-dbg done
+-- Installing: C:/dev/vcpkg/packages/zlib_x64-windows/share/zlib/copyright
+-- Performing post-build validation
+-- Performing post-build validation done
+Building package zlib:x64-windows... done
+Installing package zlib:x64-windows...
+Installing package zlib:x64-windows... done
+Elapsed time for package zlib:x64-windows: 29.85 s</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c46d035172863-35">
+        35
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-1">
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-e">
+         vcpkg
+        </span>
+        <span class="crayon-e">
+         install
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-e">
+         triplet
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         windows
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-2">
+        <span class="crayon-e">
+         The
+        </span>
+        <span class="crayon-e">
+         following
+        </span>
+        <span class="crayon-e">
+         packages
+        </span>
+        <span class="crayon-e">
+         will
+        </span>
+        <span class="crayon-e">
+         be
+        </span>
+        <span class="crayon-e">
+         built
+        </span>
+        <span class="crayon-st">
+         and
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         installed
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-3">
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         core
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         windows
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-4">
+        <span class="crayon-e">
+         Starting
+        </span>
+        <span class="crayon-t">
+         package
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         windows
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-5">
+        <span class="crayon-e">
+         Building
+        </span>
+        <span class="crayon-t">
+         package
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-6">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         CURRENT_INSTALLED_DIR
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         installed
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-7">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         DOWNLOADS
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         downloads
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-8">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         CURRENT_PACKAGES_DIR
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         packages
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib_x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-9">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         CURRENT_BUILDTREES_DIR
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         buildtrees
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-10">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         CURRENT_PORT_DIR
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ports
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-11">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Using
+        </span>
+        <span class="crayon-i">
+         cached
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         downloads
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib1211
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         tar
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         gz
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-12">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Testing
+        </span>
+        <span class="crayon-e">
+         integrity
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-e">
+         cached
+        </span>
+        <span class="crayon-v">
+         file
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-13">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Testing
+        </span>
+        <span class="crayon-e">
+         integrity
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-e">
+         cached
+        </span>
+        <span class="crayon-v">
+         file
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         OK
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-14">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Extracting
+        </span>
+        <span class="crayon-v">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-15">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Applying
+        </span>
+        <span class="crayon-i">
+         patch
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ports
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         cmake_dont_build_more_than_needed
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         patch
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-16">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Applying
+        </span>
+        <span class="crayon-i">
+         patch
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ports
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         cmake_dont_build_more_than_needed
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         patch
+        </span>
+        <span class="crayon-v">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-17">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Downloading
+        </span>
+        <span class="crayon-v">
+         https
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-c">
+         //github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-win.zip...
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-18">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Downloading
+        </span>
+        <span class="crayon-v">
+         https
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-c">
+         //github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-win.zip... OK
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-19">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Testing
+        </span>
+        <span class="crayon-e">
+         integrity
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-e">
+         downloaded
+        </span>
+        <span class="crayon-v">
+         file
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-20">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Testing
+        </span>
+        <span class="crayon-e">
+         integrity
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-e">
+         downloaded
+        </span>
+        <span class="crayon-v">
+         file
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         OK
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-21">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Configuring
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         rel
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-22">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Configuring
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         rel
+        </span>
+        <span class="crayon-v">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-23">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Configuring
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         dbg
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-24">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Configuring
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         dbg
+        </span>
+        <span class="crayon-v">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-25">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Build
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         rel
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-26">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Build
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         rel
+        </span>
+        <span class="crayon-v">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-27">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Build
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         dbg
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-28">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Build
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         dbg
+        </span>
+        <span class="crayon-v">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-29">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Installing
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         packages
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib_x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         share
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         copyright
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-30">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Performing
+        </span>
+        <span class="crayon-v">
+         post
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         build
+        </span>
+        <span class="crayon-v">
+         validation
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-31">
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Performing
+        </span>
+        <span class="crayon-v">
+         post
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         build
+        </span>
+        <span class="crayon-e">
+         validation
+        </span>
+        <span class="crayon-e">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-32">
+        <span class="crayon-e">
+         Building
+        </span>
+        <span class="crayon-t">
+         package
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-33">
+        <span class="crayon-e">
+         Installing
+        </span>
+        <span class="crayon-t">
+         package
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-34">
+        <span class="crayon-e">
+         Installing
+        </span>
+        <span class="crayon-t">
+         package
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         done
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c46d035172863-35">
+        <span class="crayon-e">
+         Elapsed
+        </span>
+        <span class="crayon-e">
+         time
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         package
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         zlib
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-v">
+         x64
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         windows
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         29.85
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         s
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0017 seconds] -->
+ <p>
+ </p>
+ <p>
+  Total elapsed time: 29.85 s
+ </p>
+ <p>
+  The package zlib is compatible with built-in CMake targets:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c470662680233" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+find_package(ZLIB REQUIRED)
+target_link_libraries(main PRIVATE ZLIB::ZLIB)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c470662680233-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c470662680233-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c470662680233-1">
+        <span class="crayon-e">
+         find_package
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         ZLIB
+        </span>
+        <span class="crayon-v">
+         REQUIRED
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c470662680233-2">
+        <span class="crayon-e">
+         target_link_libraries
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         main
+        </span>
+        <span class="crayon-m">
+         PRIVATE
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         ZLIB
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         ZLIB
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h3>
+  Build the project:
+ </h3>
+ <h4>
+  CMakeLists.txt:
+ </h4>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c472323262872" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cmake_minimum_required(VERSION 3.0)
+project(example)
+find_package(ZLIB REQUIRED)
+add_executable(example example.cpp)
+target_link_libraries(example ZLIB::ZLIB)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c472323262872-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c472323262872-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c472323262872-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c472323262872-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c472323262872-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c472323262872-1">
+        <span class="crayon-e">
+         cmake_minimum_required
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-i">
+         VERSION
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c472323262872-2">
+        <span class="crayon-e">
+         project
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c472323262872-3">
+        <span class="crayon-e">
+         find_package
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         ZLIB
+        </span>
+        <span class="crayon-v">
+         REQUIRED
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c472323262872-4">
+        <span class="crayon-e">
+         add_executable
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         example
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         cpp
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c472323262872-5">
+        <span class="crayon-e">
+         target_link_libraries
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         example
+        </span>
+        <span class="crayon-v">
+         ZLIB
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         ZLIB
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <h4>
+  example.cpp:
+ </h4>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c474518265644" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include &lt;iostream&gt;
+#include &lt;zlib.h&gt;
+int main(int argc, char *argv[])
+{
+    std::cout &lt;&lt; zlibVersion() &lt;&lt; std::endl;
+    return 0;
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c474518265644-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c474518265644-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c474518265644-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c474518265644-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c474518265644-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c474518265644-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c474518265644-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c474518265644-1">
+        <span class="crayon-p">
+         #include &lt;iostream&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c474518265644-2">
+        <span class="crayon-p">
+         #include &lt;zlib.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c474518265644-3">
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         main
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         argc
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         argv
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c474518265644-4">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c474518265644-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         cout
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;&lt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         zlibVersion
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;&lt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         endl
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c474518265644-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c474518265644-7">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <h4>
+  Configure and build:
+ </h4>
+ <p>
+  Run CMake, specifying the Vcpkg toolchain file:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c476609110385" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+C:\dev\example-build&gt; cmake.exe -DCMAKE_TOOLCHAIN_FILE=C:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake -G "Visual Studio 15 2017 Win64" ..\example</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c476609110385-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c476609110385-1">
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         build
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cmake
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         exe
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         DCMAKE_TOOLCHAIN_FILE
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         scripts
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         buildsystems
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vcpkg
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         cmake
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         G
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Visual Studio 15 2017 Win64"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  For reference, the configuration can be seen in the CMake GUI:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c478299260992" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+C:\dev\example-build&gt; cmake-gui.exe .</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c478299260992-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c478299260992-1">
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         build
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cmake
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         gui
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-i">
+         exe
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <div class="wp-caption alignnone" id="attachment_20750" style="width: 896px">
+  <img alt="" class="size-full wp-image-20750" height="330" sizes="(max-width: 886px) 100vw, 886px" src="https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib.png 886w, https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib-300x112.png 300w, https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib-768x286.png 768w, https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib-220x82.png 220w, https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib-250x93.png 250w, https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib-355x132.png 355w, https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib-730x272.png 730w, https://blog.kitware.com/wp-content/uploads/2018/01/cmake-vcpkg-zlib-90x34.png 90w" width="886"/>
+  <p class="wp-caption-text">
+   CMake GUI showing zlib variables configured by Vcpkg.
+  </p>
+ </div>
+ <p>
+  Build the project:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c47a151026865" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+ C:\dev\example-build&amp;gt; cmake.exe --build .</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c47a151026865-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c47a151026865-1">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         build
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cmake
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         exe
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-i">
+         build
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  Note that the required DLLs, zlibd1.dll in this example, are automatically copied to the output directory.
+ </p>
+ <h4>
+  Run the program:
+ </h4>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8195c47c717446690" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+C:\dev\example-build&gt; Debug\example.exe
+1.2.11</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8195c47c717446690-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8195c47c717446690-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8195c47c717446690-1">
+        <span class="crayon-v">
+         C
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         dev
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         build
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Debug
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+        <span class="crayon-v">
+         example
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-i">
+         exe
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8195c47c717446690-2">
+        <span class="crayon-cn">
+         1.2.11
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h1>
+  How it works
+ </h1>
+ <ul>
+  <li>
+   Each library in the Vcpkg ecosystem contains a portfile—a CMake script—that is responsible for fetching sources or binaries, configuring builds, and installing headers and libraries into the correct locations. See
+   <a href="https://github.com/Microsoft/vcpkg/blob/f5939bff670ae0719af2fa5d290e0e0ba21fdb79/ports/zlib/portfile.cmake">
+    <span style="font-family: courier">
+     zlib/portfile.cmake
+    </span>
+   </a>
+   for an example.
+  </li>
+  <li>
+   Because portfiles are CMake scripts, there’s no inherent restriction on which build system libraries can use.
+  </li>
+  <li>
+   Vcpkg’s CMake
+   <a href="https://cmake.org/cmake/help/v3.10/variable/CMAKE_TOOLCHAIN_FILE.html">
+    toolchain file
+   </a>
+   and Visual Studio integration configure the environment so that the installed headers and libraries are available when building projects.
+  </li>
+  <li>
+   Based on the specified CMake generator, the
+   <span style="font-family: courier">
+    vcpkg.cmake
+   </span>
+   toolchain file determines the target architecture and platform and updates
+   <span style="font-family: courier">
+    CMAKE_PREFIX_PATH
+   </span>
+   and
+   <span style="font-family: courier">
+    CMAKE_LIBRARY_PATH
+   </span>
+   so that the
+   <span style="font-family: courier">
+    find_package
+   </span>
+   and
+   <span style="font-family: courier">
+    find_library
+   </span>
+   CMake commands locate the appropriate config files and libraries. Additionally, it overrides add_executable to add a
+   <span style="font-family: courier">
+    POST_BUILD
+   </span>
+   step that copies dependent shared libraries to the output directory alongside the executable.
+  </li>
+ </ul>
+ <h1>
+  Building static libraries
+ </h1>
+ <p>
+  By default, Vcpkg builds dynamic libraries. To build static libraries, specify the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8195c47f311188924" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-o">
+     --
+    </span>
+    <span class="crayon-e">
+     triplet
+    </span>
+    <span class="crayon-v">
+     x64
+    </span>
+    <span class="crayon-o">
+     -
+    </span>
+    <span class="crayon-v">
+     windows
+    </span>
+    <span class="crayon-o">
+     -
+    </span>
+    <span class="crayon-m">
+     static
+    </span>
+   </span>
+  </span>
+  option when running vcpkg install. Alternatively, you can set this value in the
+  <span style="font-family: courier">
+   VCPKG_DEFAULT_TRIPLET
+  </span>
+  environment variable.
+ </p>
+ <p>
+  When configuring a project to use static libraries, it’s currently necessary to explicitly specify the static triplet, like:
+  <span style="font-family: courier">
+   -DVCPKG_TARGET_TRIPLET:STRING=x64-windows-static
+  </span>
+  . Additionally, your project should be configured to use the
+  <a href="https://cmake.org/Wiki/CMake_FAQ#How_can_I_build_my_MSVC_application_with_a_static_runtime.3F">
+   static C runtime library
+  </a>
+  .
+ </p>
+ <h1>
+  Kitware packages
+ </h1>
+ <p>
+  The Visualization Toolkit (VTK) and the Insight Toolkit (
+  <a href="https://github.com/Microsoft/vcpkg/pull/2376">
+   ITK
+  </a>
+  ) are already available through Vcpkg.
+ </p>
+ <h1>
+  Conclusion
+ </h1>
+ <p>
+  In this post we introduced Vcpkg and showed how to install libraries using Vcpkg. Additionally, we provided an example of a CMake-based project that uses a library installed through Vcpkg.
+ </p>
+ <p>
+  Vcpkg provides a convenient way to install and use open source C and C++ libraries on Windows. If you’re building a project that depends on more than a few libraries, using Vcpkg might save you some time.
+ </p>
+</div>

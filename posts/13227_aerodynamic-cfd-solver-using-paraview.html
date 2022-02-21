@@ -1,0 +1,113 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  During the last year, a new computational fluid dynamics (cfd) software has been made available as freeware for public use.  The software named “ufo-cfd” is available from https://sites.google.com/site/ufocfdsolver, and is loosely described as a ‘freeware aerodynamics CFD solver’ (but is not open-source). The software uses (and relies upon) ParaView for pre and post-processing of the solver inputs and outputs.  The geometry (in STL format) is the main input to the CFD solver, and the solver output is mainly a ParaView VTK file and some convergence data.  Like many, I first came to use ParaView whilst using OpenFoam, and after that came to use ParaView for other tasks such as STL file viewing and manipulation.
+ </p>
+ <p>
+  <a href="/source/files/28_1232876824.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1232876824.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="50%"/>
+  </a>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Aims
+   </span>
+  </strong>
+  <br/>
+  The aims of this new CFD freeware were driven by problems with some of the existing CFD methods, namely cost, excessive time spent meshing, over complexity of solvers, and accessibility (for a wide range of users). Having used snappyHex Mesh, I wanted something that could also robustly handle complex STL geometry, but in a much more simplified framework.  By simplified framework, I mean 1) get geometry and solver, 2) edit input text file, 3) run solver, and 4) visualise the solution using ParaView. When CFD is made this easy-to-use, it becomes both more accessible and applicable. One of the driving forces behind the new software comes from impatience, meaning that I should be able to obtain a geometry, setup the test-case and run the solver within an hour or two; this is certainly true whatever the geometry (whether it be a simple cylinder/sphere or an F1 car). Obviously the solver time depends on other factors such as mesh size and available brute force (number of CPU and RAM).  That said, for simple test cases it is feasible to complete the CFD cycle (geometry to flow solution) within an hour, when familiar with the format of the simple input text file.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    RAM/32/64bit /Parallel Issues/Platform
+   </span>
+  </strong>
+  <br/>
+  Another of the driving forces was to reduce the RAM dependency of the solver.  The solver is streamlined in terms of the arrays which are stored; no additional arrays are stored unless they have to be stored, and all arrays are allocated. This allows the user to specify small arrays for small problems, and vice-versa.  I initially found that the limit of the 32-bit solver was about 10 million cells. Then after the 64-bit executable was available, the max mesh size depends how much RAM you have available on your machine/cluster.  I then did a 20 million cell mesh on a F1 car and found that this used only 3GB RAM.  So then the limiting factor becomes the number of processors that you have available.  The version of gfortran that I eventually used was from
+  <br/>
+  (http://www.equation.com), which fortunately allowed 64-bit compilation using the OpenMP flag.  This was a leap forward for the CFD software since (with minor modifications to the source code) the 64-bit parallel solver became easily achievable.  The F1 car demo that I started ran at approx 3 iterations per minute on 8 processors, which means a weekend is required for 10,000 iterations of a 20 million cell mesh. But that’s not at all bad for freeware on laptop at home. Now the software compiles in a 32-bit Linux mode also, although that version is largely untested.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    METHOD Development
+   </strong>
+  </span>
+  <br/>
+  The solver code was developed over about a year, using gfortran throughout.  The code was written ‘back-to-front’ in some ways.  The first part of the code to be completed was the writing of the VTK solution; a simple 100x100x100 (1 million) cell mesh was written out and then read into ParaView, and that was the starting point.  The next step of reading in an STL file was straightforward, and then I used the STL data to mark the grid with ‘cut-cells’ where the STL triangles intersect the mesh cells. The next part was to write the fill algorithm to mark the inside cells as ‘dead,’ the outer ones as ‘live,’ and the cut-cells as ‘cut’. Now the fill routine marks millions of cells in few seconds, and that is the only computational effort required for meshing.  I then had the foundation on which to write a solver which loops though the arrays in conventional i,j,k loops, but skipping the dead cells.  The solver was then written based on my PhD notes (from 1995) on the Navier Stokes equations, but using zero velocity at the walls (cut-cells).  This highlighted issues of solution stability, and some smoothing parameters were introduced to smooth the solution. The other tricky part of the development was to apply a non-zero tangential velocity at the wall, which then allows the solver to apply an Euler or wall-function type approach at the wall.  All smoothing and wall treatment parameters are adjusted via the input data file so to give the user maximum control over the method.
+ </p>
+ <p>
+  ParaView is an integral part of the CFD solver.  The only part of the process which doesn’t use ParaView, is during the solver execution, where Gnuplot is used to monitor the solver convergence.
+ </p>
+ <p>
+  <strong>
+   Geometry:
+  </strong>
+  Having obtained an STL file of interest, the user reads this into ParaView and changes the scale / orientation of the geometry to suit the solver defaults (xmin: inlet, xmax: outlet etc).  After this, the STL file is saved in ParaView (after surface extraction) in ASCII format.  At this stage, ParaView is also used to note down the STL geometry limits in x/y/z directions.
+ </p>
+ <p>
+  <strong>
+   Meshing:
+  </strong>
+  The mesh setup requires minimal effort, but ParaView is essential because it allows users to load in and visualise both the STL file and initial guessed mesh at the same time.  The user may then go through several iterations of adjusting the mesh size and location relative to the STL geometry.  Then, ParaView is used to check that there is a ‘dead’ region inside the geometry, meaning that the cut-cells form a continuous ‘air-tight’ surface.  This is done by viewing the cell_lcd property within the VTK file.
+ </p>
+ <p>
+  <strong>
+   Visualisation:
+  </strong>
+  Once the flow solution is obtained, the VTK file is loaded into ParaView for post-processing. The cell-to-point-data filter is used.  A variety of ParaView methods are typically used to view the flow-field, including contour plots, velocity vector plots, and streamlines. The ParaView software allows for fast manipulation of solutions containing millions of cells, thus enabling fast flow visualisation.
+ </p>
+ <p>
+  <strong>
+   Shrink-wrap:
+  </strong>
+  The ParaView method can also be used to obtain a shrink-wrapped representation of the original STL geometry. Once the VTK file is loaded from the solver, you can create a contour surface of the ‘cut-cells,’ which looks like a brick-work representation of the real geometry.  Then, by applying some smoothing to this surface, you get something similar to the original STL geometry, which can be used to display a surface property such as pressure or velocity. This is very useful for the CFD solver since it allows you to display the flow solution on the body surface.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Applications
+   </strong>
+  </span>
+  <br/>
+  These days a large collection of geometry is available to anyone with internet access. For example, ‘Sketchup Warehouse’ (http://sketchup.google.com/3dwarehouse)   allows users to select from a massive collection of vehicles (planes / helicopters / cars).  The geometry may not be clean or ‘watertight,’ but it does not need to be for this solver. It is preferable to have a dead region inside your geometry, but in some cases (with no dead region) the interior region of the model is also live, and the solver runs just as well, if a little slower. The CFD solver can be applied to a wide variety of applications (aerospace, automotive, etc), but admittedly there are some limitations to the approach: 1) Its a compressible solver which strictly means that it is not applicable to low speed flows; 2) The Cartesian mesh approach means that the mesh size is uniform within the geometry region (expanding away from geometry). This means that the method is best suited to external flows around cars or aircraft where the entire body can be captured by a uniform mesh size.  For example, for the F1 car, the entire geometry was modelled using 1cm cuboid cells; but for other ‘long’ geometries it would be advisable to use long cells such as 2x1x1 or 3x1x1 cells, which is a simple modification of the input file.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Summary
+   </strong>
+  </span>
+  <br/>
+  This CFD solver has been developed as a personal interest and is not associated with any current or previous employers. It is hoped that the software would get significant use in academia (for under-grad or post-grad coursework) as well as for commercial or industrial applications.  The direction of the software development is uncertain for now, and will mainly depend on any future interest or enquiries which are received via the website contact email:
+  <br/>
+  ufocfdsolver@gmail.com
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Acknowledgements
+   </strong>
+  </span>
+  <br/>
+  http://www.ParaView.org (ParaView)
+  <br/>
+  http://sketchup.google.com/3dwarehouse/ (STL geometry)
+  <br/>
+  http://www.equation.com (gfortran)
+  <br/>
+  http://www.gnuplot.info (Gnuplot)
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/28_2006921939.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_2006921939.jpg" style="float: left;" width="20%"/>
+  </a>
+  <em>
+   <strong>
+    Giles Richardson
+   </strong>
+   is a graduate of Leicester University (BEng Hons) and Cranfield University College of Aeronautics (PhD). He has worked at UK aerospace companies including Westland Helicopters Ltd (Yeovil, UK) and Rolls-Royce (Bristol and Derby, UK).  He is currently employed as a Cooling Systems Analyst at Perkins Engines Ltd, (Peterborough, UK) which is part of Caterpillar Inc.
+  </em>
+ </p>
+</div>

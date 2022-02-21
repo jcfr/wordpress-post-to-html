@@ -1,0 +1,142 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The molecule framework in VTK and ParaView has recently been improved. In this blog we quickly introduce the new features.
+ </p>
+ <p>
+  Note that the features presented below are available in ParaView 5.6 and VTK master branch (thus in next release VTK 8.2).
+ </p>
+ <h2>
+  Conversion Between vtkMolecule and vtkPointSet
+ </h2>
+ <p>
+  Two new filters enable converting vtkMolecule into vtkPolyData (mesh data structures for 0, 1 and 2D primitives) and reversely:
+ </p>
+ <ul>
+  <li>
+   “Convert into polydata” (vtkMoleculeToPolyDataFilter)
+  </li>
+  <li>
+   “Convert into molecule” (vtkPointSetToMoleculeFilter)
+  </li>
+ </ul>
+ <p>
+  These conversions are based on an atom-point mapping (1 atom = 1 point) and on a bond-line mapping (1 bond = 1 line, i.e. cell of type VTK_LINE), without loss of data (arrays are passed to output). Note that conversion into molecule requires a one-dimensional array to be used as Atomic Numbers.
+ </p>
+ <p>
+  These conversion filters allow all polydata filters to be used for molecule analysis, as shown on figure 1.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_22981" style="width: 310px">
+  <img alt="" class="wp-image-22981 size-full" height="300" src="http://blog.kitware.com/wp-content/uploads/2018/06/atomPaths2.gif" width="300"/>
+  <p class="wp-caption-text">
+   Figure 1 – Atom paths: converting molecule into polydata allows to use the Temporal Particles To Path Lines filter.
+  </p>
+ </div>
+ <p>
+ </p>
+ <h2>
+  Parallel Molecule Support
+ </h2>
+ <p>
+  The molecule framework has been improved to support distributed parallelism with MPI. Now vtkMolecule and vtkMoleculeMapper support and manage ghost atoms and ghost bonds allowing the distribution of big molecules (or a set of atoms) on multiple processors.
+ </p>
+ <p>
+  The subdivision of a dataset into pieces can be done through the recently created “Distribute Points” filter (vtkDistributedPointCloudFilter): it creates spatially contiguous region, containing an equivalent number of points (see figure 2b).
+ </p>
+ <div style="text-align: center">
+  <div class="wp-caption aligncenter" id="attachment_22964" style="width: 1010px">
+   <img alt="" class="wp-image-22964 size-full" height="500" sizes="(max-width: 1000px) 100vw, 1000px" src="http://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final.png 1000w, https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final-300x150.png 300w, https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final-768x384.png 768w, https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final-220x110.png 220w, https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final-250x125.png 250w, https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final-355x178.png 355w, https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final-730x365.png 730w, https://blog.kitware.com/wp-content/uploads/2018/06/3GQP_final-90x45.png 90w" width="1000"/>
+   <p class="wp-caption-text">
+    Figure 2 – A molecule dataset split on 4 MPI ranks. Left: colored by atomic number. Right: colored by MPI rank.
+   </p>
+  </div>
+ </div>
+ <div>
+  <p>
+   In ParaView, when the rendering is done on the client-side, the different pieces have to be merged before being rendered. It is possible thanks to the Append Molecule filter (vtkMoleculeAppend)
+  </p>
+  <h2>
+   Bonds Computation
+  </h2>
+  <p>
+   A VTK filter (vtkSimpleBondPerceiver) aims to create bonds in a molecule, depending on the inter-atomic distance between and the atoms Van Der Waals radius. This filter was improved in two ways:
+  </p>
+  <ul>
+   <li>
+    As only the nearest neighbours of an atom can have a bond with it, the main algorithm now extracts a list of good candidates for bonds (thanks to a locator), reducing the time of computation.
+   </li>
+   <li>
+    The new filter vtkPSimpleBondPerceiver extends the original filter for molecules distributed over multiple MPI ranks (it will detect and create bonds between atoms located in neighbor ranks and create ‘ghost’ atoms accordingly). This feature enables processing large atoms sets and gives better performance.
+   </li>
+  </ul>
+  <p>
+  </p>
+  <p>
+   You can now use this filter in ParaView under the name “Compute Bonds” (see Figure 3).
+  </p>
+  <div class="wp-caption aligncenter" id="attachment_22956" style="width: 675px">
+   <img alt="" class="wp-image-22956 size-full" height="359" sizes="(max-width: 665px) 100vw, 665px" src="http://blog.kitware.com/wp-content/uploads/2018/06/bondPerceiver.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/06/bondPerceiver.png 665w, https://blog.kitware.com/wp-content/uploads/2018/06/bondPerceiver-300x162.png 300w, https://blog.kitware.com/wp-content/uploads/2018/06/bondPerceiver-220x119.png 220w, https://blog.kitware.com/wp-content/uploads/2018/06/bondPerceiver-250x135.png 250w, https://blog.kitware.com/wp-content/uploads/2018/06/bondPerceiver-355x192.png 355w, https://blog.kitware.com/wp-content/uploads/2018/06/bondPerceiver-90x49.png 90w" width="665"/>
+   <p class="wp-caption-text">
+    Figure 3 – Bonds computation. Left: molecule without bonds. Right: molecule with computed bonds.
+   </p>
+  </div>
+  <h2>
+   Support for Molecule in Programmable filter/source
+  </h2>
+  <p>
+   This molecule framework can be extended with python and in the Programmable filter/source module, as they now support molecule as input and output. Molecule can be easily generated and processed (see Figures 4 and 5)
+  </p>
+  <p>
+  </p>
+  <div class="wp-caption aligncenter" id="attachment_22958" style="width: 776px">
+   <img alt="" class="wp-image-22958 size-full" height="353" sizes="(max-width: 766px) 100vw, 766px" src="http://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2.png 766w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2-300x138.png 300w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2-220x101.png 220w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2-250x115.png 250w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2-355x164.png 355w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2-730x336.png 730w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2-90x41.png 90w" width="766"/>
+   <p class="wp-caption-text">
+    Figure 4 – CO2 molecule produced by a Programmable Source.
+   </p>
+  </div>
+  <p>
+  </p>
+  <div class="wp-caption aligncenter" id="attachment_22959" style="width: 767px">
+   <img alt="" class="wp-image-22959 size-full" height="348" sizes="(max-width: 757px) 100vw, 757px" src="http://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds.png 757w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds-300x138.png 300w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds-220x101.png 220w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds-250x115.png 250w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds-355x163.png 355w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds-730x336.png 730w, https://blog.kitware.com/wp-content/uploads/2018/06/programmableCO2_bonds-90x41.png 90w" width="757"/>
+   <p class="wp-caption-text">
+    Figure 5 – CO2 molecule with bond order processed by a Programmable Filter.
+   </p>
+  </div>
+ </div>
+ <h2>
+  Going Further
+ </h2>
+ <div>
+  <p>
+   For more information about VTK/ParaView molecule framework, please refer to these previous blog entries:
+  </p>
+  <p>
+   <a href="https://blog.kitware.com/new-features-paraview-chemistry-pettt/">
+    https://blog.kitware.com/new-features-paraview-chemistry-pettt/
+   </a>
+  </p>
+  <p>
+   <a href="https://blog.kitware.com/rendering-engine-improvements-in-vtk/">
+    https://blog.kitware.com/rendering-engine-improvements-in-vtk/
+   </a>
+  </p>
+ </div>
+ <h2>
+  Acknowledgements
+ </h2>
+ <p>
+  This work is a result of a common effort by Kitware France and the CEA (French Alternative Energies and Atomic Energy Commission) in the context of the project SMICE – a collaborative research project about material exaflopic simulation founded by the French program “Investissements d’Avenir”.
+ </p>
+ <table style="width: 75%">
+  <tbody>
+   <tr>
+    <td>
+     <img alt="" class="wp-image-22966 alignnone aligncenter" height="104" src="http://blog.kitware.com/wp-content/uploads/2018/06/CEA_logotype2012-235x156.png" width="156"/>
+    </td>
+    <td>
+     <img alt="" class="wp-image-22986 alignnone aligncenter" height="110" sizes="(max-width: 109px) 100vw, 109px" src="http://blog.kitware.com/wp-content/uploads/2018/06/invest_avenir_164433.54.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/06/invest_avenir_164433.54.jpg 187w, https://blog.kitware.com/wp-content/uploads/2018/06/invest_avenir_164433.54-90x91.jpg 90w" width="109"/>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+</div>

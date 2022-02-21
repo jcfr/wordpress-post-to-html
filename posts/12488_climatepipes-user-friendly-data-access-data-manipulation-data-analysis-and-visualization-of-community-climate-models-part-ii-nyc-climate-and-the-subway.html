@@ -1,0 +1,95 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h5 style="font-style: italic;">
+  Authors: Cesar Palomo, Guillaume Vialaneix, Chris Harris, Claudio Silva,  Aashish Chaudhary
+ </h5>
+ <p>
+  In this second article in the ClimatePipes series (please see the part 1
+  <a href="https://blog.kitware.com/climatepipes-user-friendly-data-access-data-manipulation-data-analysis-and-visualization-of-community-climate-models-part-i-visualization-of-archived-climate-data/">
+   here
+  </a>
+  ), we introduce an application that visualizes the effect of climate events on subway usage in New York City. The application can be viewed here:
+ </p>
+ <p>
+  <a href="https://climatepipes.kitware.com/apps/subway/web/">
+   https://climatepipes.kitware.com/apps/subway/web/
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/36_530241805.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.36_530241805.png" style="width: 691px; height: 627px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Figure 1:
+  </strong>
+  The main visualization tool of our application is a map of the New York City subway, each station being represented by a circle. Blue circles represent stations mainly used for entering and red circles depicts stations used primarily as exit points. White circles are “neutral” stations. The diameter size represents the average traffic of the station.
+ </p>
+ <p>
+  The goal of our application is to enable the user to correlate the use of New York City subway system with the climatic conditions, from simple snowy or rainy days to hurricanes such as Irene or Sandy. We created an interactive application, enabling the user to navigate through two different sets of data, one concerning the subway usage, the other containing weather information. We will first describe more precisely the data used in our work, then detail the implementation, and finally present the final prototype.
+ </p>
+ <p>
+  The datasets were gathered from two different sets of data: one from the Metropolitan Transportation Authority (MTA), the public corporation responsible for public transportation in New York state, and the other from the National Climatic Data Center (NCDC), a branch of the National Oceanic and Atmospheric Administration.
+ </p>
+ <p>
+  The MTA dataset contains turnstiles usage for every station in the NYC MTA subway system: how many people entered and exited a station during a certain amount of time. The sampling here is a 4-hours aggregate, and covers a period going from May 2010 to May 2014.
+ </p>
+ <p>
+  The NCDC dataset comes from three weather stations in the NYC area: La Guardia Airport, JFK Airport, and Central Park. For each of these stations, we have monthly, daily and hourly values for very different parameters, such as wind speeds, dew and wet points, sunrise and sunset hours,… Note that the fields are different for each sampling. We chose only to focus on a few values, to keep it clear enough for the user: wind speed, average temperature, amount of rain, percentage of humidity. We aggregate the hourly data in order to have the same sampling for both datasets, covering the same period.
+ </p>
+ <p>
+  In order to facilitate for the user the identification of the impact of extra-ordinary phenomena that occurred in the years covered by our data, we added on the first and third visualization the position of three major events in terms of climate conditions (exceptional wind speeds and/or precipitation): hurricanes Irene (August 2011), Sandy (October 2013), and tropical storm Andrea (June 2013).
+ </p>
+ <p>
+  The first step in our implementation is the extraction of the datasets. From raw data, we created JSON format files, using Python scripts. This allowed us to create an optimal number of files (i.e.. files small enough to be handled by the application, but large enough so that we don’t have too many files, in which case too many HTTP requests would be made).
+ </p>
+ <p>
+  The visualization interface prototype is written with HTML5, with extensive use of JavaScript and the D3 library. Three parts constitute the main interface: a visualization of the global traffic through the stations, at the top. The central part is a map of the subway stations, displaying the average traffic through them. The lower part is two-fold: first, a linear representation of the turnstile subway data, with data for each year displayed in a different color. Below we have the weather data for each year, allowing the user to try to explore basic relationships between subway usage in a station versus the weather conditions in different periods of time, with efficient comparison of time patterns and/or anomalies.
+ </p>
+ <p>
+  <a href="/blog/files/36_507397436.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.36_507397436.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Figure 2:
+  </strong>
+  This image represents the entire turnstiles dataset. Each row corresponds to a station, and each column to a 4-hour wide time interval. Note a large interruption in service due to Hurricane Sandy (white band around October 2012), and a number of stations that remained closed due to restoration work (white row for some stations after October 2012 up until the end of May 2013)
+ </p>
+ <p>
+  The main purpose of the prototype is to let the user navigate through the datasets, by selecting stations on the map. The first graph and the map enables a global point of view, while the lower display details the commuters volume for the currently selected station. The global graph (Fig. 2) is an image that encompasses the whole turnstiles dataset, each line of pixels representing a subway station, and each column a 4-hour span turnstile traffic.
+ </p>
+ <p>
+  Below the graph is a map of the NYC subway system, each circle corresponding to a subway station. The circles vary in size and color: the bigger the diameter, the more traffic there is on the station. Red circles are stations used mainly as exits, blue circles being mainly entries. White stations denotes neutral traffic. This visualization provides a good overview of the main role each stations plays: 34St-Penn and 14St stations show great volume of people entering the station, as opposed to 34St-Herald and Grand Central-42St stations, which show great volume of people leaving the stations. 42 St-Port Authority Bus Terminal is more neutral, showing a more balanced number of people entering and exiting the station over the entire observed dataset.
+ </p>
+ <p>
+  Finally, The per-station visualization is two-fold. First, a timeseries depicts for each selected station in the map the volume of activity in that station per year. Below the user can select a weather measurement to verify possible correlations between the use of that particular station and the weather conditions. This visualization enables the user to see the global impact of the climate on subway usage.
+ </p>
+ <p>
+  <a href="/blog/files/36_752846260.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.36_752846260.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Figure 3:
+  </strong>
+  The per-station part of the visualization, and the weather conditions plot. Here, the example of the Neptune Av. station.
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   This prototype, through the coupling of turnstiles and weather datasets, enables the user to study the impact of climatic conditions on the New York City subway users, and this for a time window of more than four years. Other plots could be devised to make visible a possible correlation between station use and weather conditions, to extend the basic mechanism implemented in this prototype.
+  </span>
+ </p>
+ <p>
+  Other data could also provide users with more insights, such as the precise path of hurricanes, or more weather variables coming from different datasets. Overall, we believe the choices made here offer a good compromise between keeping the prototype user-friendly and providing a great amount of information to users with variable knowledge about weather and subway systems, consisting on a easily extendable prototype for data exploration.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

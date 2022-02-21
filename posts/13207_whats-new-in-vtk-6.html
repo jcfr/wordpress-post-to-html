@@ -1,0 +1,358 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  VTK 5.10.0 was tagged on May 12, 2012, with a bug fix release made on October 15. For many months, we worked on the modularization of VTK using a set of tools to automate the file moves and maintain a testing tree that was parallel to the current master. A lot of that work was documented in a recent blog post about “VTK Modularization and Modernization,” with the largest motivation being to update the VTK build system to facilitate our growth and evolution as one of the world’s most powerful and extensive visualization libraries. Once the modularization was merged into the main tree, we continued working on many new features and removing deprecated APIs, code, including the VTK 4 compatibility API.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    New Features
+   </strong>
+  </span>
+  <br/>
+  Major new features in VTK 6 include enhanced support for patched AMR, which comprises updated readers for Enzo and Flash format files and demand-driven filters for re-sampling and slicing AMR datasets. The latter changes enable users to visualize complex AMR simulation data while accessing only the blocks that are necessary and in only as much detail as necessary to display the details of interest. As part of this work, we’ve developed filters that will automatically generate ghost layers in distributed structured datasets in case they are not present in the input.
+ </p>
+ <p>
+  We’ve also optimized particle tracing in time-varying vector fields in this release. The vtkParticleTracer, vtkStreaklineFilter, and vtkParticlePathFilter classes, along with their parallel counterparts, have been rewritten to use the pipeline more effectively and to cache and reuse previously-computed results when possible. As part of this work the VTK pipeline’s treatment of time-varying data was refactored, shifting more of the responsibility from the executives and datasets into vtkMultipleTimeStepAlgorithm.
+ </p>
+ <p>
+  It is also now possible to smoothly and continuously warp arbitrarily complex polygonal meshes, and other datasets that are represented by explicit point coordinates, using the method of mean value coordinates and the vtkDeformPointSet filter.
+ </p>
+ <p>
+  The charts saw several enhancements, such as the introduction of the scatter plot matrix support which features seamless 2D-3D-2D transitions when animating between the different columns of the input data. The support added for 3D charts in the 2D chart API then led to the development of a new set of 3D charts supporting surfaces, points, and lines with reinforcement for fixed size charts where data can be panned and zoomed, and the charts rotated. Several new selection modes and interactions were added, including support for polygonal selection in addition to the standard rectangular selection box.
+ </p>
+ <p>
+  Vector graphics export to formats such as postscript, SVG, and PDF has been improved following a rewrite of the vtkGL2PSExporter class. Several related improvements to text rendering have been made in this release as well; text can now be rendered to a vtkPath object as a raw Bezier curve, for example; system fonts may now be used in VTK renderings by enabling the Rendering/FreeTypeFontConfig module on platforms that support fontconfig; and mathematical equations can be rendered using the matplotlib Python package. With this release, enclosing latex-style markups between dollar signs will produce pretty-printed equations in text actors and charts when the Rendering/Matplotlib module is enabled and matplotlib is installed.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_1665509526.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1665509526.jpg" style="display: block; margin-left: auto; margin-right: auto; width: 50%;"/>
+  </a>
+  <strong>
+   <em>
+    Figure 1: FreeType Text Renderer test image.
+   </em>
+  </strong>
+ </p>
+ <p style="text-align: justify;">
+  The generalized mechanism by which VTK calls into Python mentioned above is itself a new feature in this release. This code can be found in the UtilitiesPython module. The interface to Python was promoted from ParaView, where it forms the basis of ParaView’s Python Programmable Filter. Likewise, the XDMF file format, a meta-format for describing HDF5 data, has been promoted from ParaView into VTK for the first time as part of this 6.0 release. This type of code reuse is simplified because of VTK’s new modular build system, which is described more later in this article.
+ </p>
+ <p>
+  VTK can now map values into discrete color sets. ‘vtkScalarsToColors’ and subclasses now support ‘IndexedLookup’ mode where only values that exactly match an annotation are assigned a color. Similarly, the ‘vtkScalarBarActor’ has been refactored to enable drawing of color swatches for lookup tables when the “indexed lookup” feature is turned on, and draw a “NaN” swatch to indicate the color used for not-a-number and infinite values. Annotations on the ScalarBarActor also make use of the new text rendering capabilities mentioned previously.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_1614702641.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1614702641.jpg" style="display: block; margin-left: auto; margin-right: auto; width: 50%;"/>
+  </a>
+  <strong>
+   <em>
+    Figure 2: Indexed lookup color map.
+   </em>
+  </strong>
+ </p>
+ <p>
+  For the first time, VTK also has a polyhedron surface selection mode. This extends VTK’s ability to select surface elements underneath a rectangular region of the screen with a variation that allows the user to draw arbitrarily shaped regions on the screen and return all the surface elements within.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_1416369966.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1416369966.jpg" style="display: block; margin-left: auto; margin-right: auto; width: 50%;"/>
+  </a>
+  <strong>
+   <em>
+    Figure 3: Selecting odd-shaped features in VTK.
+   </em>
+  </strong>
+ </p>
+ <p>
+  This release also marks a first forray into GPGPU filtering within VTK. The AcceleratorsPiston module is a module that interfaces to LANL’s Piston library. Piston is a library of visualization operators that are built on top of NVidia’s Thrust parallel processing library. The new VTK module is a set of filters that transport data from VTK into Piston, orchestrate the execution of Piston operators to process data on the GPU, render the data directly on the GPU, and then optionally bring the results back into VTK for further processing on the CPU.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Modularization
+   </strong>
+  </span>
+  <br/>
+  Modularization involved rewriting large pieces of the build system, taking advantage of many new features in CMake, moving almost all of the source code into new modules, and automating the addition and removal of modules as much as possible. We went from a set of 19 statically-defined kits with hardwired dependencies and wrapping code, to 160 modules where almost every aspect of the modules were processed automatically.
+ </p>
+ <p>
+  Two files were used to script the modularization of the VTK source tree: a Python file written by the Boost community, and a manifest file that describes the file moves, deletions, creations, and patches. This allowed us to get most of the new build system working without undue interruption to the normal development process, with some projects even using the modularized source before it was committed to master. On April 9, 2012, Brad King, Chris Harris, and I gathered in Brad’s office and pressed the button, running the modularization scripts one final time to create a sequence of commits that moved all of the source files, patched the source, and introduced the new build system.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Simple Module Naming Scheme
+    </span>
+   </strong>
+  </span>
+  <br/>
+  We decided early on that we wanted to use a simple naming scheme and source tree layout. All source code is two levels deep, with a top-level grouping (one word) and a second level (one or more words), which means that it is very simple to go from module name to source code location and back again; for example, vtkCommonDataModel is in Common/DataModel and Rendering/Core code is exposed in the vtkRenderingCore module. The tests now all contain the name of the module they are located in and the language the test is written in, again making it much simpler to go from the name of a test to a location in the source tree. All names are camel-cased, with a lower case ‘vtk’ prefix.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Anatomy of a Module
+   </strong>
+  </span>
+  <br/>
+  The new VTK build system processes modules in two passes. The first scans the source tree for files named module.cmake which are two directories deep; when found, the files are included, which causes a CMake macro called vtk_module to run. This macro is used to declare the name of the module, its dependencies, group memberships, and any other special metadata. We kept the syntax as simple as possible, and a standard macro can be defined in just a few lines. A more complex module, such as vtkRenderingCore, takes a few extra lines.
+ </p>
+ <p>
+  <span style="font-size: x-small;">
+   vtk_module(vtkRenderingCore
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   GROUPS
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   Rendering
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   DEPENDS     vtkCommonExecutionModel
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkCommonTransforms
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkFiltersSources
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkFiltersGeneral
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkFiltersGeometry
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkFiltersExtraction
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkIOImage
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkIOXMLParser
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   COMPILE_DEPENDS
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkUtilitiesMaterialLibrary
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   TEST_DEPENDS
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkIOXML
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkTestingCore
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkTestingRendering
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   vtkRenderingContext2D
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   )
+  </span>
+ </p>
+ <p>
+  The first argument is always the name of the module, which in this case is vtkRenderingCore. After that named arguments are used (all other arguments are optional), such as: GROUPS to specify membership in an option group; DEPENDS for public dependencies the module will link to; COMPILE_DEPENDS for modules that are needed at compile time but are not necessarily linked to; and TEST_DEPENDS that the tests depend upon in addition to the module dependencies. The dependencies are all recursive, and so depending on vtkCommonDataModel brings in vtkCommonCore, which is a dependency of vtkCommonDataModel for example.
+ </p>
+ <p>
+  There is an accompanying CMakeLists.txt file in the same directory, which contains the standard logic for building a module. This file has access to everything a normal CMakeLists.txt file has, in addition to some VTK-specific macros and functions that integrate with the dependency information specified in the module.cmake files. When adding a module here, it should be added with the same name as specified in the module.cmake file, using the vtk_module_library function. This will export module properties for the wrappers, ensure the headers are installed, and link to anything specified as a dependency of the module. Once this call has been made, a standard CMake target will be created and it can be used with all of the standard CMake commands, such as target_link_libraries and set_target_properties, if any special treatment is required.
+ </p>
+ <p>
+  The directory is added in the second pass, and in the correct order assuring all dependencies were already added, using a standard add_subdirectory call with variables set up correctly for the module; as a result, variables such as vtk-module will be set to the name of the module specified in module.cmake.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Build Time Options Should Not Change API/Modules
+   </strong>
+  </span>
+  <br/>
+  VTK had increasingly difficult-to-follow logic where the kits would be built differently depending upon what was available on the system. This led to the rendering kit linking to Qt, the Qt kit linking to QtWebKit, if available; and other behaviors that were not always desirable. In VTK 6, we decided to disallow options that changed API/linking in modules, with one-or-two exceptions where it was hard to avoid. The Qt kit was split into several modules, including a vtkGUISupportQtWebkit, which contains the webkit-dependent code. Things such as vtkRenderingOpenGL had to make exceptions to account for different windowing systems, OpenGL libraries, etc.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Optional Use of the Object Factory
+   </strong>
+  </span>
+  <br/>
+  In previous VTK releases, all vtkObject-derived classes used the object factory in their static new method. While this allowed for a great deal of flexibility as any class could be overridden by dependent code,  it also came at a great price in terms of run time cost for instantiation. With the release of VTK 6, the default vtkStandardNewMacro will return the class; the new vtkObjectFactoryNewMacro will always use the object factory; and the vtkAbstractObjectFactoryNewMacro will always use the object factory and potentially return NULL if no override was specified. The VTK_ALL_NEW_OBJECT_FACTORY option enables you to switch back to the old behavior at compile time by using the object factory for all vtkObject-derived classes.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Object Factory Initialization
+   </span>
+  </strong>
+  <br/>
+  A big change in VTK 6 is the introduction of implementation modules. These move VTK from hardwiring object factory overrides in an ad-hoc fashion for each kit at compile time, to initializing the object factory overrides at link/runtime. We thought long and hard about how to reduce the pain as much as possible here, and came up with the solution in VTK 6.0 where you must state the implementation modules you rely upon and ensure your binary is compiled with the generated compiler definitions, as documented here.
+ </p>
+ <p>
+  The interface classes, such as vtkRenderWindow, are abstract and therefore it is not possible to return anything except NULL if their new method does not have a registered override. Linking to vtkRenderingOpenGL and adding the compiler definitions to your application’s build system will ensure that the object factory overrides are initialized whether you are linking to dynamic or static libraries. These overrides change highlighted areas where interface classes were inherently linked to OpenGL. Changes were also introduced to allow other back-ends, ultimately opening the door to alternative implementation modules. This pattern was also used to enhance database-related classes, where each implementation module registers the additional database backends (see vtkIOMySQL for example).
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Finding and Using VTK 6
+   </strong>
+  </span>
+  <br/>
+  Any application using the standard OpenGL rendering in VTK will likely want to link to vtkRenderingOpenGL and vtkInteractionStyle. If using volume rendering, vtkRenderingVolumeOpenGL would also be required, and some of the text rendering used required vtkRenderingFreeTypeOpenGL. If your application wants to take advantage of our integration with Qt then vtkGUISupportQt contains many of the standard classes, with vtkGUISupportQtOpenGL containing integration with QGLWidget and the Qt OpenGL library.
+ </p>
+ <p>
+  It is very important to ensure that you specify the components you want to use in the find_package call. If no components are specified, the VTK_LIBRARIES variable and the VTK_DEFINITIONS variables will be populated with all modules that were built. This is not usually what you want; you should instead specify the modules you will use in your application, and ensure that the compile definitions are used when compiling your application and that the libraries are linked to. A typical example would be one where you wish to find and link to the rendering code in VTK using the OpenGL implementation module. The CMake code in your application would look something like:
+ </p>
+ <p>
+  <span style="font-size: x-small;">
+   cmake_minimum_required(VERSION 2.8.7 FATAL_ERROR)
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   project(vtkApplication)
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   find_package(VTK 6.0
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   COMPONENTS vtkRenderingOpenGL vtkInteractionStyle
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   NO_MODULE)
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   include(${VTK_USE_FILE})
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   add_executable(myApplication application.cxx)
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   target_link_libraries(myApplication
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   ${VTK_LIBRARIES})
+  </span>
+ </p>
+ <p>
+  The inclusion of the VTK_USE_FILE is optional. If a user wishes to have more control, they may can opt to replace it with the following calls (or similar):
+ </p>
+ <p>
+  <span style="font-size: x-small;">
+   include_directories(${VTK_INCLUDE_DIRS})
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   set_property(DIRECTORY APPEND
+  </span>
+  <br/>
+  <span style="font-size: x-small;">
+   PROPERTY COMPILE_DEFINITIONS ${VTK_DEFINITIONS})
+  </span>
+ </p>
+ <p>
+  The above is what the use file does, but it could be adapted so that  include directories were set on the target directly, or the compiler definitions applied only to the application target in a more complex application. Including the use file sets several things at directory scope, which may not be desirable depending upon your build system and how your source tree is structured. It should also be noted that the aforementioned variables are populated locally with each invocation of the find_package command, and so subsequent calls could specify the components needed by another executable for example.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Acknowledgements
+   </strong>
+  </span>
+  <br/>
+  This release results from the effort of many different parties. Modularization was supported, principally, by the Scientific Discovery through Advanced Computing (SciDAC) program funded by U.S. Department of Energy, Office of Science, Advanced Scientific Computing Research under award number DE-FC02-12ER26070, and by Sandia National Laboratories, a multi-program laboratory managed and operated by Sandia Corporation, a wholly owned subsidiary of Lockheed Martin Corporation, for the U.S. Department of Energy’s National Nuclear Security Administration under contract DE-AC04-94AL85000. The final release work was sponsored primarily by NIH R01EB014955. As usual, the full list of sponsors and developers is long and diverse. Thanks go out to everyone who tried, contributed to, and funded the development of VTK 6.
+  <br/>
+  <a href="/source/files/28_541861353.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_541861353.jpg" style="float: left; height: 125px; width: 100px;"/>
+  </a>
+  <em>
+   <strong>
+    Marcus D. Hanwell
+   </strong>
+   is a Technical Leader in the scientific computing team at Kitware, where he leads the Open Chemistry effort.  He has a background in open source, open science, Physics, and Chemistry. He has worked in open-source for over a decade.
+  </em>
+  <br/>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/28_1552309367.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1552309367.jpg" style="float: left; height: 126px; width: 100px;"/>
+  </a>
+  <em>
+   <strong>
+    David E. DeMarle
+   </strong>
+   is a member of the R&amp;D team at Kitware where he contributes to both ParaView and VTK. He frequently teaches Kitware’s professional development and training courses for these product applications.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Did you know…?
+   </strong>
+  </span>
+  <br/>
+  Kitware’s Vimeo library is regularly updated with new videos and webinars to keep you up-to-date with the lastest developments to our toolkits.
+ </p>
+ <p>
+  Visit
+  <a href="vimeo.com/kitware">
+   vimeo.com/kitware
+  </a>
+  to see what topics are available. Recent videos related this articles include:
+ </p>
+ <p>
+  <a href="https://vimeo.com/68306366">
+   VTK 6.0 Release Webinar
+  </a>
+  : This 20-minute webinar highlights changes made in the VTK 6.0 release.
+ </p>
+ <p>
+  <a href="https://vimeo.com/66194458">
+   Open-Source, Cross-Platform Charting with VTK
+  </a>
+  : This webinar teaches participants how to use VTK’s charting modules to plot and interact with non-spatially oriented datasets.
+ </p>
+ <p>
+  <a href="https://vimeo.com/68719167">
+   ParaView 4.0 Release Webinar
+  </a>
+  : This short video shows what updates are new in ParaView 4.0, many of which are derived from VTK 6.0.
+ </p>
+</div>

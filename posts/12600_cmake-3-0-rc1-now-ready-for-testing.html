@@ -1,0 +1,1550 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  I am proud to announce that CMake 3.0 has entered the release candidate stage.
+ </p>
+ <p>
+  Sources and binaries are available at:
+  <br/>
+  <a href="http://www.cmake.org/files/v3.0/?C=M;O=D">
+   http://www.cmake.org/files/v3.0/?C=M;O=D
+  </a>
+ </p>
+ <p>
+  Documentation is available at:
+  <br/>
+  <a href="http://www.cmake.org/cmake/help/v3.0">
+   http://www.cmake.org/cmake/help/v3.0
+  </a>
+ </p>
+ <p>
+  Release notes appear below and are also published at
+  <br/>
+  <a href="http://www.cmake.org/cmake/help/v3.0/release/3.0.0.html">
+   http://www.cmake.org/cmake/help/v3.0/release/3.0.0.html
+  </a>
+ </p>
+ <p>
+  Some of the more significant features of CMake 3.0 are:
+ </p>
+ <ul>
+  <li>
+   Compatibility options supporting code written for CMake versions prior to 2.4 have been removed.
+  </li>
+  <li>
+   The CMake language has been extended with *Bracket Argument* and  *Bracket Comment* syntax inspired by Lua long brackets.
+  </li>
+  <li>
+   The CMake documentation has been converted to reStructuredText and uses Sphix generation.
+  </li>
+  <li>
+   Generators for Visual Studio 10 (2010) and later were renamed to include the product year like generators for older VS versions:
+   <ul>
+    <li>
+     "Visual Studio 10" -&gt; "Visual Studio 10 2010"
+    </li>
+    <li>
+     "Visual Studio 11" -&gt; "Visual Studio 11 2012"
+    </li>
+    <li>
+     "Visual Studio 12" -&gt; "Visual Studio 12 2013"
+    </li>
+   </ul>
+  </li>
+  <li>
+   This clarifies which generator goes with each Visual Studio version. The old names are recognized for compatibility.
+  </li>
+  <li>
+   A new "CodeLite" extra generator is available for use with the Makefile or Ninja generators.
+  </li>
+  <li>
+   A new "Kate" extra generator is available for use with the Makefile or Ninja generators.
+  </li>
+  <li>
+   The "add_library()" command learned a new "INTERFACE" library type. Interface libraries have no build rules but may have properties defining "usage requirements" and may be installed, exported, and imported.  This is useful to create header-only libraries that have concrete link dependencies on other libraries.
+  </li>
+  <li>
+   The "export()" command learned a new "EXPORT" mode that retrieves the list of targets to export from an export set configured by the "install(TARGETS)" command "EXPORT" option. This makes it easy to export from the build tree the same targets that are exported from the install tree.
+  </li>
+  <li>
+   The "project()" command learned to set some version variables to values specified by the new "VERSION" option or to empty strings. See policy "CMP0048".
+  </li>
+  <li>
+   Several long-outdated commands that should no longer be called have been disallowed in new code by policies:
+   <ul>
+    <li>
+     Policy "CMP0029" disallows "subdir_depends()"
+    </li>
+    <li>
+     Policy "CMP0030" disallows "use_mangled_mesa()"
+    </li>
+    <li>
+     Policy "CMP0031" disallows "load_command()"
+    </li>
+    <li>
+     Policy "CMP0032" disallows "output_required_files()"
+    </li>
+    <li>
+     Policy "CMP0033" disallows "export_library_dependencies()"
+    </li>
+    <li>
+     Policy "CMP0034" disallows "utility_source()"
+    </li>
+    <li>
+     Policy "CMP0035" disallows "variable_requires()"
+    </li>
+    <li>
+     Policy "CMP0036" disallows "build_name()"
+    </li>
+   </ul>
+  </li>
+ </ul>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   CMake 3.0.0 Release Notes
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   *************************
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Changes made since CMake 2.8.12.2 include the following.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Documentation Changes
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   =====================
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The CMake documentation has been converted to reStructuredText and
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   now transforms via Sphinx (http://sphinx-doc.org) into man and html
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   pages.  This allows the documentation to be properly indexed and to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   contain cross-references.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Conversion from the old internal documentation format was done by an
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   automatic process so some documents may still contain artifacts.
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   They will be updated incrementally over time.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   A basic reStructuredText processor has been implemented to support
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "cmake –help-command" and similar command-line options.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * New manuals were added:
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-buildsystem(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-commands(7)", replacing "cmakecommands(1)" and
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "cmakecompat(1)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-developer(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-generator-expressions(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-generators(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-language(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-modules(7)", replacing "cmakemodules(1)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-packages(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-policies(7)", replacing "cmakepolicies(1)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-properties(7)", replacing "cmakeprops(1)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-qt(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-toolchains(7)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "cmake-variables(7)", replacing "cmakevars(1)"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Release notes for CMake 3.0.0 and above will now be included with
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   the html documentation.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   New Features
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ============
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Syntax
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ——
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The CMake language has been extended with *Bracket Argument* and
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   *Bracket Comment* syntax inspired by Lua long brackets:
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   set(x [===[bracket argument]===] #[[bracket comment]])
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Content between equal-length open- and close-brackets is taken
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   literally with no variable replacements.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Warning: This syntax change could not be made in a fully
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   compatible way. No policy is possible because syntax parsing
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   occurs before any chance to set a policy.  Existing code using an
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   unquoted argument that starts with an open bracket will be
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   interpreted differently without any diagnostic.  Fortunately the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   syntax is obscure enough that this problem is unlikely in
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   practice.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Generators
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ———-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new "CodeLite" extra generator is available for use with the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Makefile or Ninja generators.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new "Kate" extra generator is available for use with the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Makefile or Ninja generators.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "Ninja" generator learned to use "ninja" job pools when
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   specified by a new "JOB_POOLS" global property.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Commands
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ——–
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "add_library()" command learned a new "INTERFACE" library
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   type. Interface libraries have no build rules but may have
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   properties defining "usage requirements" and may be installed,
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   exported, and imported.  This is useful to create header-only
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   libraries that have concrete link dependencies on other libraries.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "export()" command learned a new "EXPORT" mode that retrieves
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   the list of targets to export from an export set configured by the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "install(TARGETS)" command "EXPORT" option.  This makes it easy to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   export from the build tree the same targets that are exported from
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   the install tree.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "export()" command learned to work with multiple dependent
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   export sets, thus allowing multiple packages to be built and
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   exported from a single tree.  The feature requires CMake to wait
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   until the generation step to write the output file.  This means one
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   should not "include()" the generated targets file later during
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   project configuration because it will not be available. Use *Alias
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Targets* instead.  See policy "CMP0024".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "install(FILES)" command learned to support "generator
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   expressions" in the list of files.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "project()" command learned to set some version variables to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   values specified by the new "VERSION" option or to empty strings.
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   See policy "CMP0048".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "string()" command learned a new "CONCAT" mode. It is
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   particularly useful in combination with the new *Bracket Argument*
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   syntax.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "unset()" command learned a "PARENT_SCOPE" option matching
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   that of the "set()" command.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "include_external_msproject()" command learned to handle
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   non-C++ projects like ".vbproj" or ".csproj".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "ctest_update()" command learned to update work trees managed
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   by the Perforce (p4) version control tool.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "message()" command learned a "DEPRECATION" mode. Such
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   messages are not issued by default, but may be issued as a warning
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   if "CMAKE_WARN_DEPRECATED" is enabled, or as an error if
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CMAKE_ERROR_DEPRECATED" is enabled.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "target_link_libraries()" command now allows repeated use of
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   the "LINK_PUBLIC" and "LINK_PRIVATE" keywords.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Variables
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ———
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Variable "CMAKE_FIND_NO_INSTALL_PREFIX" has been introduced to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   tell CMake not to add the value of "CMAKE_INSTALL_PREFIX" to the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CMAKE_SYSTEM_PREFIX_PATH" variable by default. This is useful when
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   building a project that installs some of its own dependencies to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   avoid finding files it is about to replace.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Variable "CMAKE_STAGING_PREFIX" was introduced for use when cross-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   compiling to specify an installation prefix on the host system that
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   differs from a "CMAKE_INSTALL_PREFIX" value meant for the target
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   system.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Variable "CMAKE_SYSROOT" was introduced to specify the toolchain
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   SDK installation prefix, typically for cross-compiling. This is used
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   to pass a "–sysroot" option to the compiler and as a prefix
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   searched by "find_*" commands.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Variable "CMAKE_&lt;LANG&gt;_COMPILER_TARGET" was introduced for use
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   when cross-compiling to specify the target platform in the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   *toolchain file* specified by the "CMAKE_TOOLCHAIN_FILE" variable.
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   This is used to pass an option such as "–target=&lt;triple&gt;" to some
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   cross- compiling compiler drivers.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Variable "CMAKE_MAP_IMPORTED_CONFIG_&lt;CONFIG&gt;" has been introduced
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   to optionally initialize the "MAP_IMPORTED_CONFIG_&lt;CONFIG&gt;" target
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   property.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Properties
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ———-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "ADDITIONAL_MAKE_CLEAN_FILES" directory property learned to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   support "generator expressions".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new directory property "CMAKE_CONFIGURE_DEPENDS" was introduced
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   to allow projects to specify additional files on which the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   configuration process depends.  CMake will re-run at build time when
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   one of these files is modified. Previously this was only possible to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   achieve by specifying such files as the input to a
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "configure_file()" command.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new *AUTORCC* feature replaces the need to invoke
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "qt4_add_resources()" by allowing ".qrc" files to be listed as
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   target sources.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new *AUTOUIC* feature replaces the need to invoke
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "qt4_wrap_ui()".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Test properties learned to support "generator expressions". This
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   is useful to specify per-configuration values for test properties
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   like "REQUIRED_FILES" and "WORKING_DIRECTORY".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new "SKIP_RETURN_CODE" test property was introduced to tell
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "ctest(1)" to treat a particular test return code as if the test
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   were not run.  This is useful for test drivers to report that
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   certain test requirements were not available.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * New types of *Compatible Interface Properties* were introduced,
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   namely the "COMPATIBLE_INTERFACE_NUMBER_MAX" and
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "COMPATIBLE_INTERFACE_NUMBER_MIN" for calculating numeric maximum
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   and minimum values respectively.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Modules
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ——-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "CheckTypeSize" module "check_type_size" macro and the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CheckStructHasMember" module "check_struct_has_member" macro
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   learned a new "LANGUAGE" option to optionally check C++ types.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "ExternalData" module learned to work with no URL templates if
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   a local store is available.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "ExternalProject" function "ExternalProject_Add" learned a new
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "GIT_SUBMODULES" option to specify a subset of available submodules
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   to checkout.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new "FindBacktrace" module has been added to support
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "find_package(Backtrace)" calls.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new "FindLua" module has been added to support
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "find_package(Lua)" calls.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "FindBoost" module learned a new "Boost_NAMESPACE" option to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   change the "boost" prefix on library names.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "FindBoost" module learned to control search for libraries with
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   the "g" tag (for MS debug runtime) with a new
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "Boost_USE_DEBUG_RUNTIME" option.  It is "ON" by default to preserve
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   existing behavior.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "FindJava" and "FindJNI" modules learned to use a "JAVA_HOME"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   CMake variable or environment variable, and then try
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "/usr/libexec/java_home" on OS X.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "UseJava" module "add_jar" function learned a new "MANIFEST"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   option to pass the "-m" option to "jar".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new "CMakeFindDependencyMacro" module was introduced with a
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "find_dependency" macro to find transitive dependencies in a
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "package configuration file".  Such dependencies are omitted by the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   listing of the "FeatureSummary" module.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "FindQt4" module learned to create *Imported Targets* for Qt
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   executables.  This helps disambiguate when using multiple "Qt
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   versions" in the same buildsystem.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Generator Expressions
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ———————
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * New "$&lt;PLATFORM_ID&gt;" and "$&lt;PLATFORM_ID:…&gt;" "generator
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   expressions" have been added.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "$&lt;CONFIG&gt;" "generator expression" now has a variant which
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   takes no argument.  This is equivalent to the "$&lt;CONFIGURATION&gt;"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   expression.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * New "$&lt;UPPER_CASE:…&gt;" and "$&lt;LOWER_CASE:…&gt;" "generator
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   expressions" generator expressions have been added.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * A new "$&lt;MAKE_C_IDENTIFIER:…&gt;" "generator expression" has been
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   added.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Other
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   —–
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "cmake(1)" "-E" option learned a new "sleep" command.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "ccmake(1)" dialog learned to honor the "STRINGS" cache entry
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   property to cycle through the enumerated list of possible values.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "cmake-gui(1)" dialog learned to remember window settings
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   between sessions.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "cmake-gui(1)" dialog learned to remember the type of a cache
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   entry for completion in the "Add Entry" dialog.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   New Diagnostics
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ===============
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Directories named in the "INTERFACE_INCLUDE_DIRECTORIES" target
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   property of imported targets linked conditionally by a "generator
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   expression" were not checked for existence.  Now they are checked.
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   See policy "CMP0027".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Build target names must now match a validity pattern and may no
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   longer conflict with CMake-defined targets.  See policy "CMP0037".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Build targets that specify themselves as a link dependency were
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   silently accepted but are now diagnosed.  See "CMP0038".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "target_link_libraries()" command used to silently ignore
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   calls specifying as their first argument build targets created by
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "add_custom_target()" but now diagnoses this mistake. See policy
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CMP0039".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "add_custom_command()" command used to silently ignore calls
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   specifying the "TARGET" option with a non-existent target but now
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   diagnoses this mistake.  See policy "CMP0040".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Relative paths in the "INTERFACE_INCLUDE_DIRECTORIES" target
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   property used to be silently accepted if they contained a "generator
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   expression" but are now rejected.  See policy "CMP0041".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "get_target_property()" command learned to reject calls
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   specifying a non-existent target.  See policy "CMP0045".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "add_dependencies()" command learned to reject calls
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   specifying a dependency on a non-existent target. See policy
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CMP0046".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Link dependency analysis learned to assume names containing "::"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   refer to *Alias Targets* or *Imported Targets*.  It will now produce
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   an error if such a linked target is missing.  Previously in this
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   case CMake generated a link line that failed at build time. See
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   policy "CMP0028".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * When the "project()" or "enable_language()" commands initialize
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   support for a language, it is now an error if the full path to the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   compiler cannot be found and stored in the corresponding
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CMAKE_&lt;LANG&gt;_COMPILER" variable.  This produces nicer error
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   messages up front and stops processing when no working compiler is
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   known to be available.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Target sources specified with the "add_library()" or
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "add_executable()" command learned to reject items which require an
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   undocumented extra layer of variable expansion. See policy
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CMP0049".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Use of "add_custom_command()" undocumented "SOURCE" signatures now
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   results in an error.  See policy "CMP0050".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Deprecated and Removed Features
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   ===============================
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Compatibility options supporting code written for CMake versions
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   prior to 2.4 have been removed.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Several long-outdated commands that should no longer be called
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   have been disallowed in new code by policies:
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0029" disallows "subdir_depends()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0030" disallows "use_mangled_mesa()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0031" disallows "load_command()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0032" disallows "output_required_files()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0033" disallows "export_library_dependencies()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0034" disallows "utility_source()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0035" disallows "variable_requires()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Policy "CMP0036" disallows "build_name()"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "cmake(1)" "-i" wizard mode has been removed. Instead use an
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   interactive dialog such as "ccmake(1)" or use the "-D" option to set
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   cache values from the command line.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The builtin documentation formatters that supported command-line
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   options such as "–help-man" and "–help-html" have been removed in
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   favor of the above-mentioned new documentation system.  These and
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   other command-line options that used to generate man- and html-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   formatted pages no longer work.  The "cmake(1)" "–help-custom-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   modules" option now produces a warning at runtime and generates a
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   minimal document that reports the limitation.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "COMPILE_DEFINITIONS_&lt;CONFIG&gt;" directory properties and the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "COMPILE_DEFINITIONS_&lt;CONFIG&gt;" target properties have been
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   deprecated.  Instead set the corresponding "COMPILE_DEFINITIONS"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   directory property or "COMPILE_DEFINITIONS" target property and use
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "generator expressions" like "$&lt;CONFIG:…&gt;" to specify per-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   configuration definitions. See policy "CMP0043".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "LOCATION" target property should no longer be read from non-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   IMPORTED targets.  It does not make sense in multi-configuration
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   generators since the build configuration is not known while
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   configuring the project.  It has been superseded by the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "$&lt;TARGET_FILE&gt;" generator expression.  See policy "CMP0026".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "COMPILE_FLAGS" target property is now documented as
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   deprecated, though no warning is issued.  Use the "COMPILE_OPTIONS"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   target property or the "target_compile_options()" command instead.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "GenerateExportHeader" module "add_compiler_export_flags"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   function is now deprecated.  It has been superseded by the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "&lt;LANG&gt;_VISIBILITY_PRESET" and "VISIBILITY_INLINES_HIDDEN" target
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   properties.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Other Changes
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   =============
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The version scheme was changed to use only two components for the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   feature level instead of three.  The third component will now be
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   used for bug-fix releases or the date of development versions. See
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   the "CMAKE_VERSION" variable documentation for details.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The default install locations of CMake itself on Windows and OS X
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   no longer contain the CMake version number.  This allows for easy
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   replacement without re-generating local build trees manually.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Generators for Visual Studio 10 (2010) and later were renamed to
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   include the product year like generators for older VS versions:
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "Visual Studio 10" -&gt; "Visual Studio 10 2010"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "Visual Studio 11" -&gt; "Visual Studio 11 2012"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * "Visual Studio 12" -&gt; "Visual Studio 12 2013"
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   This clarifies which generator goes with each Visual Studio version.
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   The old names are recognized for compatibility.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "CMAKE_&lt;LANG&gt;_COMPILER_ID" value for Apple-provided Clang is
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   now "AppleClang".  It must be distinct from upstream Clang because
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   the version numbers differ. See policy "CMP0025".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "CMAKE_&lt;LANG&gt;_COMPILER_ID" value for "qcc" on QNX is now
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "QCC". It must be distinct from "GNU" because the command-line
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   options differ.  See policy "CMP0047".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * On 64-bit OS X the "CMAKE_HOST_SYSTEM_PROCESSOR" value is now
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   correctly detected as "x86_64" instead of "i386".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * On OS X, CMake learned to enable behavior specified by the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "MACOSX_RPATH" target property by default.  This activates use of
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "@rpath" for runtime shared library searches. See policy "CMP0042".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "build_command()" command now returns a "cmake(1)" "–build"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   command line instead of a direct invocation of the native build
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   tool.  When using "Visual Studio" generators, CMake and CTest no
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   longer require "CMAKE_MAKE_PROGRAM" to be located up front.
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   Selection of the proper msbuild or devenv tool is now performed as
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   late as possible when the solution (".sln") file is available so it
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   can depend on project content.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "cmake(1)" "–build" command now shares its own stdout and
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   stderr pipes with the native build tool by default. The "–use-
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   stderr" option that once activated this is now ignored.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "$&lt;C_COMPILER_ID:…&gt;" and "$&lt;CXX_COMPILER_ID:…&gt;" "generator
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   expressions" used to perform case-insensitive comparison but have
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   now been corrected to perform case-sensitive comparison. See policy
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "CMP0044".
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The builtin "edit_cache" target will no longer select "ccmake(1)"
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   by default when no interactive terminal will be available (e.g. with
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "Ninja" or an IDE generator). Instead "cmake-gui(1)" will be
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   preferred if available.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "ExternalProject" download step learned to re-attempt download
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   in certain cases to be more robust to temporary network failure.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "FeatureSummary" no longer lists transitive dependencies since
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   they were not directly requested by the current project.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * The "cmake-mode.el" major Emacs editing mode has been cleaned up
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   and enhanced in several ways.
+  </span>
+ </p>
+ <p>
+  <span style="font-family: Courier New, Courier, monospace;">
+   * Include directories specified in the
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "INTERFACE_INCLUDE_DIRECTORIES" of *Imported Targets* are treated as
+  </span>
+  <br/>
+  <span style="font-family: Courier New, Courier, monospace;">
+   "SYSTEM" includes by default when handled as *usage requirements*.
+  </span>
+ </p>
+</div>

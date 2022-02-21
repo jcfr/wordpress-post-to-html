@@ -1,0 +1,327 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p class="p1">
+  <span style="line-height: 2em;">
+   Starting with CMake 2.8.12, there is built
+  </span>
+  <span class="s1" style="line-height: 2em;">
+   –
+  </span>
+  <span style="line-height: 2em;">
+   in support for RPATHs on Mac OS X.  Due to the flexibility of this mechanism for finding dependent shared libraries, use of @rpath within install names should be considered over @loader_path or @executable_path.  Along with this new support, target properties such as INSTALL_RPATH, will begin to work correctly.
+  </span>
+ </p>
+ <p class="p2">
+  <span style="line-height: 2em;">
+   First off, let’s briefly review what an “install name” is, and potential problems we might have with traditional methods.  An install name is basically a path embedded within a shared library, which tells the loader where to find that shared library at runtime.  For example, if libfoo.dylib has an install name of /usr/local/lib/libfoo.dylib, the install name is copied into an executable which links with libfoo.dylib.  At runtime, the loader will search for the executable’s dependent shared libraries using the full install name, which in this case is /usr/local/lib/libfoo.dylib.  Right off, you can see that this library, as is, can only exist in /usr/local/lib.  Suppose we tried an install name of “libfoo.dylib”.  Well, then we have the option of it residing in /usr/lib or /usr/local/lib because the loader recognizes those locations.  Traditionally, to make the shared library relocatable, such as within a relocatable application bundle, we have @executable_path and @loader_path that can be used within an install name, but with those we still suffer from the constraint of a shared library residing in a path relative to the executable or a shared library using it.  Some developers write custom scripts to modify install names while copying a shared library to a new location to work around these limitations.  With @rpath, this residence constraint goes away, as well as the need to modify the install name.
+  </span>
+ </p>
+ <p class="p2">
+  <span style="line-height: 2em;">
+   When using @rpath, the install name of libfoo.dylib is simply “@rpath/libfoo.dylib” which can remain fixed for all use cases.  For frameworks, the install name can be “@rpath/foo.framework/Versions/A/foo”.  When an executable links with libfoo.dylib, the install name “@rpath/libfoo.dylib” is embedded in the executable.  When the runtime loader searches for the executable’s dependencies, it will come across @rpath/.  To interpret this, the loader needs a list of paths that can be substituted for @rpath when finding dependencies.  These paths are called relative paths (RPATH) and are embedded in the executable and used by the loader as search paths.  For example, if there is an executable bar with an RPATH of /Users/Me/MyProject/lib, and if the runtime loader encounters the dependency @rpath/libfoo.dylib, it will attempt to load “/Users/Me/MyProject/lib/libfoo.dylib”.  When using @rpath in an install name, the residence constraint goes away, and the burden for successfully locating libfoo.dylib is pushed up to the executable or shared library that uses libfoo.dylib.  While not using @executable_path and @loader_path in an install name, it is still convenient to use those variables in an RPATH for an executable to help the loader find a dependency relative to itself.
+  </span>
+ </p>
+ <p class="p2">
+  <span style="line-height: 2em;">
+   Using @rpath allows us to relocate the shared libraries anywhere.  Here are 2 examples:
+  </span>
+ </p>
+ <ul>
+  <li>
+   <span style="line-height: 2em;">
+    If one creates an SDK for use by other developers, an install name of @rpath used by shared libraries means the SDK doesn’t need to be located under recognized runtime loader paths such as /usr/local/lib or /Library/Frameworks.  The burden is placed on an executable to find its dependencies, rather than a shared library emitting its location.
+   </span>
+  </li>
+  <li>
+   <span style="line-height: 2em;">
+    If one wanted to create an application bundle, dependent shared libraries with an @rpath install name can simply be copied into the application bundle without any modification to those shared libraries.  There is no need to run install_name_tool to fix the install names with their new location, as is done when using @executable_path or @loader_path.
+   </span>
+  </li>
+ </ul>
+ <p class="p1">
+  Now that we know how @rpath works and why it
+  <span class="s1">
+   ’
+  </span>
+  s a good idea, let’s move on to a simple example of how to use it in CMake.
+ </p>
+ <p class="p1">
+  Notable target properties are MACOSX_RPATH and INSTALL_RPATH.  MACOSX_RPATH is a flag that simply turns @rpath on or off for a target.  In the past, INSTALL_NAME_DIR has been used to control install names, but there shouldn’t be a need to do this anymore.  However, if it is still used, it overrides the MACOSX_RPATH flag.  For convenience, one may also set CMAKE_MACOSX_RPATH to cover multiple targets.
+ </p>
+ <div class="line" id="file-rpathexample-cmake-LC1">
+  <div class="line" style="padding-left: 60px;">
+   <span style="font-family: arial, helvetica, sans-serif;">
+    <span class="nb" style="color: #3366ff;">
+     cmake_minimum_required
+    </span>
+    <span class="p">
+     (
+    </span>
+    <span class="s">
+     VERSION
+    </span>
+    <span class="s">
+     2.8.12
+    </span>
+    <span class="p">
+     )
+    </span>
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC3" style="padding-left: 60px;">
+   <span style="font-family: arial, helvetica, sans-serif;">
+    <span class="nb" style="color: #3366ff;">
+     project
+    </span>
+    <span class="p">
+     (
+    </span>
+    <span class="s">
+     OSXRPath
+    </span>
+    <span class="p">
+     )
+    </span>
+   </span>
+   <span style="font-size: 10px; line-height: 2em;">
+   </span>
+  </div>
+  <div class="line" style="padding-left: 60px;">
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span class="c" style="color: #339966; font-family: arial, helvetica, sans-serif;">
+    #
+    <span>
+     enable @rpath in the install name for any shared library being built
+    </span>
+   </span>
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span class="c" style="color: #339966; font-family: arial, helvetica, sans-serif;">
+    # note: it is planned that a future version of CMake will enable this by default
+   </span>
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span style="font-family: arial, helvetica, sans-serif;">
+    <span class="nb" style="color: #3366ff;">
+     set
+    </span>
+    <span class="p">
+     (
+    </span>
+    <span class="s">
+     CMAKE_MACOSX_RPATH
+    </span>
+    <span class="s">
+     1
+    </span>
+    <span class="p">
+     )
+    </span>
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC8" style="padding-left: 60px;">
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span class="c" style="color: #339966; font-family: arial, helvetica, sans-serif;">
+    # add a shared library
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC9" style="padding-left: 60px;">
+   <span style="font-family: arial, helvetica, sans-serif;">
+    <span class="nb" style="color: #3366ff;">
+     add_library
+    </span>
+    <span class="p">
+     (
+    </span>
+    <span class="s">
+     foo
+    </span>
+    <span class="s">
+     SHARED
+    </span>
+    <span class="s">
+     foo.cpp
+    </span>
+    <span class="p">
+     )
+    </span>
+   </span>
+  </div>
+  <div class="line" style="padding-left: 60px;">
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span class="nb" style="font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em; color: #339966;">
+    # add an executable
+   </span>
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span class="nb" style="font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em; color: #3366ff;">
+    add_executable
+   </span>
+   <span class="p" style="font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em;">
+    (
+   </span>
+   <span class="s" style="font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em;">
+    bar
+   </span>
+   <span class="s" style="font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em;">
+    .cpp
+   </span>
+   <span class="p" style="font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em;">
+    )
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC15" style="padding-left: 60px;">
+   <div class="line" id="file-rpathexample-cmake-LC12">
+    <span class="c" style="color: #339966;">
+     # use the shared library
+    </span>
+   </div>
+   <div class="line" id="file-rpathexample-cmake-LC13">
+    <span class="c" style="color: #339966;">
+     # note: CMake will automatically add an RPATH to this executable which is the absolute location of libfoo.dylib in the build tree.
+    </span>
+   </div>
+   <div>
+    <span class="nb" style="font-size: 10px; line-height: 2em; color: #3366ff;">
+     target_link_libraries
+    </span>
+    <span class="p" style="font-size: 10px; line-height: 2em;">
+     (
+    </span>
+    <span class="s" style="font-size: 10px; line-height: 2em;">
+     bar
+    </span>
+    <span style="font-size: 10px; line-height: 2em;">
+     foo
+    </span>
+    <span class="p" style="font-size: 10px; line-height: 2em;">
+     )
+    </span>
+   </div>
+  </div>
+  <div class="line" style="padding-left: 60px;">
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span style="color: #339966; font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em;">
+    # installation
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC17" style="padding-left: 60px;">
+   <span style="font-family: arial, helvetica, sans-serif;">
+    <span class="nb" style="color: #3366ff;">
+     install
+    </span>
+    <span class="p">
+     (
+    </span>
+    <span class="s">
+     TARGETS
+    </span>
+    <span class="s">
+     foo
+    </span>
+    <span class="s">
+     DESTINATION
+    </span>
+    <span class="s">
+     lib
+    </span>
+    <span class="p">
+     )
+    </span>
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC18" style="padding-left: 60px;">
+   <span style="font-family: arial, helvetica, sans-serif;">
+    <span class="nb" style="color: #3366ff;">
+     install
+    </span>
+    <span class="p">
+     (
+    </span>
+    <span class="s">
+     TARGETS
+    </span>
+    <span class="s">
+     bar
+    </span>
+    <span class="s">
+     DESTINATION
+    </span>
+    <span class="s">
+     bin
+    </span>
+    <span class="p">
+     )
+    </span>
+   </span>
+  </div>
+  <div class="line" style="padding-left: 60px;">
+  </div>
+  <div class="line" style="padding-left: 60px;">
+   <span style="color: #339966; font-family: arial, helvetica, sans-serif; font-size: 10px; line-height: 2em;">
+    # the install RPATH for bar to find foo in the install tree.
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC21" style="padding-left: 60px;">
+   <span class="c" style="color: #339966; font-family: arial, helvetica, sans-serif;">
+    # if the install RPATH is not provided, the install bar will have none
+   </span>
+  </div>
+  <div class="line" id="file-rpathexample-cmake-LC22" style="padding-left: 60px;">
+   <span style="font-family: arial, helvetica, sans-serif;">
+    <span class="nb" style="color: #3366ff;">
+     set_target_properties
+    </span>
+    <span class="p">
+     (
+    </span>
+    <span class="s">
+     bar
+    </span>
+    <span class="s">
+     PROPERTIES
+    </span>
+    <span class="s">
+     INSTALL_RPATH
+    </span>
+    <span class="s2">
+     “@loader_path/../lib”
+    </span>
+    <span class="p">
+     )
+    </span>
+   </span>
+  </div>
+ </div>
+ <p class="p2">
+  <span style="line-height: 2em;">
+   For debugging purposes, it is useful to know the following:
+  </span>
+ </p>
+ <ul>
+  <li>
+   <span style="line-height: 2em;">
+    To view the install name of a shared library, use “otool -D &lt;file&gt;”
+   </span>
+  </li>
+  <li>
+   <span style="line-height: 2em;">
+    To view the install name of dependent shared libraries, use “otool -L &lt;file&gt;”
+   </span>
+  </li>
+  <li>
+   <span style="line-height: 2em;">
+    To view the RPATHs for locating dependent shared libraries using @rpath, use “otool -l &lt;file&gt; | grep LC_RPATH -A2”
+   </span>
+  </li>
+  <li>
+   <span style="line-height: 2em;">
+    To modify RPATHs, use install_name_tool’s -rpath, -add_rpath, and -delete_rpath options.
+   </span>
+  </li>
+ </ul>
+</div>

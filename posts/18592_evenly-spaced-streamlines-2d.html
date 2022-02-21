@@ -1,0 +1,104 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h2>
+  Motivation
+ </h2>
+ <p>
+  VTK and ParaView provide visualization of vector fields through streamlines using vtkStreamTracer in VTK or Stream Tracer in ParaView. The ability of streamlines to create an effective visualization depends on two criteria: 1) placement of streamlines at locations where the flow needs to be visualized; and 2) Techniques to avoid streamlines crowding, as that may obstruct other visualization elements. Both randomly placing streamlines or placing them on a regular grid can lead to regions without any streamlines or regions that are too crowded.
+ </p>
+ <p>
+  Recently we merged in VTK – vtkEvenlySpacedStreamlines2D and ParaView – Evenly Spaced Streamlines 2D an implementation for evenly spaced streamlines for 2D datasets. This visualization method addresses both potential drawbacks of conventional streamline seeding strategies. It allows the user to control the density of streamlines while it provides good coverage of the domain. It avoids streamline crowding by terminating the current streamline when it gets too close to other streamlines. The following two images illustrate the differences between evenly spaced streamlines and randomly seeded streamlines. The first image shows equally spaced streamlines with arrow glyphs pointing to the direction of the flow.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18889" style="width: 790px">
+  <img alt="Evenly Spaced Streamlines" class="wp-image-18889 size-full" height="413" sizes="(max-width: 780px) 100vw, 780px" src="https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1.png 780w, https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1-300x159.png 300w, https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1-768x407.png 768w, https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1-220x116.png 220w, https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1-250x132.png 250w, https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1-355x188.png 355w, https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1-730x387.png 730w, https://blog.kitware.com/wp-content/uploads/2017/07/streamline-1-90x48.png 90w" width="780"/>
+  <p class="wp-caption-text">
+   Evenly spaced streamlines
+  </p>
+ </div>
+ <p>
+  The second image shows randomly seeded streamlines with approximately the same number of streamlines as the first image. Note that certain areas are not well covered while other areas are too crowded.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18921" style="width: 798px">
+  <img alt="Randomly seeded streamlines" class="wp-image-18921 size-full" height="417" sizes="(max-width: 788px) 100vw, 788px" src="https://blog.kitware.com/wp-content/uploads/2017/07/streamlines.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/07/streamlines.png 788w, https://blog.kitware.com/wp-content/uploads/2017/07/streamlines-300x159.png 300w, https://blog.kitware.com/wp-content/uploads/2017/07/streamlines-768x406.png 768w, https://blog.kitware.com/wp-content/uploads/2017/07/streamlines-220x116.png 220w, https://blog.kitware.com/wp-content/uploads/2017/07/streamlines-250x132.png 250w, https://blog.kitware.com/wp-content/uploads/2017/07/streamlines-355x188.png 355w, https://blog.kitware.com/wp-content/uploads/2017/07/streamlines-730x386.png 730w, https://blog.kitware.com/wp-content/uploads/2017/07/streamlines-90x48.png 90w" width="788"/>
+  <p class="wp-caption-text">
+   Randomly seeded streamlines
+  </p>
+ </div>
+ <p>
+  In the next section we present usage and implementation details for evenly spaced streamlines. We only show ParaView properties, VTK properties are easily deduced from those.
+ </p>
+ <h2>
+  Usage
+ </h2>
+ <p>
+  <kbd>
+   EvenlySpacedStreamlines2D
+  </kbd>
+  works on 2D datasets parallel with the XY plane. You need to specify the
+  <kbd>
+   StartPosition
+  </kbd>
+  which represents the coordinates for the seed for the first streamline. From there on, all other seeds are determined automatically. The
+  <kbd>
+   SeparatingDistance
+  </kbd>
+  specifies how far from other streamlines a new streamline is started.
+  <kbd>
+   SeparatingDistanceRatio
+  </kbd>
+  specifies how close a streamline can get to other streamlines before it is terminated. If the current streamline gets closer than
+  <kbd>
+   SeparatingDistance * SeparatingDistanceRatio
+  </kbd>
+  to other streamlines integration stops. Loops are considered closed if they have two points at distance less than
+  <kbd>
+   ClosedLoopMaximumDistance
+  </kbd>
+  .
+ </p>
+ <p>
+  Attached is the
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/06/streamline.pvsm">
+   ParaView State File
+  </a>
+  used to generate the two images above and the
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/06/clt.tgz">
+   dataset
+  </a>
+  it operates on.
+ </p>
+ <h2>
+  Implementation details
+ </h2>
+ <p>
+  We implement the algorithm described in:
+  <br/>
+  <kbd>
+   Jobard, Bruno, and Wilfrid Lefer. "Creating evenly-spaced streamlines of arbitrary density." Visualization in Scientific
+   <br/>
+   Computing’97. Springer Vienna, 1997. 43-55.
+  </kbd>
+  <br/>
+  The loop detection is described in:
+  <br/>
+  <kbd>
+   Liu, Zhanping, Robert Moorhead, and Joe Groner. "An advanced evenly-spaced streamline placement algorithm." IEEE Transactions on Visualization and Computer Graphics 12.5 (2006): 965-972.
+  </kbd>
+  <br/>
+  The algorithm works only on 2D datasets parallel with plane XY. It does not work in parallel because of its inherently serial seeding strategy. The streamlines are produced using
+  <kbd>
+   vtkStreamTracer
+  </kbd>
+  using only Runge-Kutta2 or Runge-Kutta4 integrators (we cannot use Runge-Kutta45 integrator). This is because the algorithm needs that points along a streamline be equally spaced. We added custom termination callbacks to
+  <kbd>
+   vtkStreamTracer
+  </kbd>
+  . This enables the integration to be terminated if streamlines are too close to other streamlines or if a loop is formed.
+ </p>
+ <h2>
+  Acknowledgment
+ </h2>
+ <p>
+  We are thankful to LLNL specifically Dean Williams for supporting this work.
+ </p>
+</div>

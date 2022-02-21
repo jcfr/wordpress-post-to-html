@@ -1,0 +1,511 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Two very related problems in image processing are hole filling and compositing. This article explains an implementation of similar algorithms to solve both of these problems – poisson editing and poisson cloning; both algorithms were presented by Perez in “Poisson Image Editing”.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Poisson Editing/Hole Filling
+   </strong>
+  </span>
+  <br/>
+  First, we address the problem of image hole filling. The goal is to attempt to fill a missing region in an image so that the result looks plausible. The region can either actually be missing (in the case of a damaged photograph, or missing data in a digital file) or synthetically removed. In this example, our goal is to remove the jet from the following image,
+  <em>
+   I
+  </em>
+  :
+ </p>
+ <p>
+  <img alt="" height="267" src="https://blog.kitware.com/source/files/28_1802213837.png" style="display: block; margin-left: auto; margin-right: auto;" width="349"/>
+ </p>
+ <p>
+  To do this, we must manually specify the region to be removed with a hole mask,
+  <em>
+   H
+  </em>
+  :
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="267" src="https://blog.kitware.com/source/files/28_951622743.png" style="display: block; margin-left: auto; margin-right: auto;" width="350"/>
+ </p>
+ <p>
+  In this implementation, non-zero pixels indicate the region to fill. As a sneak preview, the solution/resulting image is:
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="268" src="https://blog.kitware.com/source/files/28_1892313903.png" style="display: block; margin-left: auto; margin-right: auto;" width="350"/>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    <br/>
+    Theoretical Solution
+   </strong>
+  </span>
+  <br/>
+  It has been shown, using calculus of variations, that the best solution for the region inside the hole, H, is given by the solution to:
+ </p>
+ <p>
+  <img alt="" height="78" src="https://blog.kitware.com/source/files/28_210886341.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+ </p>
+ <p>
+  while ensuring
+  <em>
+   H=I
+  </em>
+  on the boundary of the hole. This setup is a Laplace equation with Dirichlet (also known as first order)
+  <br/>
+  boundary conditions.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Discrete Solution
+   </strong>
+  </span>
+  <br/>
+  The continuous Laplace operator is given by:
+ </p>
+ <p>
+  <img alt="" height="142" src="https://blog.kitware.com/source/files/28_1347385165.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+  <br/>
+  A common discrete approximation to this function at a pixel
+  <em>
+   (x,y)
+  </em>
+  is given by:
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/28_1257942504.png" width="100%"/>
+ </p>
+ <p>
+  Another way to write this is by multiplying the pixel and its neighbors by a kernel
+  <em>
+   K
+  </em>
+  :
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="167" src="https://blog.kitware.com/source/files/28_2025757726.png" style="display: block; margin-left: auto; margin-right: auto;" width="350"/>
+ </p>
+ <p>
+  From there, for each unknown pixel
+  <em>
+   u
+   <sub>
+    i,j
+   </sub>
+  </em>
+  , the equation is:
+ </p>
+ <p>
+  <img alt="" height="71" src="https://blog.kitware.com/source/files/28_651720506.png" style="display: block; margin-left: auto; margin-right: auto;" width="505"/>
+ </p>
+ <p>
+  To solve the Laplace equation over the entire image, we can write a linear system of equations. Create a variable for every pixel to be filled; if the pixels are vector-valued (e.g. in an RGB image, the pixels are 3-vectors),
+  <em>
+   N
+  </em>
+  of these systems must be solved independently (where
+  <em>
+   N
+  </em>
+  is the dimensionality of the pixels) and stacked to produce the final result.
+ </p>
+ <p>
+  To solve the system of equations, a matrix
+  <em>
+   U
+  </em>
+  is constructed row-by-row, one row per variable.
+  <em>
+   U
+  </em>
+  is incredibly sparse, so a sparse solver should definitely be used. In each row, the value in the Laplacian kernel corresponding to the pixel’s location, relative to the current variable pixel, is placed in the column corresponding to the variable ID. When one of the pixels is on the border of the hole (and is therefore known), u(.,.) is replaced with p(.,.), the value of the pixel from the original image. In this case, rather than place the value of the Laplacian kernel in the
+  <em>
+   U
+  </em>
+  matrix, we instead multiply it by the image value and subtract the result from the corresponding entry of the b vector. That is, we move the known value to the right side of the equation.
+ </p>
+ <p>
+  A vector,
+  <em>
+   H
+   <sub>
+    v
+   </sub>
+  </em>
+  , the vectorized version of the solution to the set of hole pixels, is created as the unknown vector to be solved in a system of equations.
+ </p>
+ <p>
+  The linear system is then:
+ </p>
+ <p>
+  <img alt="" height="87" src="https://blog.kitware.com/source/files/28_1490703267.png" style="display: block; margin-left: auto; margin-right: auto;" width="349"/>
+ </p>
+ <p>
+  After solving for
+  <em>
+   H
+   <sub>
+    v
+   </sub>
+  </em>
+  , the resulting
+  <em>
+   H
+   <sub>
+    v
+   </sub>
+  </em>
+  is then remapped back to the pixels corresponding to each variable ID to construct
+  <em>
+   H
+  </em>
+  .
+  <br/>
+  In this implementation, the UMFPACK interface provided by Eigen3 is used to perform the computations. On a single channel image, approximately 500×500 in size, the hole filling procedure takes only a few seconds.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Code Snippet
+   </strong>
+  </span>
+  <br/>
+  We have packaged this implementation in a class called
+  <em>
+   PoissonEditing
+  </em>
+  . Using this class is very straightforward. The image and mask variables must be set and the
+  <em>
+   FillMaskedRegion()
+  </em>
+  function does the work. If the image consists of vector-valued pixels, it is internally decomposed, filled, recombined, and returned by the
+  <em>
+   GetOutput()
+  </em>
+  function.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   PoissonEditing&lt;ImageType&gt; editing;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   editing.SetImage(image);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   editing.SetMask(mask);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   editing.SetGuidanceFieldToZero();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   editing.FillMaskedRegion();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   ImageType* outputImage = editing.GetOutput();
+  </span>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    GUI
+   </strong>
+  </span>
+  <br/>
+  A Qt GUI is provided to allow users to easily load an image/mask pair, fill the hole, and inspect the results.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Region Copying
+   </strong>
+  </span>
+  <br/>
+  In the problem of region copying (a.k.a. seamless cloning or compositing), we are interested in copying a region from one image into another image in a visually pleasing way. Again, this is best motivated with an example. In our example, the goal is to copy the jet from the Poisson Editing example into the image of the canyon shown below:
+ </p>
+ <p>
+  <img alt="" height="263" src="https://blog.kitware.com/source/files/28_1692054864.png" style="display: block; margin-left: auto; margin-right: auto;" width="350"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  The final result in shown below:
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="263" src="https://blog.kitware.com/source/files/28_1270627815.png" style="display: block; margin-left: auto; margin-right: auto;" width="350"/>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Concept
+   </strong>
+  </span>
+  <br/>
+  In Perez’s original paper, it was argued that a good way of copying a region from one image into another image is to do something very similar to hole filling, but with the additional introduction of a “guidance field,”
+  <em>
+   G
+  </em>
+  . That is, the way to copy a region from one image into another is by solving the equation:
+ </p>
+ <p>
+  <img alt="" height="87" src="https://blog.kitware.com/source/files/28_1657007121.png" style="display: block; margin-left: auto; margin-right: auto;" width="349"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  The boundary condition is again first order and specifies that the resulting
+  <em>
+   H
+  </em>
+  be equal to the target image,
+  <em>
+   T
+  </em>
+  , at the hole boundary.
+ </p>
+ <p>
+  The suggested guidance field G is the gradient of the source image. That is:
+ </p>
+ <p>
+  <img alt="" height="87" src="https://blog.kitware.com/source/files/28_1613216896.png" style="display: block; margin-left: auto; margin-right: auto;" width="349"/>
+ </p>
+ <p>
+  In this case, the right-hand-side of the equation has become exactly the Laplacian of
+  <em>
+   S
+  </em>
+  .
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Discrete Solution
+   </strong>
+  </span>
+  <br/>
+  Just as before, the discrete Laplacian equation is written for each pixel, but this time the right-hand-side is set to the Laplacian of
+  <em>
+   S
+  </em>
+  at
+  <em>
+   (i,j)
+  </em>
+  , rather than 0. When the right side of this equation is non-zero, it is referred to as a Poisson equation rather than a Laplace equation. The equation for each pixel is now:
+ </p>
+ <p>
+  <img alt="" height="49" src="https://blog.kitware.com/source/files/28_651720506.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  The linear system:
+ </p>
+ <p>
+  <img alt="" height="70" src="https://blog.kitware.com/source/files/28_1802161652.png" style="display: block; margin-left: auto; margin-right: auto;" width="351"/>
+ </p>
+ <p>
+  is created and solved identically as before.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Code Snippet
+   </strong>
+  </span>
+  <br/>
+  We have implemented this functionality in a class called
+  <em>
+   PoissonCloning
+  </em>
+  . Using this class is very straightforward. In fact,
+  <em>
+   PoissonCloning
+  </em>
+  derives from
+  <em>
+   PoissonEditing
+  </em>
+  and the only addition is that
+  <em>
+   PoissonCloning
+  </em>
+  provides a
+  <em>
+   SetTargetImage
+  </em>
+  function. The rest of the functionality is identical.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   PoissonCloning&lt;ImageType&gt; cloning;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   cloning.SetImage(sourceImage);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   cloning.SetTargetImage(targetImage);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   cloning.SetMask(mask);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   cloning.PasteMaskedRegionIntoTargetImage();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   ImageType::Pointer outputImage =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   cloning.GetOutput();
+  </span>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    GUI
+   </strong>
+  </span>
+  <br/>
+  A Qt GUI is in the works to allow users to easily load an image/mask pair, fill the hole, and inspect the results.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Image Manipulation in Gradient Domain
+   </strong>
+  </span>
+  <br/>
+  There are many image processing techniques that involve manipulating the gradient or Laplacian of an image. After these manipulations, it is usually necessary to return the result to the original image domain. While these operations are not necessarily related to image hole filling or cloning, we have already presented the framework needed to solve this problem, so we will explain how to use it.
+ </p>
+ <p>
+  To return to the image domain from the gradient domain, one must find the least squares solution to a system of equations involving the derivatives of the image; however, this technique is not often used. More commonly, the derivatives are first combined into the Laplacian. We will describe the procedure for both methods below.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Reconstructing Images from Derivatives
+   </strong>
+  </span>
+  <br/>
+  For the task of reconstructing an image directly from its derivatives, we can use a method that is very similar to solving the Laplace equation. This time, however, there are two equations to be solved simultaneously:
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="188" src="https://blog.kitware.com/source/files/28_1482846445.png" style="display: block; margin-left: auto; margin-right: auto;" width="314"/>
+ </p>
+ <p>
+  where D
+  <sub>
+   x
+  </sub>
+  and D
+  <sub>
+   y
+  </sub>
+  are the known derivative images. Of course, the first order boundary conditions must be known. This time the boundary is the actual border of the image. To relate this back to the Poisson concepts, what we are doing is using the entire inside of the image as the “hole,” the image gradients as the guidance field, and the image boundary as the hole boundary.
+ </p>
+ <p>
+  We can construct the same type of linear system to solve for the components of
+  <em>
+   U
+  </em>
+  that best satisfy both equations. Any discrete derivative operator can be used. We have chosen to use the Sobel operators:
+ </p>
+ <p>
+  <img alt="" height="251" src="https://blog.kitware.com/source/files/28_1802010769.png" style="display: block; margin-left: auto; margin-right: auto;" width="323"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  By applying these operators to every pixel in the unknown image
+  <em>
+   U
+  </em>
+  , we can write a system of equations, two
+  <br/>
+  for each pixel:
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="74" src="https://blog.kitware.com/source/files/28_1606034445.png" style="display: block; margin-left: auto; margin-right: auto;" width="497"/>
+ </p>
+ <p>
+  Again, we simply place the coefficient of each term in the column of the matrix that corresponds to the variable ID of the pixel. As usual, we move the term to the right side of the equation (to contribute to the b vector) if the pixel is known. Below we show an image, its derivatives, and the image reconstructed using only the border of the image in and the derivatives.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" height="167" src="https://blog.kitware.com/source/files/28_15465240.png" style="display: block; margin-left: auto; margin-right: auto;" width="575"/>
+ </p>
+ <p>
+  We have provided this implementation in a file called DerivativesToImage.cxx.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Reconstructing Images from Laplacians
+   </strong>
+  </span>
+  <br/>
+  The technique for reconstructing an image from its Laplacian is even more similar to Poisson Cloning than the reconstruction from derivatives. We specify the Laplacian in the non-boundary region as the guidance field. We’ve provided this implementation in a file called LaplacianToImage.cxx.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Conclusion
+   </strong>
+  </span>
+  <br/>
+  We have presented the concept of Poisson image editing as well as described an implementation using ITK and Eigen3. The intention is to serve as a reference implementation, as well as a springboard for future research in these areas.
+ </p>
+ <p>
+  <img alt="" height="187" src="https://blog.kitware.com/source/files/28_1057216171.png" style="float: left;" width="150"/>
+ </p>
+ <p>
+  <em>
+   <strong>
+    David Doria
+   </strong>
+   is a Ph.D. student in Electrical Engineering at RPI. He received his B.S. in EE in 2007 and his MS in EE in 2008, both from RPI. David is currently working on hole filling in LiDAR data. He is passionate about reducing the barrier of entry into image and 3D data processing. Visit http://daviddoria.com  to find out more or email him at daviddoria@gmail.com.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+  </em>
+ </p>
+</div>

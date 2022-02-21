@@ -1,0 +1,112 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+  At the end of this script snippet, the CMake variable PROCESSOR_COUNT has a value appropriate for passing to make’s -j for parallel builds.
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica; min-height: 17.0px;">
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+  When used in a ctest -S script, you can call…
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+  if(PROCESSOR_COUNT)
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+  set(CTEST_BUILD_FLAGS “-j${PROCESSOR_COUNT}”)
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+  endif()
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica; min-height: 17.0px;">
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+  …to enable parallel builds with “Unix Makefiles” and the ctest_build command.
+ </p>
+ <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica; min-height: 17.0px;">
+  <p>
+   Here’s the snippet:
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   if(NOT DEFINED PROCESSOR_COUNT)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   # Unknown:
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   set(PROCESSOR_COUNT 0)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica; min-height: 17.0px;">
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   # Linux:
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   set(cpuinfo_file “/proc/cpuinfo”)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   if(EXISTS “${cpuinfo_file}”)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   file(STRINGS “${cpuinfo_file}” procs REGEX “^processor.: [0-9]+$”)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   list(LENGTH procs PROCESSOR_COUNT)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   endif()
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica; min-height: 17.0px;">
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   # Mac:
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   if(APPLE)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   find_program(cmd_sys_pro “system_profiler”)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   if(cmd_sys_pro)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   execute_process(COMMAND ${cmd_sys_pro} OUTPUT_VARIABLE info)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   string(REGEX REPLACE “^.*Total Number Of Cores: ([0-9]+).*$” “\\1”
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   PROCESSOR_COUNT “${info}”)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   endif()
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   endif()
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica; min-height: 17.0px;">
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   # Windows:
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   if(WIN32)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   set(PROCESSOR_COUNT “$ENV{NUMBER_OF_PROCESSORS}”)
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   endif()
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   endif()
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica; min-height: 17.0px;">
+  </p>
+  <p style="margin: 0.0px 0.0px 0.0px 0.0px; font: 14.0px Helvetica;">
+   Cheers!
+  </p>
+  <p>
+  </p>
+ </p>
+</div>

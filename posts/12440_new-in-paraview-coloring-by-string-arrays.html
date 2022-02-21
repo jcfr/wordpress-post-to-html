@@ -1,0 +1,741 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ParaView has always been able to map numerical values associated with points and cells to colors. ParaView 4.3 has the ability to map string arrays to colors. This feature works for string arrays in point data, cell data, and field data using the
+  <a href="https://blog.kitware.com/new-in-paraview-coloring-by-field-data/">
+   new feature
+  </a>
+  that enables you to color by the first tuple in a field data array.
+ </p>
+ <p>
+  Coloring by string arrays is possible when the color map option “Interpret Values As Categories” is enabled and a set of annotations whose values are strings in the data array is defined. As with other cases where values are interpretted as categories, a set of active values can be obtained automatically from the data and defined as annotations using the tools in the Color Map Editor’s Annotations section.
+ </p>
+ <p>
+  Let’s take a look at an example data set that contains the countries of the world. The cells in the file that defined the countries have an associated string array named “REGION” that encodes the region in which the country is located. The image below shows the results of coloring by this region string array. Labels in the color legend show the region string values in the map data set.
+ </p>
+ <p>
+  <a href="/blog/files/332_911620114.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.332_911620114.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The data file and ParaView state file that produced this image is attached to this post. You can try it out with ParaView 4.3 Release Candidate 1, available at the
+  <a href="http://www.paraview.org/download/">
+   ParaView downloads page
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   Mapping string arrays to colors in VTK
+  </strong>
+ </p>
+ <p>
+  Coloring by string arrays is implemented in VTK, so any VTK-based application can do it. For example, imagine you have a data set where the colors to be used for cell data are defined by strings naming the colors. You can set up a
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e80d13859055888701" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     vtkLookupTable
+    </span>
+   </span>
+  </span>
+  to map these strings to the actual colors using the following code:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e80d13862412420029" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+vtkLookupTable* lut = vtkLookupTable::New();  
+lut-&gt;IndexedLookupOn();
+lut-&gt;SetNumberOfTableColors(5);
+lut-&gt;SetTableValue(0, 1.0, 0.0, 0.0); // red
+lut-&gt;SetTableValue(1, 0.0, 0.0, 1.0); // blue
+lut-&gt;SetTableValue(2, 0.0, 1.0, 0.0); // green
+lut-&gt;SetTableValue(3, 1.0, 1.0, 0.0); // yellow
+lut-&gt;SetTableValue(4, 0.0, 1.0, 1.0); // cyan
+
+vtkStdString red("red");
+lut-&gt;SetAnnotation(red, red);
+vtkStdString blue("blue");
+lut-&gt;SetAnnotation(blue, blue);
+vtkStdString green("green");
+lut-&gt;SetAnnotation(green, green);
+vtkStdString yellow("yellow");
+lut-&gt;SetAnnotation(yellow, yellow);
+vtkStdString cyan("cyan");
+lut-&gt;SetAnnotation(cyan, cyan);</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80d13862412420029-19">
+        19
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-1">
+        <span class="crayon-e ">
+         vtkLookupTable*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkLookupTable
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-2">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         IndexedLookupOn
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-3">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetNumberOfTableColors
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         5
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-4">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTableValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // red
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-5">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTableValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // blue
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-6">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTableValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // green
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-7">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTableValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // yellow
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-8">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTableValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // cyan
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-10">
+        <span class="crayon-e">
+         vtkStdString
+        </span>
+        <span class="crayon-e">
+         red
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "red"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-11">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetAnnotation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         red
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         red
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-12">
+        <span class="crayon-e">
+         vtkStdString
+        </span>
+        <span class="crayon-e">
+         blue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "blue"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-13">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetAnnotation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         blue
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         blue
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-14">
+        <span class="crayon-e">
+         vtkStdString
+        </span>
+        <span class="crayon-e">
+         green
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "green"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-15">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetAnnotation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         green
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         green
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-16">
+        <span class="crayon-e">
+         vtkStdString
+        </span>
+        <span class="crayon-e">
+         yellow
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "yellow"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-17">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetAnnotation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         yellow
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         yellow
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-18">
+        <span class="crayon-e">
+         vtkStdString
+        </span>
+        <span class="crayon-e">
+         cyan
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "cyan"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80d13862412420029-19">
+        <span class="crayon-v">
+         lut
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetAnnotation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         cyan
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cyan
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0009 seconds] -->
+ <p>
+  Happy color mapping!
+ </p>
+</div>

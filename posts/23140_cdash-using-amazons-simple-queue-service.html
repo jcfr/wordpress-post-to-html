@@ -1,0 +1,1082 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One of CDash’s main strengths is making it easy to find problems occurring in your software project.  Testing clients make this possible by uploading their results to CDash.  CDash parses these results, stores them in a database, and presents them in a user-friendly format.
+ </p>
+ <p>
+  There are a few different ways CDash’s parsing step can take place.  The simplest method is
+  <em>
+   synchronous parsing
+  </em>
+  .  This means that CDash parses its input data as it is uploaded.  A drawback of this approach is that CDash can get bogged down when many clients are submitting simultaneously, such as when nightly build results are rolling in.  When CDash gets backed up like this, testing clients can also get slowed down while they wait for a response from the CDash server.
+ </p>
+ <p>
+  To alleviate these problems, we implemented the concept of
+  <em>
+   asynchronous parsing
+  </em>
+  .  Rather than expecting CDash to parse submissions immediately, they are added to a queue that CDash can work through later.
+ </p>
+ <p>
+  In addition to CDash’s built-in asynchronous feature, we are pleased to announce that CDash can now use external Message Queue (MQ) systems for asynchronous parsing.  This is made possible by the
+  <a href="https://github.com/bernardphp/bernard">
+   Bernard
+  </a>
+  background processing library.  Benefits of using a proper MQ for CDash submissions include less stress on the database, better monitoring tools, and more opportunities for scaling to meet demand.  This blog post will show how to setup CDash to use Amazon’s Simple Message Service (SQS) to handle build/test submissions.
+ </p>
+ <h1>
+  Step 1: create a new queue
+ </h1>
+ <p>
+  Direct your web browser to
+  <a href="http://console.aws.amazon.com/sqs">
+   http://console.aws.amazon.com/sqs
+  </a>
+  and click on the
+  <strong>
+   Create New Queue
+  </strong>
+  button.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_23142" style="width: 1034px">
+  <img alt="" class="wp-image-23142 size-large" height="278" sizes="(max-width: 1024px) 100vw, 1024px" src="http://blog.kitware.com/wp-content/uploads/2018/07/create_queue-1024x278.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/07/create_queue.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/07/create_queue-300x81.png 300w, https://blog.kitware.com/wp-content/uploads/2018/07/create_queue-768x209.png 768w, https://blog.kitware.com/wp-content/uploads/2018/07/create_queue-220x60.png 220w, https://blog.kitware.com/wp-content/uploads/2018/07/create_queue-250x68.png 250w, https://blog.kitware.com/wp-content/uploads/2018/07/create_queue-355x96.png 355w, https://blog.kitware.com/wp-content/uploads/2018/07/create_queue-730x198.png 730w, https://blog.kitware.com/wp-content/uploads/2018/07/create_queue-90x24.png 90w" width="1024"/>
+  <p class="wp-caption-text">
+   Create queue for CDash
+  </p>
+ </div>
+ <p>
+  By default, CDash expects this queue to be named
+  <strong>
+   do-submit
+  </strong>
+  .
+  <a href="https://github.com/Kitware/CDash/blob/0d1b1df753091febda903bddf0298bda04830341/app/Middleware/Queue/SubmissionService.php#L30" rel="noopener" target="_blank">
+   See here for instructions
+  </a>
+  if you’d prefer to use a different name for your CDash queue.
+ </p>
+ <h1>
+  Step 2: make sure the web user has access to the queue
+ </h1>
+ <p>
+  Let’s assume your web server is run by the user
+  <strong>
+   www-data
+  </strong>
+  and its home directory is
+  <strong>
+   /var/www
+  </strong>
+  .  Create a file
+  <strong>
+   /var/www/.aws/credentials
+  </strong>
+  with the following contents:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8877618f606228123" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+[cdash]
+aws_access_key_id = YOUR_AWS_ACCESS_KEY_ID
+aws_secret_access_key = YOUR_AWS_SECRET_ACCESS_KEY</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8877618f606228123-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877618f606228123-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877618f606228123-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8877618f606228123-1">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877618f606228123-2">
+        <span class="crayon-v">
+         aws_access_key_id
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         YOUR_AWS_ACCESS_KEY_ID
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877618f606228123-3">
+        <span class="crayon-v">
+         aws_secret_access_key
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         YOUR_AWS_SECRET_ACCESS_KEY
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  Only the
+  <strong>
+   www-data
+  </strong>
+  user should have read access to this file.
+ </p>
+ <h1>
+  Step 3: configure CDash to use the SQS queue
+ </h1>
+ <p>
+  There are two settings you will need to modify to turn on SQS support in CDash.  First, In your CDash directory, edit
+  <strong>
+   config/queue.php
+  </strong>
+  .  Towards the bottom of the file you should see an entry for
+  <strong>
+   Driver::SQS
+  </strong>
+  .  Enable this option and set your profile name and region of choice.  Here’s an example of what this section should look like once you’re done.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e88776197806470199" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+Driver::SQS =&gt; [
+    'enabled' =&gt; true,
+    'profile' =&gt; 'cdash',
+    'region' =&gt; 'us-east-1',
+    'version' =&gt; 'latest',
+],</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e88776197806470199-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88776197806470199-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88776197806470199-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88776197806470199-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88776197806470199-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88776197806470199-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e88776197806470199-1">
+        <span class="crayon-e">
+         Driver::
+        </span>
+        <span class="crayon-cn">
+         SQS
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88776197806470199-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'enabled'
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         true
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88776197806470199-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'profile'
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'cdash'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88776197806470199-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'region'
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'us-east-1'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88776197806470199-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'version'
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'latest'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88776197806470199-6">
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0094 seconds] -->
+ <p>
+ </p>
+ <p>
+  Notice how the
+  <strong>
+   profile
+  </strong>
+  here matches the header in the AWS credential file created in step 2.  Once that’s done, add the following line to your
+  <strong>
+   config.local.php
+  </strong>
+  file:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e88776199472638540" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$CDASH_BERNARD_SUBMISSION = true;</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e88776199472638540-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e88776199472638540-1">
+        <span class="crayon-v">
+         $CDASH_BERNARD_SUBMISSION
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         true
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <h1>
+  Step 4: activate CDash’s message consumer
+ </h1>
+ <p>
+  By default, Bernard’s
+  <strong>
+   consume()
+  </strong>
+  function enters an infinite loop checking for new messages on the queue.  Therefore, all that’s left to do is start this loop!  The simplest way to do so is to visit
+  <em>
+   &lt;my-cdash-url&gt;/submissionConsumer.php
+  </em>
+  with your web browser.  However, this approach is not robust to crashes, system restarts, etc.
+ </p>
+ <p>
+  Instead, we’ll use
+  <a href="https://freedesktop.org/wiki/Software/systemd/">
+   systemd
+  </a>
+  to begin this process at system startup time.
+ </p>
+ <h2>
+  Sample systemd configuration
+ </h2>
+ <p>
+  Here is sample content for the file
+  <strong>
+   <span class="s1">
+    /etc/systemd/system/cdash-consumer@.service
+   </span>
+  </strong>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8877619c097942170" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+[Unit]
+Description=CDash input consumer #%i
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/cdash
+Restart=on-failure
+RestartSec=5s
+ExecStart=/usr/bin/php /var/www/cdash/public/submissionConsumer.php
+
+[Install]
+WantedBy=multi-user.target</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619c097942170-13">
+        13
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-1">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         Unit
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-2">
+        <span class="crayon-v">
+         Description
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-e">
+         CDash
+        </span>
+        <span class="crayon-e">
+         input
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         #%i
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-4">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         Service
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-5">
+        <span class="crayon-v">
+         Type
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-e">
+         simple
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-6">
+        <span class="crayon-v">
+         User
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         www
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         data
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-7">
+        <span class="crayon-v">
+         WorkingDirectory
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-t">
+         var
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         www
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-e">
+         cdash
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-8">
+        <span class="crayon-v">
+         Restart
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         on
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         failure
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-9">
+        <span class="crayon-v">
+         RestartSec
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         5s
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-10">
+        <span class="crayon-v">
+         ExecStart
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         usr
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         bin
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         php
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-t">
+         var
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         www
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-m">
+         public
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         submissionConsumer
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-i">
+         php
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-11">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-12">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         Install
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619c097942170-13">
+        <span class="crayon-v">
+         WantedBy
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         multi
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         user
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         target
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  As you can see, this simple script will use command-line PHP to execute
+  <strong>
+   submissionConsumer.php
+  </strong>
+  .  If the script crashes, it will be automatically restarted after 5 seconds.  The @ in the title and the %i in its contents means that this script is parameterized.  This allows us to enable multiple submission processes to consume messages from CDash’s queue.
+ </p>
+ <p>
+  If we wanted to have four such processes begin running at system startup time, we would run:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8877619e351189298" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ systemctl enable cdash-consumer@1
+$ systemctl enable cdash-consumer@2
+$ systemctl enable cdash-consumer@3
+$ systemctl enable cdash-consumer@4</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8877619e351189298-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619e351189298-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619e351189298-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8877619e351189298-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8877619e351189298-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         enable
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619e351189298-2">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         enable
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619e351189298-3">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         enable
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8877619e351189298-4">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         enable
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  Note that this only schedules these jobs to run at system startup time, it actually doesn’t start running them immediately.  To do so, specify the start option instead.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e887761a0405525520" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ systemctl start cdash-consumer@1
+$ systemctl start cdash-consumer@2
+$ systemctl start cdash-consumer@3
+$ systemctl start cdash-consumer@4</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e887761a0405525520-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e887761a0405525520-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e887761a0405525520-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e887761a0405525520-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e887761a0405525520-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         start
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e887761a0405525520-2">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         start
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e887761a0405525520-3">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         start
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e887761a0405525520-4">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         systemctl
+        </span>
+        <span class="crayon-e">
+         start
+        </span>
+        <span class="crayon-v">
+         cdash
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         consumer
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <h1>
+  Follow-up steps
+ </h1>
+ <p>
+  Once you have CDash setup to use SQS, you can benefit from Amazon’s nice monitoring tools.  Select your queue from the AWS console and click on the
+  <strong>
+   Monitoring
+  </strong>
+  tab to view metrics on how your CDash queue is performing.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_23165" style="width: 1034px">
+  <img alt="" class="wp-image-23165 size-large" height="662" sizes="(max-width: 1024px) 100vw, 1024px" src="http://blog.kitware.com/wp-content/uploads/2018/07/monitoring-1024x662.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-1024x662.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-300x194.png 300w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-768x497.png 768w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-220x142.png 220w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-250x162.png 250w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-355x230.png 355w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-730x472.png 730w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring-90x58.png 90w, https://blog.kitware.com/wp-content/uploads/2018/07/monitoring.png 1299w" width="1024"/>
+  <p class="wp-caption-text">
+   SQS monitoring for CDash
+  </p>
+ </div>
+ <p>
+  A nice side-effect of this change is that we no longer assume that CDash the website and CDash the data parser live on the same machine.  This decoupling makes it possible to spin up additional EC2 images to parse input data when your queue grows too large.
+  <a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html">
+   See here for instructions
+  </a>
+  on how to create an auto-scaling group of EC2 instances that monitors your SQS queue.
+ </p>
+</div>

@@ -1,0 +1,159 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  It is becoming increasingly difficult to efficiently leverage supercomputers for computational research. There are a variety of factors contributing to this: more concurrency, heterogeneous processing units, relative slow-down of memory bandwidth, and file IO to processing power, etc. This corresponds to a large increase in our ability to crunch numbers with a small increase in the ability to gain insight into these numbers. In the simulation world, the classical workflow involves creating a simulation input, computing results, and post-processing those results. This is shown in Figure 1.
+ </p>
+ <p>
+  <a href="/source/files/4_1845449693.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1845449693.jpg" style="height:745px; margin-left:125px; margin-right:125px; width:400px"/>
+  </a>
+ </p>
+ <p style="text-align:center">
+  <em>
+   <span style="font-size:12px">
+    Figure 1: Traditional workflow.
+   </span>
+  </em>
+ </p>
+ <p>
+  With the trends of supercomputing, this workflow will not fully realize the goal of quick turnaround for gaining valuable insights from numerical experiments. The numerical experiments will run quicker due to the increase in computing power. However, the bottleneck is moving from running the actual simulation to post-processing the results to gain insight into the problem at hand. The main issue is dealing with the data efficiently. This classical workflow involves writing a large amount of the simulation data to disk just to read it back in again to do post-processing. For the situation where the post-processing is done on a separate machine, at best it has only one magnitude less computing power than the supercomputer the data was computed on exacerbating the issue. If this separate machine doesn’t share a disk with the supercomputer then this involves another file transfer which again slows down the workflow.
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <span style="font-size:14px">
+    <strong>
+     Enabling In Situ Analysis and Visualization
+    </strong>
+   </span>
+  </span>
+ </h3>
+ <p>
+  Our solution to this problem is to perform visualization and analysis on the supercomputer as the simulation is running. This has a variety of names including
+  <em>
+   in situ
+  </em>
+  , co-processing and co-visualization. There are many advantages to this. The first is that we can begin the analysis and visualization process without having to do any file IO for the simulation results. The second is that we have the full compute power of the supercomputer available to do this processing. Additionally we expect that writing the results from the analysis and visualization will be much smaller than the original full simulation data. Generally, the desired results can be saved in a much more compact form than the original data such as streamlines, lift on a wing, maximum stress, etc. This leads to dealing with simulation-generated data that is in a much more compact form, and also has the benefit of not requiring significant extra post-processing in order to gain insight into the problem at hand.
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <span style="font-size:14px">
+    <strong>
+     ParaView Catalyst for In Situ computing
+    </strong>
+   </span>
+  </span>
+ </h3>
+ <p>
+  While there has been significant work on performing
+  <em>
+   in situ
+  </em>
+  analysis and visualization, our goal was to create a general library that could easily be used to analyze and visualize data in a variety of ways. If the user can do their post-processing with ParaView they can use Catalyst for co-processing. ParaView and VTK have already been demonstrated to be successful tools for post-processing analysis and visualization for a wide variety of simulations. Catalyst has been a relatively new addition to ParaView to enable the same analysis and visualization tools that are already available for post-processing to be provided for
+  <em>
+   in situ
+  </em>
+  processing. Additionally, one of the design goals of ParaView Catalyst was to make it very simple for simulation users to create customized outputs in a workflow that they are already familiar with. This is done through ParaView’s CoProcessing plugin. In this new workflow, instead of dealing with the large data sets output from a simulation code the user specifies their desired output during the pre-processing stage by using this plugin. They essentially create the pipelines to process the results in their desired manner. At the end of the co-processing pipelines, instead of writing out data extracts (e.g. contours, streamlines, etc.) and/or screenshots, the user specifies individual frequencies for outputting these data extracts and/or screenshots. All of this information is saved in a Python script.
+ </p>
+ <p>
+  When the simulation is run with Catalyst, these pipelines will be executed at the requested time steps. Note that each sink in the pipeline can have an independent output frequency. For the adventurous, these Python scripts can be edited to contain more sophisticated logic to better extract desired data. information. This new workflow is shown in the image below.
+ </p>
+ <p>
+  <a href="/source/files/4_1375173693.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1375173693.jpg" style="height:518px; margin-left:125px; margin-right:125px; width:400px"/>
+  </a>
+ </p>
+ <p style="text-align:center">
+  <span style="font-size:12px">
+   <em>
+    Figure 2: ParaView Catalyst enabled workflow.
+   </em>
+  </span>
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <strong>
+    ParaView Catalyst Details
+   </strong>
+  </span>
+ </h3>
+ <p>
+  The easiest way to get access to ParaView Catalyst is through a regular ParaView build. By default, the CMake option to enable the API to Catalyst is turned on (the option is PARAVIEW_ENABLE_CATALYST). Typically, Catalyst is also built with MPI and Python enabled, although neither are required to use the Catalyst libraries. Additionally, with the next release of ParaView (version 4.1) we will also be releasing “editions” of Catalyst. The purpose of these editions is to reduce the overhead of linking to Catalyst. While ParaView and VTK contain a wide variety of analysis and visualization tools, a Catalyst-enabled simulation run will typically use a very small subset of those tools. The rest of the tools can result in a fairly large overhead in libraries that a simulation code needs to link to. For example, if no screenshots are desired from Catalyst then it doesn’t make sense to include all of the rendering and compositing parts of ParaView and VTK plus their dependencies (e.g. an OpenGL implementation). Our experience to date has shown that we can reduce the library size by over 100 MBs by using specific Catalyst editions for simulation runs. While this may not seem like a large amount by itself, considering the fact that multiple copies of the libraries will need to be loaded for a large simulation run, the numbers can add up quickly. For static executables, each MPI process will store a full copy of the executable. For executables that use dynamic libraries, only a single copy of a shared library per node is needed but each shared library needs to be loaded into memory which can severely burden the IO system. For a supercomputer like Hopper at NERSC with 6,384 compute nodes and 24 cores per node, this would correspond to over 600 GBs of extra storage for executables with shared libraries or 15 TBs of extra storage for static executables when running at full scale.
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <strong>
+    Interfacing a Simulation Code to ParaView Catalyst
+   </strong>
+  </span>
+ </h3>
+ <p>
+  In order for a simulation code to use Catalyst for co-processing, it must store the simulation data in a format that ParaView understands. Essentially, this means that the simulation data must be stored using VTK’s data model. This information is beyond the scope of this article but is covered thoroughly in the ParaView Catalyst User’s Guide (http://paraview.org/Wiki/images/4/48/CatalystUsersGuide.pdf). The design that was used for ParaView Catalyst leverages an adaptor that bridges the information in the simulation code’s data structures and VTK’s data structures. This is shown in the figure below.
+ </p>
+ <p>
+  <a href="/source/files/4_1939229342.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1939229342.jpg" style="height:134px; margin-left:125px; margin-right:125px; width:400px"/>
+  </a>
+ </p>
+ <p style="text-align:center">
+  <span style="font-size:12px">
+   <em>
+    Figure 3: Design to bridge between the solver and Catalyst.
+   </em>
+  </span>
+ </p>
+ <p>
+  This design isolates the simulation code’s dependency on Catalyst such that it doesn’t need to include any VTK or ParaView classes in that code base. Additionally, Catalyst doesn’t need to be modified to gain access to the simulation code’s data structures. The adaptor is responsible for passing
+  <em>
+   in situ
+  </em>
+  details to Catalyst (e.g. the Python scripts, simulation time step, etc.) and translating the simulation code’s data structures to VTK data structures. The interface between the simulation code and the adaptor is normally done through function calls. Typically there are only a handful of calls to pass the proper information to the adaptor. These are:
+ </p>
+ <ul>
+  <li>
+   Initialization call: This call initializes both the adaptor and Catalyst. This is where the co-processing pipelines are set up in Catalyst.
+  </li>
+  <li>
+   Processing call: This call checks to see if any co-processing needs to be performed. If a pipeline needs to execute, the adaptor is responsible for creating/updating the VTK data structures from the current simulation code state so that the pipelines can execute with that data.
+  </li>
+  <li>
+   Finalization call: This call cleans up any state in the adaptor and/or Catalyst.
+  </li>
+ </ul>
+ <p>
+  As can be seen with this design, the functional interface allows a minimal code footprint inside of the simulation code codebase.
+ </p>
+ <p>
+  For more information on ParaView Catalyst, visit the web-site at
+  <a href="http://catalyst.paraview.org/">
+   http://catalyst.paraview.org/
+  </a>
+  .
+ </p>
+ <h3>
+  <span style="color:#000080">
+   <strong>
+    Acknowledgements
+   </strong>
+  </span>
+ </h3>
+ <p>
+  Initial funding for ParaView Catalyst development was through Army SBIR contract W91126-08-C-0062. ParaView Catalyst was developed collaboratively between Sandia National Laboratories, Los Alamos Laboratory, the Army’s Aeroflightdynamics Directorate, and Kitware. Sandia National Laboratories is a multi-program laboratory managed and operated by Sandia Corporation, a wholly owned subsidiary of Lockheed Martin Corporation, for the U.S. Department of Energy’s National Nuclear Security Administration under contract DE-AC04-94AL85000.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_2020281523.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_2020281523.jpg" style="height:125px; width:100px"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   <em>
+    Andrew Bauer
+   </em>
+  </strong>
+  <em>
+   is an R&amp;D Engineer in the scientific computing team at Kitware. He primarily works on enabling tools and technologies for HPC simulations.
+  </em>
+ </p>
+</div>

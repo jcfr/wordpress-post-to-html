@@ -1,0 +1,211 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  We began using Gerrit for code review in 2010 and a blog post from October detailed much of the early success in using it for the ITK project [1]. David Cole wrote about the new CDash@Home functionality being developed in CDash at the time [2], and we were able to integrate this with the event stream in Gerrit to trigger automated builds when a new proposed patch was pushed to ITK (provided the user was in a whitelisted group on the server).
+ </p>
+ <p>
+  We were reasonably happy with this support, but really wanted to be able to review topic branches rather than single commits. This workflow is described in the Source article “Distributed Version Control: The Future of History” [3]. Since then it has proven to be a successful method of developing and merging features when they are ready. It follows a similar pattern to that employed in many other projects, but was poorly supported in Gerrit. The general advice was to squash a topic into a single commit, review and test that, and then possibly merge the topic (assuming everything matches up).
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Motivation
+   </strong>
+  </span>
+  <br/>
+  One of the biggest issues in software development is balancing the need to develop and merge new functionality with the desire to keep the integration branch stable and functional. A commit from a developer on Linux can cause compilation failures for Windows developers, possibly halting their development until the branch is fixed. In the days of CVS and Subversion, this problem was especially pronounced; but with the advent of distributed version control, the problem is less of an issue when “branchy workflows” are employed. The developer can now simply branch off from before a breakage and continue working independent of activity in the development branch until they reach a point where they wish to merge.
+ </p>
+ <p>
+  Still, when branches are merged, there is a strong desire to ensure these fixes will not cause issues or introduce regressions. The Kitware software process has been developed over many years to mitigate these risks and detect regressions early by using a process of continuous dashboard submissions throughout the day, along with more thorough testing of the code each night. This ensures that breakages and regressions will be caught within hours, or by the next day if they are missed in the continuous submissions, while the changes are still fresh in the developer’s mind.
+ </p>
+ <p>
+  Git (and distributed version control in general) now make it very easy to push commits to multiple repositories, merging them only when they are ready; thus, the idea of pre-testing, where you could push a change to a repository and then tell CDash to build that branch, was born. The prototype worked quite well, but it was still a very manual process. By combining Git with Gerrit, we are able to build and test proposed changes and combine that with code review from expert developers. The event stream offered by Gerrit allows us to automatically submit CDash@Home build requests with minimal human interaction.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     The Gerrit Event Stream
+    </span>
+   </strong>
+  </span>
+  <br/>
+  We initially developed a set of Python scripts for the ITK project for monitoring the Gerrit event stream and triggering various actions in response to events of interest, such as new proposed topics or patches. Python was chosen as a simple glue language that would allow the scripts to be updated easily. Python has good support for JSON (the data format used by Gerrit in its event stream), as well as HTTP PUT and POST methods used to interact with the CDash@Home web API.
+  <br/>
+  Several Kitware developers have contributed to this code, and it has grown from a simple monolitihic Python script to a pluggable Python process that is configured using a JSON configuration file. The Python script starts up and enters into a long-lived loop after connecting to Gerrit’s event stream using SSH. Events in the stream send new JSON objects into the event stream, which are then acted on according to the event handler functions.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     CDash@Home
+    </span>
+   </strong>
+  </span>
+  <br/>
+  The CDash@Home web API is called from the Gerrit CDash broker, adding build requests for the proposed topic or change if the user who pushed the change is in the appropriate group. After some iterations, we settled on creating build requests with unique names and constructing URLs using the CDash query to filter out results referring to the submitted topic only. The broker script uses the command line SSH API supplied by Gerrit to add a comment to the patch with a link and details of the build.
+ </p>
+ <p>
+  CDash@Home volunteer machines run a simple CTest script in a loop, where they poll the CDash server for new jobs at specified intervals. The CDash server maintains a list of volunteer machines and dispatches the next available job to the volunteer that matches the specification supplied by the web API calls. The standard pattern requests a build of the proposed patch on Windows, Mac, and Linux. We have taken this a little further in VTK, and build with Python wrapping on for the Linux volunteers.
+ </p>
+ <p>
+  One of the bigger challenges in using CDash@Home is writing a generic script to execute the dashboard submission. This involves cloning the source tree and any data repositories, if they do not exist, and then setting up the build using data from the CDash machine XML file and the variable values supplied by the CDash server. Until recently, VTK has been using an experimental dashboard installation with fixes necessary for for the topic branch testing; however, since the main dashboard was upgraded recently, they will be moving to the main VTK dashboard soon.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Gerrit Hooks
+   </strong>
+  </span>
+  <br/>
+  The final piece of the puzzle was replacing the hooks on the stage that prevent bad changes from being merged. These are largely patch content checks looking at the sanity of each commit, such as author name and email address, preventing certain paths (such as kwsys) from being modified, and warning about whitespace issues. These checks are now done by a Kitware robot after a patch is proposed, and the verified field is used to approve or block commits.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     New VTK Workflow
+    </span>
+   </strong>
+  </span>
+  <br/>
+  Until recently, the topic stage was used to stage and merge topics into VTK’s master branch. This has now been replaced by Gerrit, and augmented with additional features provided by the Gerrit code review application. Anyone is free to sign up for a Gerrit account, and we use OpenID for authentication. Google is one of many OpenID providers that can be used with Gerrit. There are instructions on the VTK wiki to set up a new account and develop code [5].
+ </p>
+ <p>
+  <strong>
+   Developing New Features
+  </strong>
+  <br/>
+  To get up-and-running, you will first need to install Git and clone the VTK repository,
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   git clone git://vtk.org/VTK.git
+  </span>
+ </p>
+ <p>
+  Once you have a working clone of the repository, run the set up scripts. They will add the additional remote for Gerrit, along with some useful aliases to make development easier.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   cd VTK
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   ./Utilities/SetupForDevelopment.sh
+  </span>
+ </p>
+ <p>
+  From there, you can create a topic branch and develop as normal. Following the standard “branchy workflow” documented in several places, make commits as development proceeds. Once you think the topic is ready to be merged into master, upload it to Gerrit for code review and testing. This is done using a git alias set-up for you by earlier scripts.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   git prepush      # View the commits to be pushed
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   git gerrit-push  # Push the commits for review
+  </span>
+ </p>
+ <p>
+  The command will output a URL where the changes can be viewed. Follow that link to inspect the commits and ensure everything is as expected. Once you are happy with the changes, you can suggest reviews by typing in a person’s names and clicking on “add reviewer”. If you are in the VTK-Core group, a build should have been triggered and you will see a link posted by the Kitware robot to the filtered CDash results. Follow the link to check the build results.
+ </p>
+ <p>
+  <strong>
+   Reviewing Code
+  </strong>
+  <br/>
+  Gerrit will email you if you have been added as a reviewer of a change. Anyone can give a review in the range of -1 to +1, with VTK developers being granted additional rights to approve a commit (+2 code review), or block a commit from merge (-2 code review). The Kitware robot uses the Verified field to block commits that do not pass basic content checks, or marks them as verified once the checks were successfully run. It will also warn about whitespace issues, but it is up to the reviewer to decide if that should block the submission of a topic.
+  <br/>
+  <a href="/source/files/28_933144742.png" rel="noopener" target="_blank">
+   <img alt="" height="469" src="https://blog.kitware.com/source/files/Small.28_933144742.png" style="display: block; margin-left: auto; margin-right: auto;" width="457"/>
+  </a>
+ </p>
+ <p>
+  As a reviewer, you should review the dashboard results and determine if there were any regressions or problems with the proposed topic; this includes compiler warnings, failing tests, and any configuration issues introduced. The CDash@Home builds are roughly equivalent to the Continuous submissions, covering the three major platforms (Linux, Mac, and Windows) in basic configurations. You must still check the nightly dashboards after a topic has been merged to check for regressions introduced by a commit on a much broader range of configurations and hardware.
+ </p>
+ <p>
+  Once you are happy with the dashboard results, review the code by looking at the individual commits in a topic and going through the diff. Gerrit allows for side-by-side or unified diffs, and both views offer the ability to make comments on any line of code. You should examine the code for any style issues, indentation, whitespace, etc., as well as logical issues with changes introduced and API decisions. This is the best opportunity to ensure any new API is a good fit, and to inform the developer of any problems you might spot. Any comments you make will remain drafts until you submit a review.
+ </p>
+ <p>
+  To submit a review, please use the scoring mechanism, which describes their meaning on the webpage. A score of -2 indicates that the commit is not suitable for merging into the code base, and must be changed before it can be integrated; this score blocks and does not allow submission. A score of -1 indicates that you see issues in the code, but other reviewers may choose to override your score and submit the change.
+ </p>
+ <p>
+  If you think the code is fine but feel that someone else should look before it is submitted, then +1 is appropriate.  A score of +2 score approves the topic and enables the submit button.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Submitting Code: Merging
+    </span>
+   </strong>
+  </span>
+  <br/>
+  Once all commits in a topic have been reviewed and approved, clicking the topic name in any of the commits will take you to the topic view page. This page contains a summary of all commits in the topic and their scores; it is also the only place that can be used to merge a topic. After reviewing the topic summary, the same scoring mechanism is used to assess the entire topic. If you feel the topic is ready to be merged, giving it a +2 score makes it eligible and enable to be submitted. Once the submit change button is pressed Gerrit will attempt to create a merge commit to bring all the changes into the master branch. If there are conflicts, you will be asked to rebase the topic and submit again. Topics do not require that all commits have been approved, but it is generally a good idea to ensure they are.
+ </p>
+ <p>
+  If issues are seen with topics, the topic can be extended by adding more commits to the end and using the gerrit-push alias. Each time a topic is modified, a new build request will be made. We will also be rolling out an additional field called “Build Status,” which confirms a build has been requested. This will also allow members of the core developer group to request builds for other developers once they have reviewed the code submission.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Conclusions
+   </strong>
+  </span>
+  <br/>
+  The software process for VTK has been significantly augmented using several open source tools developed at Kitware and by others in the wider open source community. The online code review facilitates improved code quality and when coupled with CDash@Home integration, it represents a significant advance in our software process. We rely on skilled developers to review build results and code submissions, but aim to automate as much of the process as possible. We have also attempted to significantly reduce the barrier-to-entry for new contributors by providing a few levels where mentoring is encouraged.
+ </p>
+ <p>
+  We would appreciate your feedback as we continue to refine the process and roll it out for other projects. If you are interested in learning more about any of the components in the system, please get in touch; we have integrated components from several open source projects in order to achieve these results, and continue to assess its efficacy and impact on the  development process.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    REFERENCES
+   </strong>
+  </span>
+  <br/>
+  [1]
+  <a href="https://blog.kitware.com/introducing-gerrit-code-review-and-community-contributions/">
+   http://www.kitware.com/blog/home/post/70
+  </a>
+  <br/>
+  [2]
+  <a href="https://blog.kitware.com/the-cdash-home-cloud/">
+   http://www.kitware.com/source/home/post/21
+  </a>
+  <br/>
+  [3]
+  <a href="https://blog.kitware.com/distributed-version-control-the-future-of-history/">
+   http://www.kitware.com/source/home/post/14
+  </a>
+  <br/>
+  [4]
+  <a href="http://trunk.cdash.org/">
+   http://trunk.cdash.org/
+  </a>
+  <br/>
+  [5]
+  <a href="http://www.vtk.org/Wiki/VTK/Git/Develop">
+   http://www.vtk.org/Wiki/VTK/Git/Develop
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/28_1025888645.png" rel="noopener" target="_blank">
+   <img alt="" height="126" src="https://blog.kitware.com/source/files/Small.28_1025888645.png" style="float: left;" width="101"/>
+  </a>
+  <em>
+   <strong>
+    Marcus Hanwell
+   </strong>
+   is an R&amp;D Engineer in the scientific computing team at Kitware. He is leading work on Open Chemistry, and has a background in open source, open science, Physics and Chemistry. He is a core developer of Avogadro, and has also made significant contributions to VTK, ParaView, Titan and software quality processes.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

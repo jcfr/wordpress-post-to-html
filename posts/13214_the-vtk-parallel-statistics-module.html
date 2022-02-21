@@ -1,0 +1,666 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The addition of a parallel, scalable statistics module to VTK was motivated by the Titan Informatics Toolkit, a collaborative effort between Sandia National Laboratories and Kitware. This effort significantly expanded VTK to support the ingestion, processing, and display of informatics data. By leveraging the VTK data and execution models, Titan provides a flexible, component based, pipeline architecture for the integration and deployment of algorithms in the fields of intelligence, semantic graphing, and information analysis.
+ </p>
+ <p>
+  In 2008, the parallel statistical engineers were integrated into VTK, and the module has continued to grow as new engines developed in the context of the “Network Grand Challenge” LDRD project at Sandia, and under a DOE/ASCR program to conduct broad research in the topological and statistical analysis of petascale data. As a result, a number of univariate, bivariate, and multivariate statistical engines have been implemented in VTK.
+ </p>
+ <p>
+  In this article we summarize the general design of these classes, describe the specifics of each, and conclude by mentioning an ongoing collaboration in the field of computational combustion science that is making use of the most recent addition to the VTK parallel statistics module.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Variables &amp; Operations
+   </span>
+  </strong>
+  <br/>
+  Each of the engines operates upon data stored in one-or-more vtkTable instances, where the first table contains “observations” and further tables represent statistical models. The statistical analysis algorithms are partitioned into four disjoint operations in order to meet two overlapping but not exactly congruent design requirements: 1) the algorithms should match typical statistical data analysis workflows; and 2) the algorithms should lend themselves to scalable parallel implementations. The four operations include the following: learn a model from observations; derive statistics from a model; assess observations with a model, and test a hypothesis.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_406265398.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_406265398.jpg" width="60%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: The 4 operations of statistical analysis and their interactions with input observations and models.  When an operation is not requested, it is eliminated by connecting input to output ports.
+  </em>
+ </p>
+ <p>
+  These operations, once executed, occur in order as shown in Figure 1. However, it is also possible to execute only a subset of these; for example, when it is desired to have previously computed models, or models constructed with expert
+  <br/>
+  knowledge, be used in conjunction with existing data.
+ </p>
+ <p>
+  These operations, performed on a request comprising a set of columns of the input observations table, are detailed as follows:
+ </p>
+ <p>
+  <strong>
+   Learn:
+  </strong>
+  Calculate a “raw” statistical model from an input dataset. By “raw,” we mean the minimal representation of the desired model, which contains only primary statistics. For example, in the case of descriptive statistics: sample size, minimum, maximum, mean, and centered M_2, M_3 and M_4 aggregates1.
+ </p>
+ <p>
+  <strong>
+   Derive:
+  </strong>
+  Calculate a “full” statistical model from a raw model. By “full,” we mean the complete representation of the desired model, which contains both primary and derived statistics. For example, in the case of descriptive statistics, the following derived statistics are calculated from the raw model: unbiased variance estimator, standard deviation, and two estimators for both skewness and kurtosis.
+ </p>
+ <p>
+  <strong>
+   Assess:
+  </strong>
+  Given a statistical model — from the same or another dataset — mark each datum of a given dataset.
+ </p>
+ <p>
+  <strong>
+   Test:
+  </strong>
+  Given a set of observations and a statistical model, perform statistical hypothesis testing.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Algorithms
+   </span>
+  </strong>
+  <br/>
+  The following algorithms are currently available in the VTK parallel statistics module. We are not discussing the Test operation, which is still considered experimental and not yet available for all engines.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Univariate Statistics
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   <span style="color: #000080; font-size: x-small;">
+    Descriptive Statistics:
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Calculate minimum, maximum, mean, and centered M_2, M_3 and M_4 aggregates.
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Calculate unbiased variance estimator, standard deviation, skewness (1_2 and G_1 estimators), kurtosis (g_2 and G_2 estimators).
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Mark with relative deviations (one-dimensional Mahalanobis distance).
+ </p>
+ <p>
+  <span style="font-size: x-small;">
+   <strong>
+    <span style="color: #000080;">
+     Order Statistics:
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Calculate histogram.
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Calculate arbitrary quantiles, such as
+  <code>
+  </code>
+  5-point” statistics (quantiles) for box plots, deciles, percentiles, etc.
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Mark with quantile index.
+ </p>
+ <p>
+  <span style="font-size: x-small;">
+   <strong>
+    <span style="color: #000080;">
+     Auto-Correlative Statistics:
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Calculate minimum, maximum, mean, and centered M_2 aggregates for a variable with respect to itself for a set of specified time lags (i.e., time steps between datasets of equal cardinality that are assumed to represent the same variable distributed in space).
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Calculate unbiased auto-covariance matrix estimator and its determinant, Pearson auto-correlation coefficient, linear regressions (both ways), and fast Fourier transform of the auto-correlation function, again for a set of specified time lags.
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Mark this with the squared two-dimensional Mahalanobis distance.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Bivariate Statistics
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   <span style="color: #000080; font-size: x-small;">
+    Correlative Statistics:
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Calculate the minima, maxima, means, and centered M_2 aggregates.
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Calculate unbiased variance and covariance estimators, Pearson correlation coefficient, and linear regressions (both ways).
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Mark with the squared two-dimensional Mahalanobis distance.
+ </p>
+ <p>
+  <span style="font-size: x-small;">
+   <strong>
+    <span style="color: #000080;">
+     Contingency Statistics:
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Calculate contingency table.
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Calculate joint, conditional, and marginal probabilities, as well as information entropies.
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Mark with joint and conditional PDF values, as well as pointwise mutual informations.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Multivariate Statistics
+   </span>
+  </strong>
+  <br/>
+  These filters all accept requests containing n_i variables upon which simultaneous statistics  should be computed.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: x-small;">
+    Multi-Correlative Statistics:
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Calculate the means and pairwise centered M_2 aggregates.
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Calculate the upper triangular portion of the symmetric n_i*n_i covariance matrix and its (lower) Cholesky decomposition.
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Mark with the squared multi-dimensional Mahalanobis distance.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: x-small;">
+     PCA Statistics:
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Identical to the multi-correlative filter.
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Everything the multi-correlative filter provides, plus the n_i eigenvalues and eigenvectors of the covariance matrix.
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Perform a change of basis to the principal components (eigenvectors), optionally projecting to the first m_i  components, where m_i &lt; n_i is either a user-specified value or is determined by the fraction of maximal eigenvalues whose sum is above a user-specified threshold. This results in m_i additional columns of data for each request R_i.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: x-small;">
+    K-Means Statistics:
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   Learn:
+  </strong>
+  Compute optimized set(s) of cluster centers from initial set(s) of cluster centers. In the default case, the initial set comprises the first K observations.  However, the user can specify one-or-more sets of cluster centers (with possibly differing numbers of clusters in each set) via an optional input table, in which case  an optimized set of cluster centers is computed for each of the  input sets.
+  <br/>
+  <strong>
+   Derive:
+  </strong>
+  Calculate the global and local rankings amongst the sets of clusters computed in the learn operation. The global ranking is the determined by the error amongst all new cluster centers, while the local rankings are computed amongst clusters sets with the same number of clusters.  The total error is also reported.
+  <br/>
+  <strong>
+   Assess:
+  </strong>
+  Mark with closest cluster id and associated distance for each set of cluster centers.
+ </p>
+ <p>
+  <a href="/source/files/28_1388756576.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1388756576.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="60%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: Several of the VTK parallel statistics engines are integrated into ParaView. Example using PCA on four dataset attributes
+  </em>
+ </p>
+ <p>
+  An example of the statistical engines within ParaView is shown in Figure 2. In this example, a PCA analysis is performed on a quadruple of variables of interest in a 2D flame simulation, whereby the statistical model is calculated (learn and derive operations) on a randomly-sampled subset of 1/10-th of the entire dataset, after which all points in the dataset are marked with their respective relation deviations from this model.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Input and Output Ports
+   </span>
+  </strong>
+  <br/>
+  The statistics algorithms have by default three input ports and three output ports as follows:
+ </p>
+ <p>
+  <strong>
+   Input Port 0:
+  </strong>
+  This port is identified as vtkStatisticsAlgorithm::INPUT_DATA and is used for learn data.
+ </p>
+ <p>
+  <strong>
+   Input Port 1:
+  </strong>
+  This port is identified as vtkStatisticsAlgorithm::LEARN_PARAMETERS and is used for learn parameters (e.g., initial cluster centers for k-means clustering, time lags for auto-correlation, etc.).
+ </p>
+ <p>
+  <strong>
+   Input Port 2:
+  </strong>
+  This port is identified as vtkStatisticsAlgorithm::INPUT_MODEL and is used for a priori models.
+ </p>
+ <p>
+  <strong>
+   Output Port 0:
+  </strong>
+  This port is identified as vtkStatisticsAlgorithm::OUTPUT_DATA and it mirrors the input data and optional assessment columns.
+ </p>
+ <p>
+  <strong>
+   Output Port 1:
+  </strong>
+  This port is identified as vtkStatisticsAlgorithm::OUTPUT_MODEL and contains any generated model.
+ </p>
+ <p>
+  <strong>
+   Output Port 2:
+  </strong>
+  This port is identified as vtkStatisticsAlgorithm::OUTPUT_TEST and is currently experimental and not used by all statistics algorithms. Please note that in earlier implementations it was called vtkStatisticsAlgorithm::ASSESSMENT, a key which has since been deprecated.
+ </p>
+ <p>
+  All input and output ports are all of type vtkTable, with the exception of both input and output ports 1 which are of type vtkMultiBlockDataSet. Note that this is an update from earlier implementations of these filters where it was also possible for ports 1 to be of type vtkTable, however that is no longer the case.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Parallel Statistics Classes
+   </span>
+  </strong>
+  <br/>
+  The purpose of building a full statistical model in two separate operations is two-fold: database normalization (resulting from the fact that there is no redundancy in the primary model) and parallel computational efficiency. As a result, in our approach, inter-processor communication and updates are performed only for primary statistics.
+ </p>
+ <p>
+  The calculations for obtaining derived statistics from primary statistics are typically fast and simple and need only be calculated once, without communication, upon completion of all parallel updates of primary variables. Data to be assessed is assumed to be distributed in parallel across all processes participating in the computation; thus, no communication is required as each process assesses its own resident data.
+ </p>
+ <p>
+  Therefore, in the parallel versions of the statistical engines, inter-processor communication is required only for the Learn operation, while both Derive and Assess are executed in an embarrassingly parallel fashion due to data parallelism. This design is consistent with the methodology used to enable parallelism within VTK, most notably in ParaView.
+ </p>
+ <p>
+  The following 8 parallel statistics engines are implemented and available in the parallel statistics module of VTK: vtkPAutoCorrelativeStatistics; vtkPDescriptiveStatistics; vtkPOrderStatistics; vtkPCorrelativeStatistics; vtkPContingencyStatistics; vtkPMultiCorrelativeStatistics; vtkPPCAStatistics; vtkPKMeansStatistics.
+ </p>
+ <p>
+  Each of these parallel algorithms is implemented as a subclass of the respective serial version of the algorithm and contains a  vtkMultiProcessController for handling inter-processor communication.
+ </p>
+ <p>
+  Within each of the parallel statistics classes, the Learn operation is the only operation whose behavior is changed (by reimplementing its virtual method or by reimplementing virtual methods that are called by the Learn operation). The  Dervie and Assess operations remain unchanged due to their inherent data parallelism. The Learn operation of the parallel algorithms performs two primary tasks:
+ </p>
+ <p>
+  1. Calculate statistics on local data by executing the Learn code of the superclass.
+  <br/>
+  2. If parallel updates are needed (i.e. the number of processes is greater than one), perform the necessary data gathering and aggregation of local statistics into global statistics.
+ </p>
+ <p>
+  The descriptive, correlative, auto-correlative and multi-correlative statistics algorithms perform the aggregation necessary for the statistics which they are computing using the arbitrary-order update and covariance update formulas presented in [1]. Since the PCA statistics class derives from the multi-correlative statistics algorithm and inherits its Learn operation, a static method is defined within the parallel multi-correlative statistics algorithm to gather all necessary statistics. As we have demonstrated in [2], all those parallel classes exhibit optimal parallel speed-up properties.
+ </p>
+ <p>
+  Similarly, the contingency statistics class derives from the bivariate statistics class and implements its own aggregation mechanism for the Learn operation. However, unlike the other statistics algorithms which rely on statistical moments (descriptive, correlative, auto-correlative,  multi-correlative, PCA, and K-means), this aggregation operation is, in general, not embarrassingly parallel; therefore, optimal parallel scale-up is not observed when this class is not used outside of its intended domain of applicability. The same is the case for the order statistics, since the parallel update of a histogram involves more than negligibly small amounts of data as compared to the overall dataset size.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Usage
+   </span>
+  </strong>
+  <br/>
+  It is fairly easy to use the serial statistics classes of VTK; it is not much harder to use their parallel versions. All that is required is a parallel build of VTK and a version of MPI installed on your system.
+ </p>
+ <p>
+  <strong>
+   Listing 1:
+  </strong>
+  A subroutine that should be run in parallel for calculating auto-correlative statistics.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   void Foo( vtkMultiProcessController* controller, void* arg )
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   // Use the specified controller on all parallel
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   filters by default:
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   vtkMultiProcessController::SetGlobalController( controller );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Assume the input dataset is passed to us:
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   vtkTable* inputData = static_cast&lt;vtkTable*&gt;( arg );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Create parallel auto-correlative statistics class
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   vtkPAutoCorrelativeStatistics* pas = vtkPAutoCorrelativeStatistics::New();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Set input data port
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;SetInput( 0, inputData );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Select all columns in inputData
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   for ( int c = 0; c &lt; inputData-&gt;GetNumberOfColumns(); ++ c )
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;AddColumn( inputData-&gt;GetColumnName[c] );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   }
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   // Set spatial cardinality
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;SetSliceCardinality( nVals );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Set parameters for autocorrelation of whole dataset with respect to itself
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;SetInputData( vtkStatisticsAlgorithm::LEARN_PARAMETERS, paramTable );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Calculate statistics with Learn and Derive operations only
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;SetLearnOption( true );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;SetDeriveOption( true );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;SetAssessOption( false );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;SetTest( false );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   pas-&gt;Update();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   }
+  </span>
+  <br/>
+  Listing 1 demonstrates how to calculate auto-correlative statistics in parallel on each column of an input set inData, which is a pointer to a vtkTable instance with an associated set of input parameters and no subsequent data assessment.
+ </p>
+ <p>
+  It is assumed that this input data type is of numeric type (i.e. double), with the following storage convention: each time-step corresponds to a block of data of the same size denoted nVals above. Each block is often referred to as a time-slab.  As a result, there are as many data points for each variable as there are time steps, times the slab size nVals.
+ </p>
+ <p>
+  A parameter table paramTable contains the list of time lags of interest; i.e., those time steps for which the auto-correlation must be computed with respect to the initial time step (the first slab in the dataset). In particular, if this parameter table contains only one entry with value ~0, then the auto-correlation of the entire dataset against itself will be calculated, which will lead to a covariance matrix with all coefficients equal to the variance of the variable, and the auto-correlation coefficient will be equal to 1.
+  <br/>
+  For univariate statistics algorithms calling AddColumn() for each column of interest sufficient — each request can by definition only reference a single column and so the filter automatically turns each column of interest into a separate request. However, this is not sufficient for multivariate filters as each request might have a different number of columns of interest. In this case, requests for columns of interest are specified by calling SetColumnStatus() multiple times to identify the variables to be used, followed by a call to RequestSelectedColumns().
+ </p>
+ <p>
+  The examples thus far assume that a vtkMPIcommunicator was previously prepared within the parallel environment used to execute the parallel auto-correlative statistics engine.  It is outside the scope of this article to discuss I/O issues, and in particular how a vtkTable instance  can be created and filled with the values of the variables of interest (see the online documentation of VTK or its user manual for details). However, we include a small amount of code to prepare a parallel controller.
+ </p>
+ <p>
+  <strong>
+   Listing 2:
+  </strong>
+  A snippet of code to show how to execute a subroutine (Foo()) in parallel.  In reality, inData would be prepared in  parallel by Foo() but is assumed to be pre-populated here to simplify the example.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   vtkTable* inputData;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   vtkMPIController* controller = vtkMPIController::New();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   controller-&gt;Initialize( &amp;argc, &amp;argv );
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Execute the function named Foo on all processes
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   controller-&gt;SetSingleMethod( Foo, &amp;inputData );
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   controller-&gt;SingleMethodExecute();
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   // Clean up
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   controller-&gt;Finalize();
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier;">
+   controller-&gt;Delete();
+  </span>
+ </p>
+ <p>
+  In the code example from Listing 1, the vtkMultiProcessController object passed to Foo() is used to determine the set of processes (which may be a  subset of a larger job) among which input data is distributed. VTK uses subroutines of this form to execute code across many processes.
+ </p>
+ <p>
+  In order to prepare a parallel controller to execute Foo() in parallel with MPI, one must first (e.g.  in the main routine) create a vtkMPIController instance and pass it the address of Foo(), as shown in Listing 2.  Note that, when using MPI, the number of processes is determined by the external program which launches the application.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    An Application to Computational Combustion
+   </span>
+  </strong>
+  <br/>
+  As an example of the application of the VTK parallel statistic module, we discuss an ongoing effort in collaboration with Dr. Jacqueline Chen’s research group at Sandia National Laboratories, for the analysis of  Direct Numerical Simulation (DNS) of reactive flows using the auto-correlation engine that was recently added to the statistics module.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_1933065915.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1933065915.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="50%"/>
+  </a>
+  <em>
+   Figure 3: A lifted ethylene jet flame generated from a direct numerical simulation
+   <br/>
+   (image courtesy of Hongfeng Yu and Jacqueline Chen).
+  </em>
+ </p>
+ <p>
+  Auto-correlation is the cross-correlation of a signal with itself, providing a measure of the similarity between observations as a function of the time separation between them. It is typically used to discover underlying repeating patterns in the presence of noise.  Within the context of the analysis of DNS computations, it is the prevalent method used by the combustion community to measure the turbulence spectrum and the turbulence length scales.
+ </p>
+ <p>
+  In an Eulerian framework, the turbulent eddies in a homogeneous turbulent flow can be perceived as being transported across a point of observation at a rate equal to the mean velocity.  The integral time scale, which is computed as the time integration of the autocorrelation function, can be used to deduce the integral length scale through a space-time transformation. The Fourier transform of the autocorrelation function yields the turbulent frequency spectrum, whose integer is the mean square of the velocity fluctuation.
+ </p>
+ <p>
+  The ongoing effort aims at providing in-situ or in-transit auto-correlation analysis to flame simulations as illustrated in Figure 3 in particular to measure turbulence spectrum and length scales. For more detail about the type of simulations involved and the approach used for large scale data analysis in this context, please refer to [3].
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Acknowledgements
+   </span>
+  </strong>
+  <br/>
+  This work was initially supported by the laboratory-directed research &amp; development (LDRD) “Network Grand Challenge” project, and afterwards by the “Mathematical Analysis of Petascale Data” project of the Advanced Scientific Computing Research (ASCR) office of the U.S. DOE. The authors would like to express their gratitude to Sandy Landsberg, ASCR project manager, for her continued support for this work, and to David Thompson (Sandia/Kitware) for his early contributions to this project.
+ </p>
+ <p>
+  Sandia National Laboratories is a multi-program laboratory managed and operated by Sandia Corporation, a wholly owned subsidiary of Lockheed Martin Corporation, for the U.S. Department of Energy’s National Nuclear Security Administration under contract DE-AC04-94AL85000.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/28_650033848.jpg" rel="noopener" target="_blank">
+   <img alt="" height="128" src="https://blog.kitware.com/source/files/Small.28_650033848.jpg" style="float: left;" width="102"/>
+  </a>
+  <em>
+   <strong>
+    Philippe Pébay
+   </strong>
+   is Technical Expert  in Visualization and HPC at Kitware SAS, the European subsidiary of the Kitware group. Pébay is currently one of the most active developers of VTK, an open-source, freely available software system for 3D computer graphics, image processing, visualization, and data analysis. He is in particular the main architect of the statistical analysis module of VTK and ParaView.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/28_1868126222.jpg" rel="noopener" target="_blank">
+   <img alt="" height="127" src="https://blog.kitware.com/source/files/Small.28_1868126222.jpg" style="float: left;" width="101"/>
+  </a>
+  <em>
+   <strong>
+    Janine Bennett
+   </strong>
+   is a Principal Member of the Technical Staff in the Scalable Modeling and Analysis Systems Department at Sandia National Laboratories. Janine’s research focuses on data analysis challenges in extreme-scale HPC environments and her interests include feature segmentation, scalable statistics algorithms, computational geometry, combinatorial topology, emerging programming and execution models, and analysis of uncertain data.
+  </em>
+ </p>
+ <p>
+  <em>
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    References:
+   </span>
+  </strong>
+ </p>
+ <ol>
+  <li>
+   P. Pébay, Formulas for robust, one-pass parallel computation of covariances and arbitrary-order statistical moments. Sandia Report SAND2008-6212, Sandia National Laboratories, September 2008.]
+  </li>
+  <li>
+   P. Pébay, D. Thompson, J. Bennett, and A. Mascarenhas. Design and performance of a scalable, parallel statistics toolkit. In Proc. 25th IEEE International Parallel &amp; Distributed Processing Symposium, 12th International Workshop on Parallel and Distributed Scientific and Engineering Computing. Anchorage, AK, U.S.A., May 2011.
+  </li>
+  <li>
+   J. Bennett et al., “Combining in-situ and in-transit processing to enable extreme-scale scientific analysis”, Proc. Supercomputing 2012 International Conference for High Performance Computing, Networking, Storage and Analysis. Salt Lake City, UT, U.S.A., November 2012]
+  </li>
+ </ol>
+</div>

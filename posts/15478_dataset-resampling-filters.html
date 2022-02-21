@@ -1,0 +1,81 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Recently, we added two new filters to the
+  <a href="https://www.kitware.com/platforms/#vtk">
+   Visualization Toolkit
+  </a>
+  (VTK) and
+  <a href="https://www.kitware.com/platforms/#paraview">
+   ParaView
+  </a>
+  . These filters can sample the point and cell data of one dataset on to the points of another dataset. Under VTK, these filters are implemented in vtkResampleWithDataSet and vtkResampleToImage. There are also parallel, distributed versions of these filters called vtkPResampleWithDataSet and vtkPResampleToImage. In ParaView, these filters are called “Resample With Dataset” and “Resample To Image.”
+ </p>
+ <p>
+  <img alt="ResampleScreenShot1" class="aligncenter wp-image-15548 " height="619" sizes="(max-width: 873px) 100vw, 873px" src="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-1024x726.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-1024x726.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-300x213.png 300w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-768x545.png 768w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-220x156.png 220w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-250x177.png 250w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-355x252.png 355w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-730x518.png 730w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1-90x64.png 90w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleScreenShot1.png 1189w" width="873"/>
+ </p>
+ <p>
+  The new filters are implemented using
+  <a href="https://diatomic.github.io/diy2/">
+   Diy2
+  </a>
+  , a block-parallel library. Diy2 provides an abstraction over Message Passing Interface (MPI). It has built-in facilities for complex communication patterns like neighbor exchange and swap-reduce, and commonly used algorithms such as domain decomposition. Diy2 greatly simplifies the process of implementing parallel programs such as dataset resampling filters.
+ </p>
+ <p>
+  Following is a brief description of the two filters and their usage in ParaView:
+ </p>
+ <h3>
+  Resample With Dataset
+ </h3>
+ <p>
+  This filter takes two inputs: Input and Source, which can be any DataSet or Composite DataSet type. The filter samples the point and cell data of Input on the points of Source. The output DataSet has the same structure as Source, and its point data contains the resampled values from Input.
+ </p>
+ <p>
+  Resample With Dataset also works in parallel with distributed datasets. The output dataset will have the same distribution as Source.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15549" style="width: 1034px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small.png">
+   <img alt="ResampleWithDataset-small" class="wp-image-15549 size-large" height="338" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-1024x338.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-1024x338.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-300x99.png 300w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-768x253.png 768w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-220x73.png 220w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-250x82.png 250w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-355x117.png 355w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-730x241.png 730w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small-90x30.png 90w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleWithDataset-small.png 1198w" width="1024"/>
+  </a>
+  <p class="wp-caption-text">
+   ParaView displays an example of Resample With Dataset. The left-hand side contains a multiblock tetrahedra mesh (Input). The middle portion of the image shows a multiblock unstructured grid (Source). The outline of Input is also shown in this view. The right-hand side displays the result of applying the filter.
+  </p>
+ </div>
+ <h3>
+  Resample To Image
+ </h3>
+ <p>
+  This filter is a specialization of Resample With Dataset. The filter takes one input and samples its point and cell data onto a uniform grid of points. It is possible to specify the bounds and extents of the uniform grid using the properties panel. By default, the bounds are set to the bounds of the input dataset. The output of the filter is an Image-Data.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15550" style="width: 503px">
+  <img alt="ResampleToImageProperties" class="wp-image-15550 size-full" height="389" sizes="(max-width: 493px) 100vw, 493px" src="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageProperties.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageProperties.png 493w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageProperties-300x237.png 300w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageProperties-220x174.png 220w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageProperties-250x197.png 250w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageProperties-355x280.png 355w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageProperties-90x71.png 90w" width="493"/>
+  <p class="wp-caption-text">
+   In the properties panel for Resample To Image, unchecking “Use Input Bounds” allows the output bounds to be set manually.
+  </p>
+ </div>
+ <p>
+  Some operations can be performed more efficiently on uniform grid datasets. The Resample to Image filter can be used to convert any dataset to Image-Data before performing such operations. For example, Resample To Image can resample an unstructured grid dataset to an Image-Data to efficiently volume-render the data.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15551" style="width: 787px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small.png">
+   <img alt="ResampleToImageExample-small" class="wp-image-15551 size-large" height="1024" sizes="(max-width: 777px) 100vw, 777px" src="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-777x1024.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-777x1024.png 777w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-228x300.png 228w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-768x1012.png 768w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-220x290.png 220w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-250x330.png 250w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-355x468.png 355w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-730x962.png 730w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small-90x119.png 90w, https://blog.kitware.com/wp-content/uploads/2016/08/ResampleToImageExample-small.png 1100w" width="777"/>
+  </a>
+  <p class="wp-caption-text">
+   The top-left portion shows Input (unstructured grid), and the bottom-left area displays the output Image-Data. The colors represent the distribution of the data among the nodes. The right-hand side illustrates a volume rendering of the resampled data.
+  </p>
+ </div>
+ <p>
+  Like Resample With Dataset, Resample To Image can accept any type of DataSet or Composite DataSet as input and can work in parallel distributed environments. The output of Resample To Image is distributed evenly among the processes.
+ </p>
+ <p>
+  Resample With Dataset and Resample To Image replace or supercede existing filters (“Resample With Dataset
+  <i>
+   ”
+  </i>
+  and “Image Resampling
+  <i>
+   ”
+  </i>
+  ) that had inefficient implementations. Resample To Image is already available in VTK 7.0 and ParaView 5.1. We expect to release Resample With Dataset with VTK 7.1 and ParaView 5.2.
+ </p>
+</div>

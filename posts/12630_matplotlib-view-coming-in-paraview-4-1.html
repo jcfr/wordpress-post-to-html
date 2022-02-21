@@ -1,0 +1,1528 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="http://matplotlib.org/index.html" title="matplotlib">
+   matplotlib
+  </a>
+  is a Python module that can be used to make publication-quality plots. We have recently integrated matplotlib into ParaView as a new type of view called a “Python View”. This new view will be available in the ParaView 4.1 release. Below is a screenshot of the new Python View (right) next to a 3D rendering (left) of the momentum vector glyphs in the bluntfin.vts example dataset. The top subplot in the Python View is a matplotlib scatterplot of momentum magnitude versus density. The bottom subplot is a matplotlib histogram of the same density data.
+ </p>
+ <p>
+  <a href="/blog/files/332_332007967.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/blog/files/Small.332_332007967.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The Python View has a single property, a Python script that contains the matplotlib rendering commands. All the Python bindings for ParaView and VTK that are available in the Python scripting module are available from within the script, making it possible to plot any array from just about any dataset that can be loaded into ParaView.
+ </p>
+ <p>
+  The view requires that the Python script where the plotting occurs define two functions. In the first function, you request which arrays you would like to transfer to the client for rendering (at present, all rendering in this view takes place on the client, even in client-server mode). These arrays can be point data, cell data, field data, and table row data. This function runs only on data server processes. It provides access to the underlying data object on the server so that you can query any aspect of the data using the Python-wrapped parts of VTK and ParaView.
+ </p>
+ <p>
+  The second function is where you put matplotlib rendering commands. This function runs only on the ParaView client. It has access to the complete data object gathered from the data server nodes, but only the arrays requested in the first function. This component will typically set up one or more matplotlib subplots, convert data from VTK to a form that can be passed to matplotlib, and plot the data.
+ </p>
+ <p>
+  <span style="font-size: large;">
+   Selecting data arrays to plot
+  </span>
+ </p>
+ <p>
+  Because a dataset residing on the ParaView server may be large, transferring all the data to the client may not be possible or practical. For that reason, we have provided a mechanism to select which data arrays to transfer to the client. The overall structure of the data object, however, including cell connectivity, point positions, and hierarchical block structure, is always transferred to the client.
+ </p>
+ <p>
+  The Python script for the view must define a function called
+  <span style="font-family: 'courier new', courier;">
+   setup_data(view)
+  </span>
+  . The “view” argument is the VTK object for the Python View. Through the view object, the current datasets loaded into ParaView may be accessed.
+ </p>
+ <p>
+  Here’s an example of this function that was used to generate the image above:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7de2e77a835886700" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def setup_data(view):
+  # Iterate over visible data objects
+  for i in xrange(view.GetNumberOfVisibleDataObjects()):
+    # You need to use GetVisibleDataObjectForSetup(i) in setup_data to access the data object.
+    dataObject = view.GetVisibleDataObjectForSetup(i)
+
+    # The data object has the same data type and structure as the data object that
+    # sits on the server. You can query the size of the data, for instance, or do anything
+    # else you can do through the Python wrapping.
+    print "Memory size:", dataObject.GetActualMemorySize(), "kilobytes"
+
+    # Clean up from previous calls here. We want to unset any of the arrays requested
+    # in previous calls to this function.
+    view.DisableAllAttributeArrays()
+
+    # By default, no arrays will be passed to the client. You need to explicitly request
+    # the arrays you want. Here, we'll request the Density point data array
+    view.SetAttributeArrayStatus(i, vtkDataObject.POINT, "Density", 1)
+    view.SetAttributeArrayStatus(i, vtkDataObject.POINT, "Momentum", 1)
+
+    # Other attribute arrays can be set similarly
+    view.SetAttributeArrayStatus(i, vtkDataObject.FIELD, "fieldData", 1)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7de2e77a835886700-22">
+        22
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-1">
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         setup_data
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         view
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Iterate over visible data objects
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         i
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         xrange
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         view
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfVisibleDataObjects
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # You need to use GetVisibleDataObjectForSetup(i) in setup_data to access the data object.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         dataObject
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         view
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetVisibleDataObjectForSetup
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # The data object has the same data type and structure as the data object that
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # sits on the server. You can query the size of the data, for instance, or do anything
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # else you can do through the Python wrapping.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         print
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Memory size:"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         dataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetActualMemorySize
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "kilobytes"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-11">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Clean up from previous calls here. We want to unset any of the arrays requested
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # in previous calls to this function.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         view
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         DisableAllAttributeArrays
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # By default, no arrays will be passed to the client. You need to explicitly request
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # the arrays you want. Here, we'll request the Density point data array
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         view
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetAttributeArrayStatus
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkDataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         POINT
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Density"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         view
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetAttributeArrayStatus
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkDataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         POINT
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Momentum"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-20">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Other attribute arrays can be set similarly
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7de2e77a835886700-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         view
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetAttributeArrayStatus
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkDataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         FIELD
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "fieldData"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0006 seconds] -->
+ <p>
+ </p>
+ <p>
+  The vtkPythonView class passed in as the “view” argument to
+  <span style="font-family: 'courier new', courier;">
+   setup_data(view)
+  </span>
+  defines several methods useful for specifying which data arrays to copy:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    GetNumberOfVisibleDataObjects()
+   </span>
+   – Returns the number of visible data objects in the view. If an object is not visible, it should not show up in the rendering, so all the methods provided by the view deal only with visible objects.
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    GetVisibleDataObjectForSetup(visibleObjectIndex)
+   </span>
+   – This returns the
+   <em>
+    visibleObjectIndex
+   </em>
+   -th visible data object in the view (the data object will have an open eye next to it in the pipeline browser).
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    GetNumberOfAttributeArrays(visibleObjectIndex, attributeType)
+   </span>
+   – Returns the number of attribute arrays for the
+   <em>
+    visibleObjectIndex
+   </em>
+   -th visible object and the given attribute type (e.g.,
+   <span style="font-family: 'courier new', courier;">
+    vtkDataObject.POINT
+   </span>
+   ,
+   <span style="font-family: 'courier new', courier;">
+    vtkDataObject.CELL
+   </span>
+   , etc.).
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    GetAttributeArrayName(visibleObjectIndex, attributeType, arrayIndex)
+   </span>
+   – Returns the name of the array of the given attribute type at the given array index for the
+   <em>
+    visibleObjectIndex
+   </em>
+   -th object.
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    SetAttributeArrayStatus(visibleObjectIndex, vtkDataObject.POINT, “Density”, 1)
+   </span>
+   – Sets the array status of an attribute array. The first argument is the visible object index, the second object is the attribute association of the array, the third argument is the name of the array, and the last argument specifies if the array is to be copied (1) or not (0).
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    GetAttributeArrayStatus(visibleObjectIndex, vtkDataObject.POINT, “Density”)
+   </span>
+   – Retrieves the array status for the object with the given visible index with a given attribute association (second argument) and name (last argument).
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    DisableAllAttributeArrays()
+   </span>
+   – Set all arrays to not be copied.
+  </li>
+ </ul>
+ <div>
+  The methods
+  <span style="font-family: 'courier new', courier;">
+   GetNumberOfVisibleDataObjects()
+  </span>
+  ,
+  <span style="font-family: 'courier new', courier;">
+   GetVisibleDataObjectForSetup(…)
+  </span>
+  ,
+  <span style="font-family: 'courier new', courier;">
+   GetNumberOfAttributeArrays(…)
+  </span>
+  , and
+  <span style="font-family: 'courier new', courier;">
+   GetAttributeArrayName(…)
+  </span>
+  are all convenience methods for obtaining information about visible data objects in the view. The latter three methods are valid only from within the
+  <span style="font-family: 'courier new', courier;">
+   setup_data(view)
+  </span>
+  function. You could instead iterate over all the representations in the vtkPythonView, check for the representation’s visibility, and query the data from the representation directly, but the convenience methods make this somewhat less cumbersome. No matter how you choose to query the available data, you must mark which arrays to copy with
+  <span style="font-family: 'courier new', courier;">
+   SetAttributeArrayStatus(…)
+  </span>
+  .
+ </div>
+ <div>
+  <span style="font-size: large; line-height: 2em;">
+   Plotting with matplotlib
+  </span>
+ </div>
+ <p>
+  After the
+  <span style="font-family: 'courier new', courier;">
+   setup_data(view)
+  </span>
+  function has been called, ParaView will transfer the data object and selected arrays to the client. When that is done, it will call the
+  <span style="font-family: 'courier new', courier;">
+   render(view, figure)
+  </span>
+  function you have defined in your script.
+ </p>
+ <p>
+  The “view” argument to the
+  <span style="font-family: 'courier new', courier;">
+   render(view, figure)
+  </span>
+  function is the vtkPythonView object on the client. The “figure” argument is a matplotlib
+  <span style="font-family: 'courier new', courier;">
+   FigureCanvasAgg
+  </span>
+  object that is automatically created by vtkPythonView. This figure object is the hook into the matplotlib library.
+ </p>
+ <p>
+  The methods in the vtkPythonView class that are useful within the render function are:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    GetNumberOfVisibleDataObjects()
+   </span>
+   – Returns the number of visible data objects in the view.
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    GetVisibleDataObjectForRendering(visibleObjectIndex)
+   </span>
+   – Returns the dataset that has been transferred to the client with the selected arrays.
+  </li>
+ </ul>
+ <div>
+  Here is an example of the
+  <span style="font-family: 'courier new', courier;">
+   render(view, figure)
+  </span>
+  function used to generate the figure above:
+ </div>
+ <p>
+  <!-- HTML generated using hilite.me -->
+ </p>
+ <div>
+  <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+  <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7de2e785138997682" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+   <div class="crayon-plain-wrap">
+    <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def render(view, figure):
+  # Set the border color of the figure figure.
+  set_facecolor('white')
+
+  # Set up a new subplot within the given figure
+  ax1 = figure.add_subplot(2,1,1)
+  ax1.minorticks_on()
+  ax1.set_title('Momentum magnitude vs. density')
+  ax1.set_xlabel('Density')
+  ax1.set_ylabel('Momentum magnitude')
+  ax2 = figure.add_subplot(2,1,2)
+  ax2.set_title('Density histogram')
+
+  # Iterate over visible data objects
+  for i in xrange(view.GetNumberOfVisibleDataObjects()):
+    # You need to use GetVisibleDataObjectForRendering(i) in this function because
+    # it returns the copy of the data on the client, and this function runs only on the client.
+    dataObject = view.GetVisibleDataObjectForRendering(i)
+
+    # Now plot a 2D histogram of momentum magnitude vs. density
+    density = dataObject.GetPointData().GetArray("Density")
+    npDensity = ns.vtk_to_numpy(density)
+    momentum = dataObject.GetPointData().GetArray("Momentum")
+    npMomentum = ns.vtk_to_numpy(momentum)
+    npMomentumAbs = sqrt(npMomentum[:,0]**2 + npMomentum[:,1]**2 + npMomentum[:,2]**2)
+    ax1.scatter(npDensity, npMomentumAbs)
+    ax2.hist(npDensity,bins=30)</textarea>
+   </div>
+   <div class="crayon-main">
+    <table class="crayon-table">
+     <tr class="crayon-row">
+      <td class="crayon-nums " data-settings="show">
+       <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-1">
+         1
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-2">
+         2
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-3">
+         3
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-4">
+         4
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-5">
+         5
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-6">
+         6
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-7">
+         7
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-8">
+         8
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-9">
+         9
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-10">
+         10
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-11">
+         11
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-12">
+         12
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-13">
+         13
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-14">
+         14
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-15">
+         15
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-16">
+         16
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-17">
+         17
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-18">
+         18
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-19">
+         19
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-20">
+         20
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-21">
+         21
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-22">
+         22
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-23">
+         23
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-24">
+         24
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-25">
+         25
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-26">
+         26
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41e7de2e785138997682-27">
+         27
+        </div>
+       </div>
+      </td>
+      <td class="crayon-code">
+       <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-1">
+         <span class="crayon-e">
+          def
+         </span>
+         <span class="crayon-e">
+          render
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          view
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          figure
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+         <span class="crayon-o">
+          :
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-2">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-p">
+          # Set the border color of the figure figure.
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-3">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-e">
+          set_facecolor
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-s">
+          'white'
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-4">
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-5">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-p">
+          # Set up a new subplot within the given figure
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-6">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax1
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          figure
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          add_subplot
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-cn">
+          1
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-cn">
+          1
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-7">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax1
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          minorticks_on
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-8">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax1
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          set_title
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-s">
+          'Momentum magnitude vs. density'
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-9">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax1
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          set_xlabel
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-s">
+          'Density'
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-10">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax1
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          set_ylabel
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-s">
+          'Momentum magnitude'
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-11">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax2
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          figure
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          add_subplot
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-cn">
+          1
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-12">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax2
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          set_title
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-s">
+          'Density histogram'
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-13">
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-14">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-p">
+          # Iterate over visible data objects
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-15">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-st">
+          for
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-i">
+          i
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-st">
+          in
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-e">
+          xrange
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          view
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          GetNumberOfVisibleDataObjects
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+         <span class="crayon-o">
+          :
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-16">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-p">
+          # You need to use GetVisibleDataObjectForRendering(i) in this function because
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-17">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-p">
+          # it returns the copy of the data on the client, and this function runs only on the client.
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-18">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          dataObject
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          view
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          GetVisibleDataObjectForRendering
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          i
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-19">
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-20">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-p">
+          # Now plot a 2D histogram of momentum magnitude vs. density
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-21">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          density
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          dataObject
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          GetPointData
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          GetArray
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-s">
+          "Density"
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-22">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          npDensity
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ns
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          vtk_to_numpy
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          density
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-23">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          momentum
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          dataObject
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          GetPointData
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          GetArray
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-s">
+          "Momentum"
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-24">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          npMomentum
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ns
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          vtk_to_numpy
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          momentum
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-25">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          npMomentumAbs
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-e">
+          sqrt
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          npMomentum
+         </span>
+         <span class="crayon-sy">
+          [
+         </span>
+         <span class="crayon-o">
+          :
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-cn">
+          0
+         </span>
+         <span class="crayon-sy">
+          ]
+         </span>
+         <span class="crayon-o">
+          *
+         </span>
+         <span class="crayon-o">
+          *
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          +
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          npMomentum
+         </span>
+         <span class="crayon-sy">
+          [
+         </span>
+         <span class="crayon-o">
+          :
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-cn">
+          1
+         </span>
+         <span class="crayon-sy">
+          ]
+         </span>
+         <span class="crayon-o">
+          *
+         </span>
+         <span class="crayon-o">
+          *
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          +
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          npMomentum
+         </span>
+         <span class="crayon-sy">
+          [
+         </span>
+         <span class="crayon-o">
+          :
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-sy">
+          ]
+         </span>
+         <span class="crayon-o">
+          *
+         </span>
+         <span class="crayon-o">
+          *
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-26">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax1
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          scatter
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          npDensity
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          npMomentumAbs
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41e7de2e785138997682-27">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          ax2
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          hist
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-v">
+          npDensity
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-v">
+          bins
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-cn">
+          30
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+       </div>
+      </td>
+     </tr>
+    </table>
+   </div>
+  </div>
+  <!-- [Format Time: 0.0117 seconds] -->
+  <br/>
+ </div>
+</div>

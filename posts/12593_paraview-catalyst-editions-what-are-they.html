@@ -1,0 +1,57 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Have you ever used the vtkHyperOctreeLimiter filter in ParaView? As far as I know, I haven’t. I’m not saying it’s not a useful filter, just that it’s not useful to me for what I use ParaView for. For that matter, there’s a bunch of stuff in ParaView that I don’t regularly use. When I’m building ParaView on my workstation though it’s not a big enough deal that I worry about excluding the parts that I don’t use. Now if I was using
+  <a href="http://catalyst.paraview.org/">
+   ParaView Catalyst
+  </a>
+  the story would probably be different, especially if I were using one of the top supercomputers in the world like
+  <a href="http://www.olcf.ornl.gov/titan/">
+   Titan
+  </a>
+  . You see, while Titan has 710 terabytes of total system memory, it only has 38 gigabytes of memory per node. Each node also has a 16 core Opteron processor and an NVIDIA Tesla K20 GPU accelerator. This means that on a per core basis, it is actually pretty low on memory. Now for a “normal” static build of the ParaView server, the executable size is around 150 megabytes. Even more memory is needed to load that executable into the virtual memory space (see
+  <a href="https://blog.kitware.com/why-is-paraview-using-all-that-memory/">
+   blog post
+  </a>
+  for a great description of how that is calculated). If we were to run pvserver on all of the Opteron cores of a Titan node it would take up at least 1/16 of the memory just to load the executable. This isn’t that horrible if there isn’t anything else that needs the memory (remember that for these types of machines there is no virtual memory so once you deplete it your run crashes). If we’re using ParaView Catalyst to co-process simulation results though the simulation may need most of that memory. So this gets to my main point here. Why use all of that memory for ParaView functionality that we know we’ll never use? This is where the ParaView Catalyst editions come into play. The editions are a way of providing base level functionality for desired filters while excluding a large portion of ParaView that we know we don’t need. We certainly don’t need readers for
+  <em>
+   in situ
+  </em>
+  analysis and visualization since our data sources are being provided in memory from the simulation code. Don’t plan on creating screenshots? Then there’s no need to use any of the rendering code or an OpenGL library. Don’t have any idea what the vtkHyperOctreeLimiter filter does? Don’t include that either. For the ambitious, they can create their own Catalyst edition by
+  <a href="http://paraview.org/Wiki/ParaView/Catalyst/BuildCatalyst">
+   manually specifying
+  </a>
+  what parts of ParaView to use. The basic process is to create a json file that specifies what parts of ParaView you want, create a separate source tree with the required files and finally build your Catalyst libraries from that. Note that several Catalyst configurations can be used together to build an edition. For example, if an edition exists with everything that is needed except for a single filter than a new json file that includes the single desired filter is all that needs to be created. The rest will come from a different configuration. For the little more feint of heart, I suggest  starting with one of the preconstructed Catalyst editions available at the
+  <a href="http://www.paraview.org/paraview/resources/software.php">
+   ParaView downloads
+  </a>
+  page under the Nightly Builds section. We have provided several editions using our best estimates of what many users would need for their desired Catalyst pipelines. Brief descriptions of what is in each configuration are:
+ </p>
+ <ul>
+  <li>
+   base: A minimal set of functionality for Catalyst. The intention for this version is a starting point for any specific Catalyst version.
+  </li>
+  <li>
+   base+python: Adds ProgrammableSource and ProgrammableFilter
+  </li>
+  <li>
+   essentials: Adds the Calculator, Clip, Contour, Glyph, PVTrivialProducer, PassArrays,  Slice, TrivialProducer filters and LoadPlugin.
+  </li>
+  <li>
+   essentials+python: Adds PythonAnnotation.
+  </li>
+  <li>
+   base+essentials+extras: Adds in the Arrow, Box, Cone, Cylinder, Line and Sphere sources . Also adds in the ExtractSurface, Histogram, IntegrateVariables, WarpByScalar, and WarpByVector filter and XMLMultiBlockDataWriter, XMLPImageDataWriter, XMLPPolyDataWriter, XMLPRectilinearGridWriter, XMLPStructuredGridWriter and XMLPUnstructuredGridWriter writers.
+  </li>
+ </ul>
+ <p>
+  Make sure when building a Catalyst edition to follow the
+  <a href="http://paraview.org/Wiki/Build_Directions">
+   directions
+  </a>
+  . The script configures the build process in a way that is significantly different than what is normally done through CMake.
+ </p>
+ <p>
+  So what does all of this work save? Depending on which edition is used, the cost of statically linking to Catalyst increases the executable size by around 15 to 30 MB. Note that we also reduce the amount of libraries from well over 1,000 to to under 200 for the base+essentials+extras+python Catalyst edition. Now that is definitely a slimmed down version of ParaView.
+ </p>
+</div>

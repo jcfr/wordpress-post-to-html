@@ -1,0 +1,72 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One of the things I really love about working on open-source projects is seeing where people take the things I’ve worked on. The latest example of this that just blew me away was with a CFD code called PHASTA, led by Ken Jansen at UC Boulder. Short for Parallel Hierarchic Adaptive Stabilized Transient Analysis, six years ago PHASTA was one of the first codes that ParaView Catalyst was prototyped with. Fast forward to a couple of months ago and I hear that Michel Rasquin, one of Ken Jansen’s postdoctoral researchers that’s now at Argonne National Laboratory, piloted remotely a PHASTA simulation instrumented with Catalyst on 256K MPI processes of the Argonne’s
+  <a href="http://www.alcf.anl.gov/mira">
+   Mira
+  </a>
+  system, an IBM BlueGene/Q. The Argonne Leaderships Computing Facility (ALCF) presented this live demonstration at the National User Facility Organization (NUFO) Annual Meeting in Washington, DC. This just blew me away (FYI: you can find the details of their latest CFD configurations along with a strong scaling analysis of PHASTA in their paper available from this link:
+  <a href="http://www.computer.org/csdl/mags/cs/2014/06/mcs2014060013-abs.html">
+   http://www.computer.org/csdl/mags/cs/2014/06/mcs2014060013-abs.html
+  </a>
+  ). I won’t go into the full details of their setup but some of the Catalyst details of their runs include:
+ </p>
+ <ul>
+  <li>
+   They used a full edition of ParaView Catalyst Version 4.1 that was built static and cross-compiled
+  </li>
+  <li>
+   They used an unstructured grid with 1.3 billion elements.
+  </li>
+  <li>
+   The pipeline consisted of an isosurface of Q criterion and an isosurface of a quantity that gives a point’s distance to a wall. It is usually called wall distance and is useful for turbulent flow modeling.
+  </li>
+  <li>
+   Generated 1920×1200 png images showing the Q criterion isosurface pseudo-colored by velocity magnitude and the wall distance isosurface colored grey.
+  </li>
+  <li>
+   They estimated that the run-time overhead was roughly 40% for using Catalyst.
+  </li>
+  <li>
+   They calculated that using Catalyst introduced roughly a 200 MB per MPI process memory overhead. This meant that they were only able to run with 2 of the 4 BG/Q hardware threads per core due to memory constraints.
+  </li>
+  <li>
+   Some of the Python settings include
+   <ul style="list-style-type: circle;">
+    <li>
+     Set PYTHONHOME to the target ParaView build directory so 256K processes did not try to search the entire file system for Python dependencies
+    </li>
+    <li>
+     Set PYTHONDONTWRITEBYTECODE to a positive value so that 256K processes did not try to write to a single .pyc file.
+    </li>
+    <li>
+     Did not statically link Python dependencies.
+    </li>
+   </ul>
+  </li>
+ </ul>
+ <p>
+  Some images generated from the run are shown below and movies are available at
+  <a href="https://vimeo.com/120504264">
+   https://vimeo.com/120504264
+  </a>
+  and
+  <a href="https://vimeo.com/120504265" target="_blank">
+   https://vimeo.com/120504265
+  </a>
+  .
+ </p>
+ <p>
+  <img alt="phasta_simulation" class="aligncenter size-full wp-image-13608" height="212" sizes="(max-width: 376px) 100vw, 376px" src="https://blog.kitware.com/wp-content/uploads/2015/02/phasta_simulation.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/02/phasta_simulation.png 376w, https://blog.kitware.com/wp-content/uploads/2015/02/phasta_simulation-300x169.png 300w, https://blog.kitware.com/wp-content/uploads/2015/02/phasta_simulation-220x124.png 220w, https://blog.kitware.com/wp-content/uploads/2015/02/phasta_simulation-250x141.png 250w, https://blog.kitware.com/wp-content/uploads/2015/02/phasta_simulation-355x200.png 355w, https://blog.kitware.com/wp-content/uploads/2015/02/phasta_simulation-90x51.png 90w" width="376"/>
+ </p>
+ <p>
+  As I mentioned above, the runs were done using the full edition of ParaView Catalyst from ParaView 4.1. Since that time, significant improvements have been made to ParaView Catalyst that would have made the runs even more efficient.  The first improvement was for handling the Python script. Since ParaView 4.2, process 0 reads the main Catalyst Python script and broadcasts it out to the other process. Each process then runs the script in the linked-in Python interpreter. This saves on file IO in two ways. First by having only a single process read the file and second by not having each file trying to write a .pyc file to disk (they did that by setting PYTHONDONTWRITEBYTECODE to a positive value to get the same effect). The other improvement is that there is now also a rendering edition of Catalyst. This reduces the Catalyst library memory overhead by roughly 50%. You can look at the
+  <a href="http://www.paraview.org/files/catalyst/docs/FabianUltravis14.pdf">
+   paper
+  </a>
+  by Nathan Fabian, et.al. for more information on this.
+ </p>
+ <p>
+  So in summary: wow, someone ran a Catalyst enabled simulation with 256K MPI processes and if they were to do it with the newly released ParaView 4.3, it would be even faster and easier than before.
+ </p>
+</div>

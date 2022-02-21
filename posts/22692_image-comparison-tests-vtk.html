@@ -1,0 +1,83 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  In
+  <a href="https://vtk.org/" rel="noopener" target="_blank">
+   VTK
+  </a>
+  we go to a lot of trouble to create tests that exercise our visualization algorithms, and verify that we have consistent results across platforms. This has been in place since long before I got here, and it is an amazingly powerful tool that enables us to automate the verification of consistent visualization on a pixel-by-pixel basis. Over the years we have also done a lot of work on creating charts/graphs that feature a lot of text, lines, and symbols.
+ </p>
+ <p>
+  We naturally reused the image comparison testing infrastructure in order to verify that the charts rendered consistently across all of our platforms. The core of the infrastructure involves creating one or more baseline images, and when the test suite is executed each image comparison test creates an output image, and runs a small pipeline to compare this to the baseline image(s). We generate a number to summarize the difference, and will produce an image difference with a failing test if that number is too high.
+ </p>
+ <h3>
+  Windows, Significant Digits, and a Falsely Passing Test
+ </h3>
+ <p>
+  All good tests are robust, the best tests pass or fail consistently. In
+  <a href="https://tomviz.org/" rel="noopener" target="_blank">
+   Tomviz
+  </a>
+  we have a central widget for displaying a histogram of the volume, quite some time ago we decided that the y axis should display zero decimal places, the vtkAxis API supported this, and I made the change. Some time after that
+  <a href="https://github.com/OpenChemistry/tomviz/issues/543" rel="noopener" target="_blank">
+   an issue was reported
+  </a>
+  showing the y axis showing six significant figures.
+ </p>
+ <p>
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/06/tomviz-windows-histogram-bug.png">
+   <img alt="" class="aligncenter size-full wp-image-22771" height="189" sizes="(max-width: 271px) 100vw, 271px" src="http://blog.kitware.com/wp-content/uploads/2018/06/tomviz-windows-histogram-bug.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/06/tomviz-windows-histogram-bug.png 271w, https://blog.kitware.com/wp-content/uploads/2018/06/tomviz-windows-histogram-bug-220x153.png 220w, https://blog.kitware.com/wp-content/uploads/2018/06/tomviz-windows-histogram-bug-250x174.png 250w, https://blog.kitware.com/wp-content/uploads/2018/06/tomviz-windows-histogram-bug-90x63.png 90w" width="271"/>
+  </a>
+ </p>
+ <p>
+  It wasn’t a critical bug, but eventually I got a chance to look into it and confirm it was in fact a VTK bug, so I
+  <a href="https://gitlab.kitware.com/vtk/vtk/issues/17201" rel="noopener" target="_blank">
+   created an issue
+  </a>
+  , verified with a small C++ program that the Windows API would always produce six decimal places, and in the interests of time used one decimal places as that functioned correctly across all platforms. It wasn’t the ideal solution, but let us move forward with our release, and the many other deadlines we had at the time.
+ </p>
+ <p>
+  The most curious thing was that there was a test that exercised this particular case (scientific notation, zero decimal places), and it was passing. If I removed an axis I could clearly see the Windows submission had too many decimal places. We had other things to fix, busy making a release, and I figured that the test baseline image was a little crowded (it featured quite a few axes testing various configurations), or maybe too small and that was why the test pass when I would have expected it to fail on Windows.
+ </p>
+ <h3>
+  Circling Back – Image Shifts
+ </h3>
+ <p>
+  Some months later we had a new employee start, Alessandro Genova, and I thought this would be a great bug to fix as he got familiar with the VTK APIs. I had assumed at the time if we just made a test with a single axis, and avoided any confusion from crowding the image difference would easily pick up the failure on Windows. We were going to do classical test driven development, he would make a failing test, and then write the code that fixes the bug and make the test pass.
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/06/vtk-axis-precision.png">
+   <img alt="" class="aligncenter size-full wp-image-22774" height="100" sizes="(max-width: 200px) 100vw, 200px" src="http://blog.kitware.com/wp-content/uploads/2018/06/vtk-axis-precision.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/06/vtk-axis-precision.png 200w, https://blog.kitware.com/wp-content/uploads/2018/06/vtk-axis-precision-90x45.png 90w" width="200"/>
+  </a>
+ </p>
+ <p>
+  The above image summarizes the difference, pretty distinct images, so what could go wrong? A little while later he told me that the test wasn’t failing, and I
+  <a href="http://vtk.1045678.n5.nabble.com/VTK-image-error-0-despite-differences-false-pass-td5747274.html" rel="noopener" target="_blank">
+   posted something on the developer list
+  </a>
+  about it. I replied to myself as we worked through the issue, and saw a zero image difference when the axis on the right was compared to the baseline on the left. This was surprising, and then I remembered way back when someone telling me we allowed an image shift of up to one pixel for baselines to account for differences in drivers, operating systems, etc.
+ </p>
+ <h3>
+  More Than a Single Pixel Offset
+ </h3>
+ <p>
+  I don’t know about you, but I thought all those extra pixels looked like a lot more than a single pixel shift! I found if I reversed the images I got a failure, i.e. if the right image was the baseline and the left image was produced I got a failure with an image difference that showed all the missing zeros. Digging into the algorithm, and the documentation, it became clear that the image shift was being allowed
+  <strong>
+   per pixel, not globally
+  </strong>
+  as I had initially assumed.
+ </p>
+ <p>
+  We tried increasing the font size and were able to create a test that failed correctly, but the image difference didn’t look right. There was a definite asymmetry when you expect white pixels all around, and the test is predominantly one pixel wide. The comparison kernel is always able to find a white pixel within one pixel of the black pixel for the text. The inverse is not true, when you expect a black pixel for the text, but there are only white pixels it fails to find a match.
+ </p>
+ <h3>
+  Persistence
+ </h3>
+ <p>
+  Despite a lack of replies on the thread I posted I emailed the people listed in the copyright header to ask if they had any ideas. Using git log –follow on a few of these source files showed me they were created many years ago. We merged our fix to the vtkAxis code, and you can now set zero significant figures using scientific notation and things work as expected.
+ </p>
+ <p>
+  Ken Martin came up with a fix to the algorithm, so rather than setting the default image shift to zero, he improved the algorithm for allowing some shift. This turned up a number of other real issues that had been missed, and required updated baselines for more benign platform differences. If your image difference tests start failing when using VTK master it is well worth looking into whether there is a real issue that had gone unnoticed. It would mainly highlight things with a single pixel width, and a small number of colors such as text/lines in charts.
+ </p>
+ <p>
+  Even relatively minor issues can have deeper roots that are worth investigating, this certainly went deeper than I initially thought!
+ </p>
+</div>

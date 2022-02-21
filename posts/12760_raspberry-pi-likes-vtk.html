@@ -1,0 +1,607 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <table border="0" style="margin-left: auto; margin-right: auto;">
+  <tbody>
+   <tr>
+    <td style="text-align: center;">
+     <strong>
+      Index To the Series
+     </strong>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/raspberry-pi-likes-open-source/">
+      1. Raspberery Pi likes Open Source
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/cross-compiling-for-raspberry-pi/">
+      2. Cross-Compiling for Raspberry Pi
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/cross-compiling-itk-for-raspbery-pi/">
+      3. Cross-Compiling ITK for Raspberry Pi
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/raspberry-pi-likes-vtk/">
+      4. Raspberry Pi likes VTK
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/raspberry-pi-likes-node-js/">
+      5. Raspberry Pi likes Node.js
+     </a>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+ </p>
+ <hr/>
+ <p style="text-align: center;">
+  Following on our
+  <a href="https://blog.kitware.com/raspberry-pi-likes-open-source/">
+   series exploring the use of the Raspberry Pi
+  </a>
+  ,
+  <br/>
+  Here we describe how to build
+  <a href="http://vtk.org/">
+   VTK
+  </a>
+  natively in the board.
+ </p>
+ <table border="0" style="margin-left: auto; margin-right: auto;">
+  <tbody>
+   <tr>
+    <td>
+     <img alt="http://www.vtk.org/doc/release/5.10/html/vtk-logo.gif" class="decoded" src="http://www.vtk.org/doc/release/5.10/html/vtk-logo.gif"/>
+    </td>
+    <td>
+     <img alt="" height="200" src="https://www.kitware.com/blog/files/Small.6_1187232131.jpg" width="302"/>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p style="text-align: center;">
+  It turns out that the Raspberry Pi has a graphics stack with rendering capabilities
+  <br/>
+  that are between a
+  <a href="http://en.wikipedia.org/wiki/PlayStation#PlayStation_.281994.29">
+   Playstation I
+  </a>
+  and a
+  <a href="http://en.wikipedia.org/wiki/PlayStation#PlayStation_2_.282000.29">
+   Playstation II
+  </a>
+  .
+ </p>
+ <p style="text-align: center;">
+  To further increase the happiness, we learned that
+  <br/>
+  the
+  <a href="http://www.raspberrypi.org/archives/2221">
+   Graphics Stack of the Raspberry Pi is fully Open Source
+  </a>
+  .
+ </p>
+ <p>
+  <a href="http://www.raspberrypi.org/wp-content/uploads/2012/10/Architecture-and-Source.png" rel="noopener" target="_blank">
+   <img alt="" height="363" src="https://blog.kitware.com/blog/files/Small.6_1807015939.png" style="display: block; margin-left: auto; margin-right: auto;" width="322"/>
+  </a>
+ </p>
+ <ul>
+  <li>
+   <a href="http://en.wikipedia.org/wiki/VideoCore">
+    Broadcom VideoCore IV
+   </a>
+  </li>
+  <li>
+   <a href="http://opensource.com/life/12/1/linux-hardware-race-tiniest-and-cheapest-15-cheap">
+    OpenGL ES 2.0
+   </a>
+  </li>
+  <li>
+   1080p30 h.264/MPEG-4 AVC high-profile decode
+  </li>
+ </ul>
+ <p>
+ </p>
+ <p>
+  and
+  <a href="http://www.raspberrypi.org/archives/2221">
+   actually
+  </a>
+  :
+ </p>
+ <p style="padding-left: 150px;">
+  <em>
+   “…the
+   <a href="http://www.broadcom.com/products/BCM2835">
+    BCM2835
+   </a>
+   used in the Raspberry Pi
+   <br/>
+   is the first ARM-based multimedia SoC
+   <br/>
+   with fully-functional, vendor-provided
+   <br/>
+   (as opposed to partial, reverse engineered)
+   <br/>
+   <strong>
+    fully open-source drivers
+   </strong>
+   ,
+   <br/>
+   …Broadcom is the first vendor to open
+   <br/>
+   their mobile GPU drivers up in this way…”
+  </em>
+ </p>
+ <p>
+  Given that
+  <a href="https://blog.kitware.com/faking-open-source/">
+   Open Source is not real
+  </a>
+  until you can download the source code and
+  <br/>
+  read the license, here is the
+  <a href="https://github.com/raspberrypi/userland">
+   userland repository with the drivers
+  </a>
+  for your enjoyment.
+  <br/>
+  (Note that
+  <a href="https://github.com/raspberrypi/userland/blob/master/README.md">
+   they use CMake
+  </a>
+  for configuration as well).
+ </p>
+ <p>
+ </p>
+ <p>
+  All these news make us realize that this little gadget is a good platform
+  <br/>
+  for playing with visualization, and what better tool for doing so than VTK !     🙂
+ </p>
+ <hr/>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Here is how we built VTK natively in the Raspberry Pi.
+  </strong>
+ </p>
+ <p>
+ </p>
+ <p>
+  <span style="color: #ff6600;">
+   <strong>
+    Note:
+   </strong>
+  </span>
+  as with the previous posts, many of the screenshot images below
+  <br/>
+  may appear blurred due to subsampling. Please simply click on them,
+  <br/>
+  to see them in full resolution, where the text will be clearly readable.
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Step 1. Install Required Packages
+  </strong>
+ </p>
+ <p>
+  First, in the Raspberry Pi we install several pre-requisite packages with the commands:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    <span style="font-family: courier new,courier;">
+     sudo apt-get install libgl1-mesa-dev
+    </span>
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    <span style="font-family: courier new,courier;">
+     sudo apt-get install libxt-dev
+    </span>
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    sudo apt-get install libosmesa-dev
+   </span>
+  </li>
+ </ul>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Step 2 Download VTK
+  </strong>
+ </p>
+ <p>
+  Then we download VTK’s source code:
+  <strong>
+   <br/>
+  </strong>
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    cd ~/src
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    wget http://www.vtk.org/files/release/5.10/vtk-5.10.1.tar.gz
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    tar -xzf vtk-5.10.1.tar.gz
+   </span>
+  </li>
+ </ul>
+ <p>
+  This leaves VTK in a directory:
+ </p>
+ <ul>
+  <li>
+   /home/pi/src/VTK5.10.1
+  </li>
+ </ul>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Step 3 Configure VTK with CMake
+  </strong>
+ </p>
+ <p>
+  <span style="font-family: arial,helvetica,sans-serif;">
+   As usual, we create a binary directory and from there we invoke
+  </span>
+  <br/>
+  <span style="font-family: arial,helvetica,sans-serif;">
+   ccmake giving it as argument the location of the source directory.
+  </span>
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    mkdir  -p  ~/bin/VTK
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    cd ~/bin/VTK
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    ccmake ~/src/VTK5.10.1/
+   </span>
+  </li>
+ </ul>
+ <p>
+  <a href="/blog/files/6_1518946436.png" rel="noopener" target="_blank">
+   <img alt="" height="238" src="https://blog.kitware.com/blog/files/Small.6_1518946436.png" width="467"/>
+  </a>
+ </p>
+ <p>
+  <a href="/blog/files/6_918987460.png" rel="noopener" target="_blank">
+   <img alt="" height="239" src="https://blog.kitware.com/blog/files/Small.6_918987460.png" width="469"/>
+  </a>
+ </p>
+ <p>
+  There we do
+ </p>
+ <ul>
+  <li>
+   Turn OFF Testing
+  </li>
+  <li>
+   Turn OFF Examples
+  </li>
+  <li>
+   Turn ON Shared Libraries
+  </li>
+  <li>
+   Select “Release” compilation mode in CMAKE_BUILD_TYPE
+  </li>
+ </ul>
+ <p>
+  <a href="/blog/files/6_185803045.png" rel="noopener" target="_blank">
+   <img alt="" height="242" src="https://blog.kitware.com/blog/files/Small.6_185803045.png" width="477"/>
+  </a>
+ </p>
+ <p>
+  As usual we do
+ </p>
+ <ul>
+  <li>
+   Hit “c” to Configure
+  </li>
+  <li>
+   Hit “g” to Generate
+  </li>
+ </ul>
+ <p>
+  and we are back to the command line prompt.
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Step 4    Build !
+  </strong>
+ </p>
+ <p>
+  We can now happily type
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    make
+   </span>
+  </li>
+ </ul>
+ <p>
+  we actually did “time make” since we are curious about the time that it will take to compile.
+ </p>
+ <p>
+  <a href="/blog/files/6_1488766668.png" rel="noopener" target="_blank">
+   <img alt="" height="264" src="https://blog.kitware.com/blog/files/Small.6_1488766668.png" width="519"/>
+  </a>
+ </p>
+ <p>
+  and while this builds, we go and read more about the graphics capabilities of the Raspberry Pi
+ </p>
+ <ul>
+  <li>
+   <a href="http://www.raspberrypi.org/archives/1967">
+    http://www.raspberrypi.org/archives/1967
+   </a>
+   (Penguins)
+  </li>
+  <li>
+   <a href="http://www.raspberrypi.org/archives/106">
+    http://www.raspberrypi.org/archives/106
+   </a>
+   (Quake 3)
+  </li>
+  <li>
+   <a href="http://www.raspberrypi.org/archives/tag/3d">
+    http://www.raspberrypi.org/archives/tag/3d
+   </a>
+  </li>
+ </ul>
+ <p>
+ </p>
+ <p>
+  Our VTK build finishes in about 13 hours:
+ </p>
+ <p>
+  <a href="/blog/files/6_1551813014.png" rel="noopener" target="_blank">
+   <img alt="" height="265" src="https://blog.kitware.com/blog/files/Small.6_1551813014.png" width="523"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Step 5   Try a VTK Example
+  </strong>
+ </p>
+ <p>
+  We are ready to build our first VTK example in the Raspberry Pi.
+ </p>
+ <ul>
+  <li>
+   We choose to go to the
+   <a href="http://www.vtk.org/Wiki/VTK/Examples">
+    VTK Examples Wiki page
+   </a>
+   ,
+  </li>
+  <li>
+   and from the
+   <a href="http://www.vtk.org/Wiki/VTK/Examples/Cxx">
+    C++ Examples
+   </a>
+   ,
+  </li>
+  <li>
+   we select the
+   <a href="http://www.vtk.org/Wiki/VTK/Examples/Cxx/IO/ReadOBJ">
+    OBJ Reader Example
+   </a>
+   .
+  </li>
+ </ul>
+ <p>
+  Hovering the mouse over the link that says:
+ </p>
+ <ul>
+  <li>
+   “Click
+   <a class="external text" href="http://gitorious.org/vtkwikiexamplestarballs/vtkwikiexamplestarballs/blobs/raw/master/ReadOBJ.tar" rel="nofollow">
+    here to download ReadOBJ
+   </a>
+   . and its
+   <em>
+    CMakeLists.txt
+   </em>
+   file”
+  </li>
+ </ul>
+ <p>
+  We get the URL address and we use it in the Pi
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    cd /tmp
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    wget http://gitorious.org/vtkwikiexamplestarballs/vtkwikiexamplestarballs/blobs/raw/master/ReadOBJ.tar
+   </span>
+  </li>
+  <li>
+   tar xf
+   <span style="font-family: courier new,courier;">
+    ReadOBJ.tar
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    cd ReadOBJ
+   </span>
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    cd build
+   </span>
+  </li>
+ </ul>
+ <p>
+  We configure the example by pointing CMake to the binary directory where we just built VTK.
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    cmake  -DVTK_DIR=/home/pi/bin/VTK   ..
+   </span>
+  </li>
+ </ul>
+ <p>
+  then build it by simply calling “make”
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    make
+   </span>
+  </li>
+ </ul>
+ <p>
+  <a href="/blog/files/6_1260013451.png" rel="noopener" target="_blank">
+   <img alt="" height="271" src="https://blog.kitware.com/blog/files/Small.6_1260013451.png" width="535"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  Now we need an OBJ dataset to load, that we can procure ourselves with some Google magic from
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    wget  http://pages.cs.wisc.edu/~yetkin/smvr/obj/cow.obj
+   </span>
+  </li>
+ </ul>
+ <p>
+  and finally we can run our first VTK example in the Pi
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    ./ReadOBJ  cow.obj
+   </span>
+  </li>
+ </ul>
+ <p>
+  <a href="/blog/files/6_1818349700.png" rel="noopener" target="_blank">
+   <img alt="" height="272" src="https://blog.kitware.com/blog/files/Small.6_1818349700.png" width="537"/>
+  </a>
+ </p>
+ <p>
+  and we got the display of a Magnificent Cow !,
+  <br/>
+  that we can of course rotate around with the mouse,
+  <br/>
+  and get into wireframe mode by using the “w” key.
+ </p>
+ <table border="0">
+  <tbody>
+   <tr>
+    <td>
+     <a href="/blog/files/6_349076568.png" rel="noopener" target="_blank">
+      <img alt="" height="200" src="https://blog.kitware.com/blog/files/Small.6_349076568.png" width="182"/>
+     </a>
+    </td>
+    <td>
+     <a href="/blog/files/6_746856112.png" rel="noopener" target="_blank">
+      <img alt="" height="200" src="https://blog.kitware.com/blog/files/Small.6_746856112.png" width="183"/>
+     </a>
+    </td>
+    <td>
+     <a href="/blog/files/6_1036995326.png" rel="noopener" target="_blank">
+      <img alt="" height="200" src="https://blog.kitware.com/blog/files/Small.6_1036995326.png" width="183"/>
+     </a>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  NOTE: In this case, this was done with a remote SSH login in the Raspberry Pi,
+  <br/>
+  therefore, for this display to work, we had to previously had started the X Server in the board,
+  <br/>
+  which is done by simply typing:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    startx
+   </span>
+  </li>
+ </ul>
+ <p>
+  and then we had to login from a different shell into the board using the -X option of SSH.
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    ssh    -X    pi@raspberrypi
+   </span>
+  </li>
+ </ul>
+ <p>
+  in this way the X Windows that may be open during that shell session
+  <br/>
+  get exported to the remote display (our Dell Laptop in this case).
+ </p>
+ <p>
+ </p>
+ <hr/>
+ <p>
+ </p>
+ <p>
+  …and this concludes our session on building VTK.
+ </p>
+ <p>
+ </p>
+ <p>
+  Enjoy Visualization in the Raspberry Pi !
+ </p>
+</div>

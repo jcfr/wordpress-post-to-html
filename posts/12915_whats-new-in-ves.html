@@ -1,0 +1,150 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Pat Marion recently posted
+  <a href="https://blog.kitware.com/ves-development-in-iterations/">
+   VES: Development in Iterations
+  </a>
+  , which included a demo of VES using KiwiViewer. This post will discuss some of the back-end features that enabled the demo.
+ </p>
+ <p>
+  The VES library is the backbone of the KiwiViewer. It provides a framework for developing visualizations on mobile platforms using OpenGL ES 2.0. Recent developments in VES were made with two important considerations in mind:
+ </p>
+ <ul>
+  <li>
+   Performance
+  </li>
+  <li>
+   Having a nice API
+  </li>
+ </ul>
+ <p>
+  Since VES uses OpenGL ES 2.0, it forced us to implement features a bit differently than if we had developed them for desktops. This is so because OpenGL ES 2.0 is a subset of OpenGL for desktops. Still, OpenGL ES 2.0 provides enough capabilities to create a very usable visualization running at interactive frame rates.
+ </p>
+ <p>
+  So, what’s new in VES?
+ </p>
+ <p>
+  <strong>
+   1. New Rendering Pipeline:
+  </strong>
+ </p>
+ <p>
+  VES adopted scene graph early on. Scene graph provides two important features: it allows objects to be put together in relation to each other and provides opportunities for optimizations.  In this new version of VES, implementation has been changed to achieve both of these desired features of scene graph. Instead of rendering while traversing earlier, drawable entities are now placed in a render stage. The render stage makes sure to minimize state changes to achieve performance. This particular approach also allowed us to provide a framework for features such as render-to-texture and other multipass rendering techniques.
+ </p>
+ <p>
+  <strong>
+   2. Generalized Uniform and Vertex Attribute Support:
+  </strong>
+ </p>
+ <p>
+  Since OpenGL ES 2.0 follows the core profile of OpenGL, glLoadMatrix, glBegin()/End(), and other GL commands are gone (for better). Now, all matrices (model view, projection, etc) and vertex data (position, normal, color), etc. have to go through shaders via uniform and vertex attributes. We have provided an extensible framework using VES uniform and vertex attribute objects to make it easier to deal with this change. It also allows dynamic updates to uniforms, which can be used for animations.
+ </p>
+ <p>
+  <strong>
+   3. Use of VBOs for Performance:
+  </strong>
+ </p>
+ <p>
+  If you want performance, Vertex Buffer Object (VBO) is the way to go and that’s exactly what we are doing now. Thanks to Brad Davis, we split our VBO data into smaller chunks to achieve higher rendering performance.
+ </p>
+ <p>
+  <strong>
+   4. Multiple Shader Support:
+  </strong>
+ </p>
+ <p>
+  The framework now allows for switching shaders, as shown below in a test program (Gouraud shading, Blinn-phong shading, Toon shading).
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="139" src="https://blog.kitware.com/blog/files/128_1130230877.png" width="187"/>
+  <img alt="" height="139" src="https://blog.kitware.com/blog/files/128_951304761.png" width="188"/>
+  <img alt="" height="140" src="https://blog.kitware.com/blog/files/128_1300340954.png" width="186"/>
+ </p>
+ <p>
+  <strong>
+   5. Generalized Texture Support:
+  </strong>
+ </p>
+ <p>
+  VES now allows the creation of generalized texture objects (textures are material attributes in VES) and use of them wherever required. There is work-in-progress to support different texture environments.
+ </p>
+ <p>
+  <img alt="" height="220" src="https://blog.kitware.com/blog/files/128_1153074298.png" style="display: block; margin-left: auto; margin-right: auto;" width="292"/>
+ </p>
+ <p>
+  <strong>
+   6. Render-to-Texture:
+  </strong>
+ </p>
+ <p>
+  This feature was recently added to allow for rendering a scene to a texture and for later use of the texture for other purposes in the same scene or a different one. We wanted to show this as a part of the demo found in the
+  <a href="https://blog.kitware.com/ves-development-in-iterations/">
+   Iterations
+  </a>
+  post, but didn’t get enough time.
+ </p>
+ <p>
+  <strong>
+   7. Color by Scalars:
+  </strong>
+ </p>
+ <p>
+  Using generalized texture support, it is possible now to create a one-dimensional texture and use it to look-up a table in the shaders. This test uses default values for vtkLookupTable.
+ </p>
+ <p>
+  <img alt="" height="218" src="https://blog.kitware.com/blog/files/128_594037607.png" style="display: block; margin-left: auto; margin-right: auto;" width="291"/>
+ </p>
+ <p>
+  <strong>
+   8. Support for Rendering Overlay Objects:
+  </strong>
+ </p>
+ <p>
+  Using the new VES framework made it quite easy to add support for rendering overlay objects such as screen texts. Thanks Pat!
+ </p>
+ <p>
+  <img alt="" height="218" src="https://blog.kitware.com/blog/files/128_135091902.png" style="display: block; margin-left: auto; margin-right: auto;" width="291"/>
+ </p>
+ <p>
+  <strong>
+   9. Support for Rendering Transparent Objects:
+  </strong>
+ </p>
+ <p>
+  The framework sorts objects based on their bin property, which natively adds supports for rendering transparent objects. In the future, we will add support for order independent transparency.
+ </p>
+ <p>
+  <strong>
+   10. Clip Planes and Two-sided Lighting:
+  </strong>
+ </p>
+ <p>
+  This is all done in shaders.
+ </p>
+ <p>
+  <img alt="" height="220" src="https://blog.kitware.com/blog/files/128_1321248013.png" style="display: block; margin-left: auto; margin-right: auto;" width="293"/>
+ </p>
+ <p>
+  <strong>
+   11. Gradient Background:
+  </strong>
+ </p>
+ <p>
+  Actual algorithm-to-render for gradient backgrounds is straightforward, but supporting different backgrounds for each camera (there could be more than one and or in parent / child relationship) so that we can provide a generalized support for backgrounds (skydome, plane, textured, and gradient) is bit tricky. We implemented this feature based on the work done for the render-to-texture feature.
+ </p>
+ <p>
+  <img alt="" height="218" src="https://blog.kitware.com/blog/files/128_1647148714.png" style="display: block; margin-left: auto; margin-right: auto;" width="291"/>
+ </p>
+ <p>
+  <strong>
+   12. Testing:
+  </strong>
+ </p>
+ <p>
+  We added few tests to ensure software quality and plan to add more in near future.
+ </p>
+ <p>
+  We are working towards making a release, but would like to handle one or more issues, add couple of new features, and provide documentation (there is none right now) before then.
+ </p>
+</div>

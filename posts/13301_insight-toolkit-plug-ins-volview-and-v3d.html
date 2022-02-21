@@ -1,0 +1,65 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  VolView and V3D are applications for visualization and analysis of three-dimensional images. They both have tools which allow users to filter and analyze image data. The two applications serve two different niches: VolView was created with radiologists in mind, while V3D caters primarily to microscopists. However, a powerful part of both biomedical imaging tools is support for user defined extensions via custom plug-ins. This support allows users to extend how input data is filtered. This quick guide will help you get started with your own VolView and/or V3D plug-in.
+ </p>
+ <p>
+  Software applications such as Slicer, SNAP, Analyze, VolView, SCIRun, GoFigure and V3D use ITK filters as plug-ins to add desirable additional capability to their image analysis application of choice, thus removing the need to rewrite existing algorithms for each new piece of software while stamping out the hassles of requesting usage-permission.
+ </p>
+ <p>
+  ITK’s qualifications for use in scientific research makes it important for developers to make the most of ITK’s imaging tools and offer tailored combinations to those who desire them. The following table compares some of the main features of VolView [1] and V3D [2].
+ </p>
+ <p style="text-align: center;">
+  <img alt="" src="https://blog.kitware.com/source/files/3_1333118702_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+  <strong>
+   Structure of Plug-ins
+  </strong>
+  <br/>
+  Typically, a plug-in for V3D and VolView consists of source code compiled and packaged as a shared library. The plug-in name determines the name of the shared library used for deployment as well as the name of the plug-in initialization function. The shared library is copied into a specific directory of the VolView or V3D binary installation. No libraries from VolView or V3D are required in the process. Plug-in developers only need a set of source code headers defining the plug-in API offered by the application. This is essentially the set of data structures and function calls by which the plug-in communicates with the application.
+ </p>
+ <p>
+  <strong>
+   A V3D PLUG-IN
+  </strong>
+  <br/>
+  The development of ITK plug-ins for V3D serves two purposes: 1) exposing ITK functionalities to researches who analyze microscopy data and 2) uncovering the areas in which ITK requires improvements in order to better serve the microscopy community. ITK filter plug-ins were added to V3D via a collaborative effort between Kitware and Janelia Farm (HHMI).
+ </p>
+ <p>
+  The simplest way to implement a plug-in is to copy and paste an existing V3D plug-in and modify two methods. More advanced plug-ins, typically those requiring more than one filter, may need to be modified further. For our V3D plug-in example, we will use the existing itkSigmoidImageFilter, which can be found under the Intensity Transformation directory to create another plug-in, itkLogImageFilter. For V3D, the V3DPluginCallback is used to get data structures and callbacks.
+ </p>
+ <p>
+  <strong>
+   Create a V3D Plug-in
+  </strong>
+ </p>
+ <p>
+  Copy and paste existing plug-in header and source files to the binary directory where plug-ins are set up in your system. An example path is: src/ITK-V3D-Plugins/Source/IntensityTransformations. Change the file names to correspond to the goal image filter.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" src="https://blog.kitware.com/source/files/3_1519728414_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  Then find instances in files where filter references and names ought to be replaced. In the SetupParameters section, adjust your filter’s parameters, or if the section does not exist, refer to the SetUpParameters() below. If you’re uncertain about a default value use your best judgment or communicate with  an appropriate end-user for a general value. The value chosen should reflect some noticeable changes in an image upon testing.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 600px; height: 22px;">
+  <tbody>
+   <tr>
+    <td>
+     void Execute
+     <br/>
+     (const QString &amp;menu_name, Qwidget 50  *parent)
+     <br/>
+     {
+     <br/>
+     this-&gt;Compute();
+     <br/>
+     }
+    </td>
+   </tr>
+  </tbody>
+ </table>
+</div>

@@ -1,0 +1,196 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The Center for Advanced Modeling and Simulation (CAMS) at the Idaho National Laboratory offers an advanced visualization facility that includes a four-sided CAVE-style immersive display system, a large 3×3 tiled display, and low-cost immersive systems dubbed the IQ-station [5] (also see Figure 1). Given these immersive environments, the CAMS team has a vested interest in making it very easy for scientists to bring their data into their facility and enable them to quickly explore and interact with it. Highly customized tools requiring specific data formats work very well in the CAVE, but these tools do not meet the needs of the new or occasional user without the means to develop custom code. The common user use-model drives the need for a general purpose visualization tool compatible with immersive environments.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_788032831.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_788032831.png" style="display: block; margin-left: auto; margin-right: auto;" width="500px"/>
+  </a>
+ </p>
+ <p>
+  <a href="/source/files/4_260907511.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_260907511.png" style="display: block; margin-left: auto; margin-right: auto;" width="500px"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <strong>
+    Figure 1: (top) LIDAR application running on IQ station; (bottom) ParaView application running on IQ station.
+   </strong>
+  </em>
+ </p>
+ <p style="text-align: center;">
+ </p>
+ <p>
+  ParaView [1] was recognized as a great fit for introducing scientists to using immersive systems by allowing them to make use of a tool they can learn to wield on their desktop, and transfer these skills to the advanced visualization systems.  In 2010, the CAMS team began a collaboration with Kitware, Indiana University, and the University of Wyoming to add features necessary for immersion (i.e. virtual reality interfaces) to ParaView, including some new features to the underlying VTK library [2].
+ </p>
+ <p>
+  The result of this collaboration is a collection of code changes labeled as ‘Immersive ParaView.’ These extensions to the code base enable ParaView to display and interact with objects in an immersive environment. This work followed a development cycle that included: analysis and exploration of similar efforts from earlier releases of ParaView and other tools; a first-pass implementation modifying VTK for basic operation and gaining understanding of the various connections required for immersive applications; and a second-pass implementation that re-engineered and overhauled the code to improve correctness and maintainability.
+ </p>
+ <p>
+  The team recently gathered at the Center for Advanced Energy Studies (CAES) facility in Idaho Falls, Idaho to test and evaluate the prototype code, which is now part of the ParaView source code release. The goals of this meeting were to test the functionality of the prototype and determine how to move forward in a way that will allow the process to be easier to configure and run for the general user.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Testing the Prototype Implementation
+   </strong>
+  </span>
+  <br/>
+  The new immersive functionality makes use of ParaView’s client/server operational mode. One-or-more server processes are configured to render all the views needed to fill the display(s) of the immersive system.  The client then resides on a separate screen, and remains the primary means by which the visualization pipeline is built and configured.
+ </p>
+ <p>
+  Once the client/server connection is established, the plugin manager is used to load the “VR Plugin” into both the client and server processes.  Doing so reveals a new widget panel (a new addition based on our evaluation, see Figure 2) that allows the user to initiate a VR session.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_282966085.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_282966085.png" style="display: block; margin-left: auto; margin-right: auto;" width="500px"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <strong>
+    Figure 2: New VR Plugin widget panel; a user creates a new connection manager by utilizing controls from the top-half of the widget and later configures various interactor styles using the bottom-half of the widget.
+   </strong>
+  </em>
+ </p>
+ <p>
+  Our tests at the INL CAMS facility (see Figure 3) included the use of the crushed can sample dataset, as well as some computational data provided by INL researchers.  With the recent off-axis stereo feature in VTK, we were able to get correct immersive rendering both in the four-sided CAVE and on the smaller-scale IQ-station.  The tracking feature is part of the “VR Plugin,” and can use either the VRPN [4] or the Vrui Device Daemon protocol [3]. With tracking enabled, immersive rendering responds properly to head movement; and additionally the world can be grabbed and moved with a hand-held wand.
+ </p>
+ <p style="text-align: center;">
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_1620110299.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1620110299.png" style="display: block; margin-left: auto; margin-right: auto;" width="500px"/>
+  </a>
+  <br/>
+  <em>
+   <strong>
+    Figure 3: Testing the prototype implementation in the INL four-sided immersive environment
+   </strong>
+  </em>
+  .
+ </p>
+ <p style="text-align: center;">
+ </p>
+ <p>
+  Testing the prototype demonstrated the practicality of adding immersion through the VR plugin system. Given the functional baseline code, it was decided to address the identified shortcomings that were encountered. These were primarily in the process of configuring the immersive features.  As part of preparations for a wider user base, we focused on creating a new VR widget panel and adding Python scripting access to the new VR plugin features.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_489079922.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_489079922.png" style="display: block; margin-left: auto; margin-right: auto;" width="500px"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <strong>
+    Figure 4: Latest version of VR plugin running on IQ station at INL
+   </strong>
+  </em>
+  .
+ </p>
+ <p style="text-align: center;">
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Future Work and Conclusions
+   </strong>
+  </span>
+  <br/>
+  We are actively making improvements to the VR plugin to make it easy to configure VR input device servers and interactor styles.  We are also making changes to the code base so that interactor styles can be wrapped using the VTK-Python wrapping framework. Another very useful added feature is the support for side-by-side stereo (or split viewport stereo) for the current generation of 3D TVs. This feature will enable more users to run ParaView in “VR” mode on a low-cost immersive system built from consumer model televisions.
+ </p>
+ <p>
+  Presently, there are two primary interactions styles available through the VR plugin: head-tracking and grab-the-world. We recognize and are working to address the need for additional methods of navigation, and a means of interacting with control widgets such as slice planes. Overall, the ParaView VR plugin is proving to be extremely useful in the various immersive systems we have tested and we believe that it is ready to be used in production environments.
+ </p>
+ <p>
+  This work has been supported by the Idaho National Laboratory and is publicly released as open-source software in the ParaView repository.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Acknowledgement
+   </strong>
+  </span>
+  <br/>
+  The authors would like to thank the following Kitwareans for their contributions to this effort: Nikhil Shetty, David Lonie, Patrick O’Leary, Utkash Ayachit, and Berk Geveci.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    References
+   </span>
+  </strong>
+  <br/>
+  [1]    Ahrens, J., Geveci, B. &amp; Law, C. ParaView : An End-User Tool for Large Data Visualization. Energy 836, 717-732 (2005).
+  <br/>
+  [2]    Chaudhary A., Sherman B., Shetty N.: ParaView in Immersive Environments, http://www.kitware.com/source/home/post/66
+  <br/>
+  [3]  Kreylos, O.: Environment-Independent VR Development. In: Bebis, G., Boyle,  R., Parvin, B., Koracin, D., Remagnino, P., Porikli, F., Peters, J., Klosowski, J., Arns, L., Chun, Y.K., Rhyne, T.-M., Monroe, L. (eds.) ISVC 2008, Part I. LNCS, vol. 5358, pp. 901–912. Springer, Heidelberg (2008)
+  <br/>
+  [4]  Taylor, R.M. et al. VRPN: a device-independent, network-transparent VR peripheral system. Proceedings of the ACM symposium on Virtual reality software and technology VRST 01 55 (2001).
+  <br/>
+  [5]   William R. Sherman, Patrick O’Leary, Eric T. Whiting, Shane Grover, Eric A. Wernert, “IQ-Station: a low cost portable immersive environment,” Proceedings of the 6th annual International Symposium on Advances in Visual Computing (ISVC’10). pp. 361–372, 2010
+ </p>
+ <p>
+  <em>
+   <strong>
+   </strong>
+  </em>
+ </p>
+ <p>
+  <a href="/source/files/4_1651294704.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1651294704.png" style="margin-right: 10px; float: left;" width="100"/>
+  </a>
+  <em>
+   <strong>
+    Bill Sherman
+   </strong>
+   is a Senior Technical Advisor in the Advanced Visualization Lab at Indiana University. Sherman’s primary area of interest is in applying immersive technologies to scientific visualizations. He has been involved in visualization and virtual reality technologies for over 20 years, and has been involved in establishing several immersive research facilities.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1732677980.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1732677980.png" style="float: left; margin-right: 10px;" width="100"/>
+  </a>
+  <em>
+   <strong>
+    Eric Whiting
+   </strong>
+   is the Director of the Center for Advanced Modeling and Simulation at the Idaho National Laboratory. His area of expertise focuses on the area of high performance computing. In addition to HPC, he is experienced in electronics, signal processing, computer architectures, computer programming, and networking.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <br/>
+  </em>
+ </p>
+ <p>
+  <a href="/source/files/4_952130612.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_952130612.png" style="float: left; margin-right: 10px;" width="100"/>
+  </a>
+  <em>
+   <strong>
+    Aashish Chaudhary
+   </strong>
+   is an R&amp;D Engineer on the Scientific Computing team at Kitware. Prior to joining Kitware, he developed  a graphics engine and open-source tools for information and geo-visualization. Some of his interests are software engineering, rendering, and visualization.
+  </em>
+ </p>
+</div>

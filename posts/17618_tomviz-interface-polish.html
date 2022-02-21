@@ -1,0 +1,83 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="http://tomviz.org/" target="_blank">
+   Tomviz
+  </a>
+  is an open source, cross platform software application developed to run on Windows, macOS, and Linux. It makes use of Qt 5 for much of its desktop integration, and inherits many of its icons from ParaView which is one of its major dependencies. Over the last few months we have been focusing on a number of updates to our user interface in order to present a polished interface on all of our supported platforms. We have also been looking at general integration with our supported operating systems.
+ </p>
+ <h3>
+  Running CPU-intensive Tasks in Background Threads
+ </h3>
+ <p>
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline.png">
+   <img alt="" class="alignleft size-full wp-image-17772" height="291" sizes="(max-width: 415px) 100vw, 415px" src="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline.png 415w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-300x210.png 300w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-220x154.png 220w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-250x175.png 250w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-355x249.png 355w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-90x63.png 90w" width="415"/>
+  </a>
+  <br/>
+  We have done a lot of work in the Tomviz interface to run anything longer running/CPU intensive in background threads. This starts from right after a file is loaded into memory, where the 3D scene is displayed while the application calculates the binned histogram values in the background. These are then shown once they are available, and you are able to interact with your data and begin exploring it. We added this feature early on, along with caching of loaded data histograms so that they can be shown instantly when switching between data. This could of course be made even faster by multithreading the code run in the background thread.
+ </p>
+ <p>
+  The Tomviz pipeline is composed of three basic building blocks – data sources, data operators, and visualization modules. The data operations represent some of the most (potentially) time consuming tasks, and so were moved into a background thread in order to keep our user interface responsive. They operate on a data source in place, and can transform the data in various ways that can take fractions of a second up to hours. They are written in C++ or Python, and now benefit from a significant array of features that enable you to observe them as they execute. The updated data is brought into the main graphical thread once all operations have completed.
+ </p>
+ <h3>
+  Pipeline Interaction
+ </h3>
+ <p>
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context.png">
+   <img alt="" class="alignright size-full wp-image-17773" height="289" sizes="(max-width: 435px) 100vw, 435px" src="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context.png 435w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context-235x156.png 235w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context-300x199.png 300w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context-220x146.png 220w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context-250x166.png 250w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context-355x236.png 355w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-pipeline-context-90x60.png 90w" width="435"/>
+  </a>
+  <br/>
+  As our pipeline has grown in complexity we have made a number of enhancements to make it easier to work with. The context menu (seen when right-clicking on pipeline objects) now contains a number of useful entries tailored to what was selected. You can for example show/hide visualization modules (even selecting multiple entries), delete items, view the source code of a Python-based operator, or clone a data source.
+ </p>
+ <p>
+  Most operations can be performed while the pipeline is executing in a background thread, and the execution of the pipeline is displayed enabling you to see at a glance which operations completed successfully, which one is currently operating, and whether any failed. We will continue to improve the pipeline interface, and add features that make it easier to interact with larger pipelines.
+ </p>
+ <h3>
+  Updated Icons
+ </h3>
+ <p>
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-module-icons.png">
+   <img alt="" class="alignright size-full wp-image-17775" height="35" sizes="(max-width: 278px) 100vw, 278px" src="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-module-icons.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-module-icons.png 278w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-module-icons-220x28.png 220w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-module-icons-250x31.png 250w, https://blog.kitware.com/wp-content/uploads/2017/04/Tomviz-1-0-module-icons-90x11.png 90w" width="278"/>
+  </a>
+  <br/>
+  We have been working with our graphic designer and discussing ideas for updated icons in the Tomviz,
+  <a href="http://www.computationalmodelbuilder.org/" target="_blank">
+   CMB
+  </a>
+  , and base
+  <a href="http://paraview.org/" target="_blank">
+   ParaView
+  </a>
+  application. We had a desire to move towards simpler icons that used flat shading, and easily recognizable visual cues. We also wanted to replace a number of icons that had been added in a fairly ad-hoc way as requirements cropped up for new icons. Another driver was the need for larger icons to support high resolution and retina displays on macOS when using
+  <a href="https://www.qt.io/" target="_blank">
+   Qt 5
+  </a>
+  .
+ </p>
+ <h3>
+  Retina Displays
+ </h3>
+ <p>
+  Support for retina displays is something we had been wanting to add for quite some time, and it made its first appearance in Tomviz’s 0.9.3 release. The macOS APIs present a legacy API that tells applications they have exactly half of the pixels in width and height as are actually available, using fast hardware scaling to fill the actual pixels on the display. This works but usually results in a fuzzy looking image, especially when compared to full resolution applications where double sized icons are preferred for example.
+ </p>
+ <p>
+  This situation is quite a lot worse when considering our OpenGL rendering where the context is only aware of the low resolution surface, which is upscaled. The rendering widgets used to display the visuals rendered by VTK needed to be augmented in order to request and consistently use the native resolution to define the size of the render surface, as well as for mouse interactions. The new QVTKOpenGLWidget was developed to integrate better with Qt 5, and uses QOpenGLWidget as its base class to create the OpenGL context etc. We used the Qt APIs to get the native resolution where appropriate, and ensure this information is consistently passed to our OpenGL render windows, interactors, etc.
+ </p>
+ <h3>
+  Signed Applications
+ </h3>
+ <p>
+  We have also been wanting to sign application binaries for quite some time. Our 1.0.0 release was the first to feature signed application bundles for macOS, which is the operating system that needed this support the most due to recent changes in how the operating system treats unsigned binaries. We would like to extend this to Windows in the future, and look at ways to make packaging easier on Linux. Our 1.0 release also features cryptographic hashes for all downloadable installers/source code, with a PGP signature, for anyone who would like to verify the integrity of these files.
+ </p>
+ <h3>
+  Closing Thoughts
+ </h3>
+ <p>
+  There were many other improvements made to the user interface as we prepared our 1.0 release, and we have been collecting bug reports since the last release. We would like to thank our growing community for all of the feedback, and our collaborators at Cornell University and Michigan. As you start using Tomviz we would love to hear your feedback.
+ </p>
+ <p>
+  <i>
+   The Tomviz project is developed as part of a collaboration between Kitware and Cornell University under DOE Office of Science contract DE-SC0011385. This is a community project, and we are very pleased to take input and contributions from all in the community.
+  </i>
+ </p>
+</div>

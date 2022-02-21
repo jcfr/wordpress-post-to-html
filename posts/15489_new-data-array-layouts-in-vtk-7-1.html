@@ -1,0 +1,5466 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ProTip: For an exhaustive and up-to-date description of all improvements described in this blog, consider reading
+  <a href="http://www.vtk.org/Wiki/VTK/Tutorials/DataArrays" rel="noopener" target="_blank">
+   the current wiki page.
+  </a>
+ </p>
+ <p>
+  With the upcoming release of VTK 7.1 comes significant improvements to the efficiency and interoperability of VTK datasets. This post will guide you through how to use these tools.
+ </p>
+ <p>
+  VTK datasets store most of their important information in subclasses of vtkDataArray. Vertex locations (vtkPoints::Data), cell topology (vtkCellArray::Ia), and numeric point, cell, and generic attributes (vtkFieldData::Data) are the dataset features accessed most frequently by VTK algorithms, and these all rely on the vtkDataArray API.
+ </p>
+ <h2>
+  Terminology
+ </h2>
+ <p>
+  <b>
+   ValueType:
+  </b>
+  the element type of an array. For instance, vtkFloatArray has a ValueType of float.
+ </p>
+ <p>
+  <b>
+   ArrayType:
+  </b>
+  subclass of vtkDataArray which specifies ValueType and an array implementation.
+ </p>
+ <p>
+  <b>
+   Dispatch:
+  </b>
+  a runtime-resolution of a vtkDataArray’s ArrayType which calls a tailored section of executable code. At compile-time, the possible ArrayTypes are determined and a worker code template is generated for each. At run-time, the type of a specific array is determined and the proper worker instantiation is called.
+ </p>
+ <p>
+  <b>
+   Template explosion
+  </b>
+  is a sharp increase in the size of a compiled binary that results from instantiating a template function or class on many different types.
+ </p>
+ <h3>
+  <b>
+   vtkDataArray
+  </b>
+ </h3>
+ <p>
+  This non-templated base class of the VTK data array type hierarchy is unique in C++. All arrays containing numeric data inherit the common interface vtkDataArray. Without knowing the underlying ValueType stored in a data array, an algorithm or user may resize, reshape, read, and rewrite the array using a generic API that substitutes double-precision floating point numbers for the array’s actual ValueType. For instance, we can write a simple function that computes the magnitudes for a set of vectors in one array and store the results in another using nothing but the typeless vtkDataArray API:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbd0721428772" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+// 3 component magnitude calculation using the vtkDataArray API.
+// Inefficient, but easy to write:
+void calcMagnitude(vtkDataArray *vectors, vtkDataArray *magnitude)
+{
+  vtkIdType numVectors = vectors-&amp;gt;GetNumberOfTuples();
+  for (vtkIdType tupleIdx = 0; tupleIdx &amp;lt; numVectors; ++tupleIdx) { // What data types are magnitude and vectors using? // We don’t care! These methods all use double. magnitude-&amp;gt;SetComponent(tupleIdx, 0,
+      std::sqrt(vectors-&amp;gt;GetComponent(tupleIdx, 0) *
+                vectors-&amp;gt;GetComponent(tupleIdx, 0) +
+                vectors-&amp;gt;GetComponent(tupleIdx, 1) *
+                vectors-&amp;gt;GetComponent(tupleIdx, 1) +
+                vectors-&amp;gt;GetComponent(tupleIdx, 2) *
+                vectors-&amp;gt;GetComponent(tupleIdx, 2));                
+    }
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd0721428772-14">
+        14
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-1">
+        <span class="crayon-c">
+         // 3 component magnitude calculation using the vtkDataArray API.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-2">
+        <span class="crayon-c">
+         // Inefficient, but easy to write:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-3">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         calcMagnitude
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-4">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         numVectors
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfTuples
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numVectors
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // What data types are magnitude and vectors using? // We don’t care! These methods all use double. magnitude-&amp;gt;SetComponent(tupleIdx, 0,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         sqrt
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd0721428772-14">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0007 seconds] -->
+ <p>
+ </p>
+ <h3>
+  <b>
+   The Costs of Flexibility
+  </b>
+ </h3>
+ <p>
+  This flexibility comes at a cost. Accuracy is impacted by ValueTypes that cannot be fully expressed as a double; integers with &gt; 52 bits of precision must be truncated. Performance also takes a hit – vtkDataArray calls must be routed through a run-time resolution of ValueTypes using a C++ virtual override, adding overhead to each API call. This indirection also prevents the compiler from making assumptions about the layout of the data in-memory, which could be used to perform advanced optimizations such as vectorization.
+ </p>
+ <p>
+  So what options are available for fast, optimized, type-safe access to the data stored in a vtkDataArray?
+ </p>
+ <h3>
+  <b>
+   The Current Solution: vtkTemplateMacro
+  </b>
+ </h3>
+ <p>
+  In the past, this was done using the vtkTemplateMacros construct; this is no longer a best practice due to practical issues with array dispatching. While it is still usable and likely to be encountered in the VTK source code, newer code should use the vtkArrayDispatch mechanism.
+ </p>
+ <p>
+  Before 7.1, most numeric vtkDataArray objects were subclasses of the vtkDataArrayTemplate class, which implements all documented numeric data arrays such as vtkDoubleArray, vtkIdTypeArray, etc. Tuples are stored in memory as a contiguous array-of-structs (AOS), with the components stored in adjacent memory locations. These are accessed with the vtkTemplateMacro, a series of case statements that call a virtual GetDataType() to determine the array’s ValueType, typedef’d to VTK_TT. This allows developers to write generic type-specific code using VTK_TT as a placeholder for the actual ValueType. To perform an operation on multiple arrays, all arrays must have the same ValueType, or nested vtkTemplateMacros calls must be used to determine the ValueTypes of the additional arrays.
+ </p>
+ <p>
+  This solution has two problems: First, the worker functions assume the AOS adjacent layout; as VTK moves further into the field of in-situ analysis, this assumption may no longer be valid. Second, the number of required dispatches increases exponentially as the number of arrays to be considered grows. Restricted dispatch is needed to avoid template explosion.
+ </p>
+ <h2>
+  The New Solution: Data Array Changes in VTK 7.1
+ </h2>
+ <p>
+  As of VTK 7.1, the Array-Of-Structs (AOS) memory layout is no longer the only vtkDataArray implementation provided. The Struct-Of-Arrays (SOA) memory layout is now available through the vtkSOADataArrayTemplate class. The SOA layout assumes that the components of an array are stored separately, as in:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbd9761813472" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+struct StructOfArraysBuffer 
+{ 
+  float *x; // Pointer to array containing x components
+  float *y; // Same for y
+  float *z; // Same for z
+};</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbd9761813472-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd9761813472-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd9761813472-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd9761813472-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd9761813472-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbd9761813472-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbd9761813472-1">
+        <span class="crayon-t">
+         struct
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         StructOfArraysBuffer
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd9761813472-2">
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd9761813472-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Pointer to array containing x components
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd9761813472-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         y
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Same for y
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd9761813472-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         z
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Same for z
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbd9761813472-6">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  The new SOA arrays improve interoperability between VTK and simulation packages for live visualization of in-situ results. Many simulations use the SOA layout for their data, and natively supporting these arrays in VTK allows analysis of live data without explicitly copying it into a VTK data structure.
+ </p>
+ <p>
+  The legacy GetVoidPointer method, which is typically used with vtkTemplateMacro, must return a pointer to the array data with AOS-ordering. SOA arrays implement this by copying the data into a temporary buffer – this is a waste of both processor time and memory. A replacement mechanism is needed which can abstract storage details while providing performance on-par with raw memory buffer operations, and reduce template explosion by providing more efficient multi-array dispatch.
+ </p>
+ <h2>
+  Best Practices for vtkDataArray Post-7.1
+ </h2>
+ <p>
+  The new tools in VTK 7.1 make managing template instantiations for efficient array access both easy and extensible. These tools replace vtkTemplateMacro by abstracting away things like storage details, while providing performance on-par with raw memory buffer operations. They also give the developer more control over multi-array dispatch, and reduce the template explosion problem. These include:
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <b>
+    vtkGenericDataArray
+   </b>
+   The new templated base interface for all numeric vtkDataArray subclasses.
+  </li>
+  <li style="font-weight: 400">
+   <b>
+    vtkArrayDispatch
+   </b>
+   Collection of code generation tools that allow concise and precise specification of restrictable dispatch for up to 3 arrays simultaneously.
+  </li>
+  <li style="font-weight: 400">
+   <b>
+    vtkArrayDownCast
+   </b>
+   Access to specialized downcast implementations from code templates.
+  </li>
+  <li style="font-weight: 400">
+   <b>
+    vtkDataArrayAccessor
+   </b>
+   Provides Get and Set methods for efficiently accessing/modifying array data using either a specific ArrayType API, or falling back to the slower generic vtkDataArray API when the ArrayType is unknown.
+  </li>
+  <li style="font-weight: 400">
+   <b>
+    VTK_ASSUME
+   </b>
+   New abstraction for the compiler __assume directive to provide optimization hints.
+  </li>
+ </ul>
+ <p>
+  Here is the calcMagnitude example implemented using these new tools:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbdf265061251" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+// 3-component magnitude calculation using new concepts in VTK 7.1:
+// A worker functor. The calculation is implemented in the function template
+// for operator().
+struct CalcMagnitudeWorker
+{
+  // The worker accepts VTK array objects, not raw memory buffers.
+  template 
+  void operator()(VectorArray *vectors, MagnitudeArray *magnitude)
+  {
+    // This allows the compiler to optimize for the AOS array stride.
+    VTK_ASSUME(vectors-&amp;gt;GetNumberOfComponents() == 3);
+    VTK_ASSUME(magnitude-&amp;gt;GetNumberOfComponents() == 1);
+ 
+    // These allow this single worker function to be used with both
+    // the vtkDataArray 'double' API and the more efficient 
+    // vtkGenericDataArray APIs, depending on the template parameters:
+    vtkDataArrayAccessor v(vectors);
+    vtkDataArrayAccessor m(magnitude);
+ 
+    vtkIdType numVectors = vectors-&amp;gt;GetNumberOfTuples();
+    for (vtkIdType tupleIdx = 0; tupleIdx &amp;lt; numVectors; ++tupleIdx)
+      {
+      // Set and Get compile to inlined optimizable raw memory accesses for
+      // vtkGenericDataArray subclasses.
+      m.Set(tupleIdx, 0, std::sqrt(v.Get(tupleIdx, 0) * v.Get(tupleIdx, 0) +
+                                   v.Get(tupleIdx, 1) * v.Get(tupleIdx, 1) +
+                                   v.Get(tupleIdx, 2) * v.Get(tupleIdx, 2)));
+      }
+  }
+};
+ 
+void calcMagnitude(vtkDataArray *vectors, vtkDataArray *magnitude)
+{
+  // Create our worker functor:
+  CalcMagnitudeWorker worker;
+ 
+  // Define our dispatcher. We’ll let vectors have any ValueType, but only
+  // consider float/double arrays for magnitudes. These combinations will
+  // use a 'fast-path' implementation generated by the dispatcher:
+  typedef vtkArrayDispatch::Dispatch2ByValueType
+    &amp;lt; vtkArrayDispatch::AllTypes, // ValueTypes allowed by first array vtkArrayDispatch::Reals // ValueTypes allowed by second array &amp;gt; Dispatcher;
+ 
+  // Execute the dispatcher:
+  if (!Dispatcher::Execute(vectors, magnitude, worker))
+    {
+    // If Execute() fails, it means the dispatch failed due to an
+    // unsupported array type. In this case, it’s likely that the magnitude
+    // array is using an integral type. This is an uncommon case, so we won’t
+    // generate a fast path for these, but instead call an instantiation of 
+    // CalcMagnitudeWorker::operator()&amp;lt;vtkDataArray, vtkDataArray&amp;gt;.
+    // Through the use of vtkDataArrayAccessor, this falls back to using the
+    // vtkDataArray double API:
+    worker(vectors, magnitude);
+    }
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-42">
+        42
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-43">
+        43
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-44">
+        44
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-45">
+        45
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-46">
+        46
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-47">
+        47
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-48">
+        48
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-49">
+        49
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-50">
+        50
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-51">
+        51
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-52">
+        52
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-53">
+        53
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-54">
+        54
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbdf265061251-55">
+        55
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-1">
+        <span class="crayon-c">
+         // 3-component magnitude calculation using new concepts in VTK 7.1:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-2">
+        <span class="crayon-c">
+         // A worker functor. The calculation is implemented in the function template
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-3">
+        <span class="crayon-c">
+         // for operator().
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-4">
+        <span class="crayon-t">
+         struct
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         CalcMagnitudeWorker
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-5">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // The worker accepts VTK array objects, not raw memory buffers.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         template
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-8">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         operator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         VectorArray *
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         MagnitudeArray *
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // This allows the compiler to optimize for the AOS array stride.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         VTK_ASSUME
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfComponents
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         VTK_ASSUME
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfComponents
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-13">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // These allow this single worker function to be used with both
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // the vtkDataArray 'double' API and the more efficient
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // vtkGenericDataArray APIs, depending on the template parameters:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         vtkDataArrayAccessor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         v
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         vtkDataArrayAccessor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         m
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-19">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         numVectors
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfTuples
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numVectors
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Set and Get compile to inlined optimizable raw memory accesses for
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // vtkGenericDataArray subclasses.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-25">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         sqrt
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-28">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-29">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-30">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-31">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-32">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         calcMagnitude
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-33">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-34">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Create our worker functor:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-35">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         CalcMagnitudeWorker
+        </span>
+        <span class="crayon-v">
+         worker
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-36">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-37">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Define our dispatcher. We’ll let vectors have any ValueType, but only
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-38">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // consider float/double arrays for magnitudes. These combinations will
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-39">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // use a 'fast-path' implementation generated by the dispatcher:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-40">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkArrayDispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Dispatch2ByValueType
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-41">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkArrayDispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         AllTypes
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // ValueTypes allowed by first array vtkArrayDispatch::Reals // ValueTypes allowed by second array &amp;gt; Dispatcher;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-42">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-43">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Execute the dispatcher:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-44">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         !
+        </span>
+        <span class="crayon-v">
+         Dispatcher
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         Execute
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         worker
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-45">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-46">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // If Execute() fails, it means the dispatch failed due to an
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-47">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // unsupported array type. In this case, it’s likely that the magnitude
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-48">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // array is using an integral type. This is an uncommon case, so we won’t
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-49">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // generate a fast path for these, but instead call an instantiation of
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-50">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // CalcMagnitudeWorker::operator()&amp;lt;vtkDataArray, vtkDataArray&amp;gt;.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-51">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Through the use of vtkDataArrayAccessor, this falls back to using the
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-52">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // vtkDataArray double API:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-53">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         worker
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-54">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbdf265061251-55">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0095 seconds] -->
+ <p>
+ </p>
+ <h2>
+  vtkGenericDataArray
+ </h2>
+ <p>
+  The vtkGenericDataArray class template drives the new vtkDataArray class hierarchy. The ValueType is introduced here, both as a template parameter and a class-scope typedef. As a result, writing a typed API doesn’t require conversion to/from a common type. Instead of implementing storage details, it uses the CRTP idiom to forward key method calls to a derived class without a virtual function call. Without this indirection, vtkGenericDataArray can define an efficient interface for the compiler to to see past the method calls and instead optimize the underlying memory accesses.
+ </p>
+ <p>
+  The two main subclasses of vtkGenericDataArray are
+  <b>
+   vtkAOSDataArrayTemplate
+  </b>
+  and
+  <b>
+   vtkSOADataArrayTemplate
+  </b>
+  . These implement array-of-structs and struct-of-arrays storage, respectively.
+ </p>
+ <h2>
+  vtkTypeList
+ </h2>
+ <p>
+  Type lists are a metaprogramming construct used to generate a list of C++ types, used in VTK to implement restricted array dispatching. vtkArrayDispatch reduces the number of generated template instantiations by enforcing constraints on the arrays used to dispatch. For instance, if one wanted to only generate templated worker implementations for vtkFloatArray and vtkIntArray, a typelist is used to specify this:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbe3661541718" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+// Create a typelist of 2 types, vtkFloatArray and vtkIntArray:
+typedef vtkTypeList_Create_2(vtkFloatArray, vtkIntArray) MyArrays;
+ 
+Worker someWorker = ...;
+vtkDataArray *someArray = ...;
+ 
+// Use vtkArrayDispatch to generate code paths for these arrays:
+vtkArrayDispatch::DispatchByArray(someArray, someWorker);</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe3661541718-8">
+        8
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-1">
+        <span class="crayon-c">
+         // Create a typelist of 2 types, vtkFloatArray and vtkIntArray:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-2">
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkTypeList_Create_2
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtkFloatArray
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkIntArray
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         MyArrays
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-3">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-4">
+        <span class="crayon-e">
+         Worker
+        </span>
+        <span class="crayon-v">
+         someWorker
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-5">
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-v">
+         someArray
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-6">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-7">
+        <span class="crayon-c">
+         // Use vtkArrayDispatch to generate code paths for these arrays:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe3661541718-8">
+        <span class="crayon-v">
+         vtkArrayDispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         DispatchByArray
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         someArray
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         someWorker
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  There is a set of macros named vtkTypeList_Create_X, where X is the number of types in the created list, and the arguments are the types to place in the list. In the example above, the new type list is bound to a friendlier name using a local typedef, which is a common practice.
+ </p>
+ <p>
+  The vtkTypeList.h header defines some additional type list operations that may be useful, such as deleting and appending types, looking up indices, etc. vtkArrayDispatch::FilterArraysByValueType may come in handy, too. But for array dispatches, most users will only need to create new ones, or use the predefined vtkTypeLists:
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   vtkArrayDispatch::Reals — All floating point ValueTypes.
+  </li>
+  <li style="font-weight: 400">
+   vtkArrayDispatch::Integrals — All integral ValueTypes.
+  </li>
+  <li style="font-weight: 400">
+   vtkArrayDispatch::AllTypes — Union of Reals and Integrals.
+  </li>
+  <li style="font-weight: 400">
+   vtkArrayDispatch::Arrays — Default list of ArrayTypes to use in dispatches.
+  </li>
+ </ul>
+ <p>
+  The last one is special — vtkArrayDispatch::Arrays is a type list of ArrayTypes set application-wide when VTK is built. This vtkTypeList of vtkDataArray subclasses is used for unrestricted dispatches, and is the list that gets filtered when restricting a dispatch to specific ValueTypes. This list contains all AOS arrays by default. The CMake option VTK_DISPATCH_SOA_ARRAYS will enable SOA array dispatch as well. More advanced possibilities exist and are described in VTK/CMake/vtkCreateArrayDispatchArrayList.cmake.
+ </p>
+ <h2>
+  vtkArrayDownCast
+ </h2>
+ <p>
+  In VTK, all subclasses of vtkObject support a downcast method called SafeDownCast, similar to the C++ dynamic_cast: given an object, try to cast it to a more derived type; return NULL if the object is not the requested type. SafeDownCast is implemented as a series of string comparisons on the object’s class name, and this can dominate computational resources. Some vtkDataArrays support a specialized FastDownCast method, which lessons the cost of downcasting arrays by replacing common string comparisons with a single virtual call. However, not all array implementations support the FastDownCast method.
+ </p>
+ <p>
+  vtkArrayDownCast unifies these casting methods by automatically selecting FastDownCast when it is defined for the ArrayType, and otherwise falls back to the slower SafeDownCast.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbe7925625497" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+template 
+void DoSomeAction(vtkAbstractArray *array)
+{
+  ArrayType *myArray = vtkArrayDownCast(array);
+  if (myArray)
+    {
+    // ... (do work with myArray)
+    }
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbe7925625497-9">
+        9
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-1">
+        <span class="crayon-e">
+         template
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-2">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         DoSomeAction
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         vtkAbstractArray *
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-3">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         ArrayType *
+        </span>
+        <span class="crayon-v">
+         myArray
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkArrayDownCast
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         myArray
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // ... (do work with myArray)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbe7925625497-9">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <h2>
+  vtkDataArrayAccessor
+ </h2>
+ <p>
+  Array dispatching relies on having templated worker code carry out some operation, such as locating the maximum value in an array. However, because only the arrays in vtkArrayDispatch::Arrays are tested for dispatching, a backup implementation to fall back on the slower vtkDataArray API is needed in case of an unsupported array. Writing the same algorithm twice adds extra debugging, testing, and maintenance.
+ </p>
+ <p>
+  The vtkDataArrayAccessor removes the need for duplication of effort. It provides component and tuple based Get and Set methods using either the vtkDataArray or vtkGenericDataArray API, depending on the class’s template parameter. It also defines an APIType, which can be used to allocate temporaries, etc. This type is double for vtkDataArrays and vtkGenericDataArray::ValueType for vtkGenericDataArrays.
+ </p>
+ <p>
+  vtkDataArrayAccessor has a more compact API. The only defined methods are Get and Set, and they’re overloaded to work on tuples and components. Note that non-element access operations such as GetNumberOfTuples should still be called on the array pointer using vtkDataArray API.
+ </p>
+ <p>
+  Using vtkDataArrayAccessor, we can write a single worker template that works for both vtkDataArray and vtkGenericDataArray, without a loss of performance in the latter case. That worker looks like this:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbeb812230470" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+// Stores the tuple/component coordinates of the maximum value using vtkDataArrayAccessor:
+struct FindMax
+{
+  vtkIdType Tuple; // Result
+  int Component; // Result
+ 
+  FindMax() : Tuple(-1), Component(-1) {}
+ 
+  template 
+  void operator()(ArrayT *array)
+  {
+    // Create the accessor:
+    vtkDataArrayAccessor access(array);
+ 
+    // Prepare the temporary. We’ll use the accessor's APIType instead of
+    // ArrayT::ValueType, since that is appropriate for the vtkDataArray
+    // fallback:
+    typedef typename vtkDataArrayAccessor::APIType ValueType;
+    ValueType max = std::numeric_limits::min();
+ 
+    // Iterate as before, but use access.Get instead of
+    // array-&amp;gt;GetTypedComponent. GetTypedComponent is still used
+    // when ArrayT is a vtkGenericDataArray, but 
+    // vtkDataArray::GetComponent is now used as a fallback when ArrayT
+    // is vtkDataArray.
+    vtkIdType numTuples = array-&amp;gt;GetNumberOfTuples();
+    int numComps = array-&amp;gt;GetNumberOfComponents();
+    for (vtkIdType tupleIdx = 0; tupleIdx &amp;lt; numTuples; ++tupleIdx)
+      {
+      for (int compIdx = 0; compIdx &amp;lt; numComps; ++compIdx)
+        {
+        if (max &amp;lt; access.Get(tupleIdx, compIdx)) { max = access.Get(tupleIdx, compIdx); this-&amp;gt;Tuple = tupleIdx;
+          this-&amp;gt;Component = compIdx;
+          }
+        }
+      }
+  }
+};</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbeb812230470-38">
+        38
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-1">
+        <span class="crayon-c">
+         // Stores the tuple/component coordinates of the maximum value using vtkDataArrayAccessor:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-2">
+        <span class="crayon-t">
+         struct
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         FindMax
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-3">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         Tuple
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Result
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Component
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Result
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-6">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         FindMax
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Tuple
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Component
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-8">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         template
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-10">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         operator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         ArrayT *
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Create the accessor:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkDataArrayAccessor
+        </span>
+        <span class="crayon-e">
+         access
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-14">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Prepare the temporary. We’ll use the accessor's APIType instead of
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // ArrayT::ValueType, since that is appropriate for the vtkDataArray
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // fallback:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         typename
+        </span>
+        <span class="crayon-v">
+         vtkDataArrayAccessor
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         APIType
+        </span>
+        <span class="crayon-v">
+         ValueType
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ValueType
+        </span>
+        <span class="crayon-v">
+         max
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         numeric_limits
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         min
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-20">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Iterate as before, but use access.Get instead of
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // array-&amp;gt;GetTypedComponent. GetTypedComponent is still used
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // when ArrayT is a vtkGenericDataArray, but
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // vtkDataArray::GetComponent is now used as a fallback when ArrayT
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-25">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // is vtkDataArray.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         numTuples
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfTuples
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numComps
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfComponents
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-28">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numTuples
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-29">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-30">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         compIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         compIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numComps
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-v">
+         compIdx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-32">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         max
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         access
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         compIdx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         max
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         access
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         compIdx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         Tuple
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-33">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         Component
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         compIdx
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-34">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-35">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-36">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-37">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbeb812230470-38">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0011 seconds] -->
+ <p>
+ </p>
+ <p>
+  When we call operator() with, say, ArrayT=vtkFloatArray, we’ll get an optimized, efficient code path. But we can also call this same implementation with ArrayT=vtkDataArray and still get a correct result (assuming that the vtkDataArray’s double API represents the data well enough).
+ </p>
+ <p>
+  Using the vtkDataArray fallback path is straightforward. At the call site:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbf1499767088" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+void someFunction(vtkDataArray *array)
+{
+  FindMax maxWorker;
+  if (!vtkArrayDispatch::Dispatch::Execute(array, maxWorker))
+    {
+    maxWorker(array); // Dispatch failed, call vtkDataArray fallback
+    }
+  // Do work using maxWorker.Tuple and maxWorker.Component -- now we know
+  // for sure that they’re initialized!
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf1499767088-10">
+        10
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-1">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         someFunction
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-2">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         FindMax
+        </span>
+        <span class="crayon-v">
+         maxWorker
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         !
+        </span>
+        <span class="crayon-v">
+         vtkArrayDispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Dispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         Execute
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         maxWorker
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         maxWorker
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Dispatch failed, call vtkDataArray fallback
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Do work using maxWorker.Tuple and maxWorker.Component -- now we know
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // for sure that they’re initialized!
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf1499767088-10">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  Using the above pattern for calling a worker and always going through vtkDataArrayAccessor to Get/Set array elements ensures that any worker implementation can be its own fallback path.
+ </p>
+ <h2>
+  VTK_ASSUME
+ </h2>
+ <p>
+  The new array classes achieve the same performance as raw memory buffers for most cases, using both AOS and SOA array implementations. In fact, with –ffast-math optimizations on GCC 4.9, the optimizer is able to remove all function calls and apply SIMD vectorized instructions in the dispatched worker, showing that the new array API is thin enough that the compiler can see the algorithm in terms of memory access.
+ </p>
+ <p>
+  But there was one case where performance suffered. If iterating through an AOS data array with a known number of components using GetTypedComponent, the raw pointer implementation initially outperformed the dispatched array. To understand why, note that the AOS implementation of GetTypedComponent is along the lines of:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbf4104021533" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+ValueType vtkAOSDataArrayTemplate::GetTypedComponent(vtkIdType tuple,
+                                                     int comp) const
+{
+  // AOSData is a ValueType* pointing at the base of the array data.
+  return this-&amp;gt;AOSData[tuple * this-&amp;gt;NumberOfComponents + comp];
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbf4104021533-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf4104021533-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf4104021533-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf4104021533-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf4104021533-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf4104021533-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbf4104021533-1">
+        <span class="crayon-e">
+         ValueType
+        </span>
+        <span class="crayon-v">
+         vtkAOSDataArrayTemplate
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         GetTypedComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         tuple
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf4104021533-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         comp
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-m">
+         const
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf4104021533-3">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf4104021533-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // AOSData is a ValueType* pointing at the base of the array data.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf4104021533-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         AOSData
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-e ">
+         tuple *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         NumberOfComponents
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         comp
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf4104021533-6">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  Because NumberOfComponents is unknown at compile time, the optimizer cannot assume anything about the stride of the components in the array. This leads to missed optimizations for vectorized read/writes and increased complexity in the instructions used to iterate through the data.
+ </p>
+ <p>
+  For such cases where the number of components is, in fact, known at compile time (due to a calling function performing some validation, for instance), it is possible to tell the compiler about this fact using VTK_ASSUME.
+ </p>
+ <p>
+  VTK_ASSUME wraps a compiler-specific __assume statement, which is used to pass such optimization hints. Its argument is an expression of some condition that is guaranteed to always be true. This allows more aggressive optimizations when used correctly, but be forewarned that if the condition is not met at runtime, the results are unpredictable and likely catastrophic.
+ </p>
+ <p>
+  But if we’re writing a filter that only operates on 3D point sets, we know the number of components in the point array will always be 3. In this case we can write:
+ </p>
+ <p>
+  VTK_ASSUME(pointsArray-&gt;GetNumberOfComponents() == 3);
+ </p>
+ <p>
+  in the worker function and this instructs the compiler that the array’s internal NumberOfComponents variable will always be 3, and thus the stride of the array is known. Of course, the caller of this worker function should ensure that this is a 3-component array and fail gracefully if it is not.
+ </p>
+ <p>
+  There are many scenarios where VTK_ASSUME can offer a serious performance boost, the case of known tuple size is a common one that’s really worth remembering.
+ </p>
+ <h2>
+  vtkArrayDispatch
+ </h2>
+ <p>
+  The dispatchers implemented in the vtkArrayDispatch namespace provide array dispatching with customizable restrictions on code generation and a simple syntax that hides the messy details of type resolution and multi-array dispatch. There are several “flavors” of dispatch available that operate on up to three arrays simultaneously.
+ </p>
+ <h3>
+  <b>
+   Components Of A Dispatch
+  </b>
+ </h3>
+ <p>
+  Using the vtkArrayDispatch system requires three elements: the array(s), the worker, and the dispatcher.
+ </p>
+ <h4>
+  <b>
+   The Arrays
+  </b>
+ </h4>
+ <p>
+  All dispatched arrays must be subclasses of vtkDataArray. It is important to identify as many restrictions as possible. Must every ArrayType be considered during dispatch, or is the array’s ValueType (or even the ArrayType itself) restricted? If dispatching multiple arrays at once, are they expected to have the same ValueType? These scenarios are common, and these conditions can be used to reduce the number of instantiations of the worker template.
+ </p>
+ <h4>
+  <b>
+   The Worker
+  </b>
+ </h4>
+ <p>
+  The worker is some generic callable. In C++98, a templated functor is a good choice. In C++14, a generic lambda is a usable option as well. For our purposes, we’ll only consider the functor approach, as C++14 is a long ways off for core VTK code.
+ </p>
+ <p>
+  At a minimum, the worker functor should define operator() to make it callable. This should be a function template with a template parameter for each array it should handle. For a three array dispatch, it should look something like this:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbf8324332894" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+struct ThreeArrayWorker
+{
+  template 
+  void operator()(Array1T *array1, Array2T *array2, Array3T *array3)
+  {
+  &lt;i&gt;/* Do stuff... */&lt;/i&gt;
+  }
+};</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbf8324332894-8">
+        8
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-1">
+        <span class="crayon-t">
+         struct
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ThreeArrayWorker
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-2">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         template
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-4">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         operator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         Array1T *
+        </span>
+        <span class="crayon-v">
+         array1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         Array2T *
+        </span>
+        <span class="crayon-v">
+         array2
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         Array3T *
+        </span>
+        <span class="crayon-v">
+         array3
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-c">
+         /* Do stuff... */
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbf8324332894-8">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  At runtime, the dispatcher will call ThreeWayWorker::operator() with a set of Array1T, Array2T, and Array3T that satisfy any dispatch restrictions.
+ </p>
+ <p>
+  Workers can be stateful, too, as seen in the FindMax worker earlier where the worker simply identified the component and tuple id of the largest value in the array. The functor stored them for the caller to use in further analysis:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbfa304743967" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+// Example of a stateful dispatch functor:
+struct FindMax
+{
+  // Functor state, holds results that are accessible to the caller:
+  vtkIdType Tuple;
+  int Component;
+ 
+  // Set initial values:
+  FindMax() : Tuple(-1), Component(-1) {}
+ 
+  // Template method to set Tuple and Component ivars:
+  template 
+  void operator()(ArrayT *array)
+  { 
+    &lt;i&gt;/* Do stuff... */&lt;/i&gt;
+  }
+};</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfa304743967-17">
+        17
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-1">
+        <span class="crayon-c">
+         // Example of a stateful dispatch functor:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-2">
+        <span class="crayon-t">
+         struct
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         FindMax
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-3">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Functor state, holds results that are accessible to the caller:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         Tuple
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Component
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-7">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Set initial values:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         FindMax
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Tuple
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Component
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-10">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Template method to set Tuple and Component ivars:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         template
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-13">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         operator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         ArrayT *
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-c">
+         /* Do stuff... */
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfa304743967-17">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <h4>
+  <b>
+   The Dispatcher
+  </b>
+ </h4>
+ <p>
+  The dispatcher is the workhorse of the system. It is responsible for applying restrictions, resolving array types, and generating the requested template instantiations. It has responsibilities both at run-time and compile-time.
+ </p>
+ <p>
+  During compilation, the dispatcher will identify the valid combinations of arrays that can be used according to the restrictions. This is done by starting with a typelist of arrays, either supplied as a template parameter or by defaulting to vtkArrayDispatch::Arrays, and filtering them by ValueType if needed. For multi-array dispatches, additional restrictions may apply, such as forcing the second and third arrays to have the same ValueType as the first. It must then generate the required code for the dispatch — that is, the templated worker implementation must be instantiated for each valid combination of arrays.
+ </p>
+ <p>
+  At runtime, it tests each of the dispatched arrays to see if they match one of the generated code paths. Runtime type resolution is carried out using vtkArrayDownCast to get the best performance available for the arrays of interest. If it finds a match, it calls the worker’s operator() method with the properly typed arrays. If no match is found, it returns false without executing the worker.
+ </p>
+ <h3>
+  <b>
+   Restrictions: Why They Matter
+  </b>
+ </h3>
+ <p>
+  We’ve made several mentions of using restrictions to reduce the number of template instantiations during a dispatch operation. You may be wondering if it really matters so much. Let’s consider some numbers.
+ </p>
+ <p>
+  VTK is configured to use 13 ValueTypes for numeric data. These are the standard numeric types float, int, unsigned char, etc. By default, VTK will define vtkArrayDispatch::Arrays to use all 13 types with vtkAOSDataArrayTemplate for the standard set of dispatchable arrays. If enabled during compilation, the SOA data arrays are added to this list for a total of 26 arrays.
+ </p>
+ <p>
+  Using these 26 arrays in a single, unrestricted dispatch will result in 26 instantiations of the worker template. A double dispatch will generate 676 workers. A triple dispatch with no restrictions creates a whopping 17,576 functions to handle the possible combinations of arrays.
+ </p>
+ <p>
+  Applying some simple restrictions can reduce this immensely. If the arrays will only contain floats or doubles, the single dispatch drops to 4 instantiations, the double dispatch to 16, and the triple to 64. We could even apply such a restriction to just create some ‘fast-paths’ and let the integral types fallback to using the vtkDataArray API by using vtkDataArrayAccessors.
+ </p>
+ <p>
+  Another common restriction is that all arrays in a multi-array dispatch have the same ValueType, even if that ValueType is not known at compile time. By specifying this restriction, a double dispatch on all 26 AOS/SOA arrays will only produce 52 worker instantiations, down from 676. The triple dispatch drops to 104 instantiations from 17,576.
+ </p>
+ <p>
+  Always apply restrictions when they are known, especially for multi-array dispatches. The savings are worth it.
+ </p>
+ <h2>
+  Putting It All Together
+ </h2>
+ <p>
+  Now that we’ve explored the new tools introduced with VTK 7.1 that allow efficient, implementation agnostic array access, let’s look at the calcMagnitude example and identify the key features of the implementation:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e850abbfe962466041" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+// Modern implementation of calcMagnitude using new concepts in VTK 7.1:
+struct CalcMagnitudeWorker
+{
+  template 
+  void operator()(VectorArray *vectors, MagnitudeArray *magnitude)
+  {
+    VTK_ASSUME(vectors-&amp;gt;GetNumberOfComponents() == 3);
+    VTK_ASSUME(magnitude-&amp;gt;GetNumberOfComponents() == 1);
+ 
+    vtkDataArrayAccessor v(vectors);
+    vtkDataArrayAccessor m(magnitude);
+ 
+    vtkIdType numVectors = vectors-&amp;gt;GetNumberOfTuples();
+    for (vtkIdType tupleIdx = 0; tupleIdx &amp;lt; numVectors; ++tupleIdx)
+      {
+      m.Set(tupleIdx, 0, std::sqrt(v.Get(tupleIdx, 0) * v.Get(tupleIdx, 0) +
+                                   v.Get(tupleIdx, 1) * v.Get(tupleIdx, 1) +
+                                   v.Get(tupleIdx, 2) * v.Get(tupleIdx, 2)));
+      }
+  }
+};
+ 
+void calcMagnitude(vtkDataArray *vectors, vtkDataArray *magnitude)
+{
+  CalcMagnitudeWorker worker;
+  typedef vtkArrayDispatch::Dispatch2ByValueType
+    &amp;lt; vtkArrayDispatch::AllTypes, vtkArrayDispatch::Reals &amp;gt; Dispatcher;
+ 
+  if (!Dispatcher::Execute(vectors, magnitude, worker))
+    {
+    worker(vectors, magnitude); // vtkDataArray fallback
+    }
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e850abbfe962466041-33">
+        33
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-1">
+        <span class="crayon-c">
+         // Modern implementation of calcMagnitude using new concepts in VTK 7.1:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-2">
+        <span class="crayon-t">
+         struct
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         CalcMagnitudeWorker
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-3">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         template
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-5">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         operator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         VectorArray *
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         MagnitudeArray *
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         VTK_ASSUME
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfComponents
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         VTK_ASSUME
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfComponents
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-9">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         vtkDataArrayAccessor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         v
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         vtkDataArrayAccessor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         m
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-12">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         numVectors
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetNumberOfTuples
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numVectors
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         sqrt
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         v
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tupleIdx
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-21">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-22">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-23">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         calcMagnitude
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         vtkDataArray *
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-24">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-25">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         CalcMagnitudeWorker
+        </span>
+        <span class="crayon-v">
+         worker
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkArrayDispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Dispatch2ByValueType
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkArrayDispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         AllTypes
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkArrayDispatch
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Reals
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Dispatcher
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-28">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-29">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         !
+        </span>
+        <span class="crayon-v">
+         Dispatcher
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         Execute
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         worker
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-30">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         worker
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vectors
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         magnitude
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // vtkDataArray fallback
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-32">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e850abbfe962466041-33">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0011 seconds] -->
+ <p>
+ </p>
+ <p>
+  This implementation uses dispatch restrictions to reduce the number of instantiated templated worker functions from down to 104 combinations, where a double-dispatch would create 676 instantiations. When ValueType restrictions aren’t met, the calculation is still carried out at double precision; those other 572 cases won’t have special code generated but can still run if needed. Thanks to vtkDataArrayAccessor, we have a fallback implementation that reuses our templated worker code. In this case, the dispatch is really just a fast-path implementation for floating point output types.
+ </p>
+ <p>
+  The performance should be identical to iterating through raw memory buffers.The vtkGenericDataArray API is transparent to the compiler. The specialized instantiations of operator() can be heavily optimized since the memory access patterns are known and well-defined. Using VTK_ASSUME tells the compiler that the arrays have known strides, allowing further compile-time optimizations.
+ </p>
+ <p>
+  Hopefully this has convinced you that the vtkArrayDispatch and related tools are worth using to create flexible, efficient, typesafe implementations for your work with VTK. For information on types of Dispatchers and advanced usage such as accessing memory buffers, check out the
+  <a href="http://www.vtk.org/Wiki/VTK/Tutorials/DataArrays">
+   wiki
+  </a>
+  . Please direct any additional questions you may have on the subject to the
+  <a href="http://www.vtk.org/mailing-lists/">
+   VTK mailing lists
+  </a>
+  .
+ </p>
+</div>

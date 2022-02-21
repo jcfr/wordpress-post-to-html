@@ -1,0 +1,142 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One of the major efforts undertaken for
+  <a href="http://www.vtk.org/">
+   VTK
+  </a>
+  6 was a general update and modularization of our build system. We built on the lessons learned from the
+  <a href="http://www.boost.org/">
+   Boost
+  </a>
+  and
+  <a href="http://itk.org/">
+   ITK
+  </a>
+  communities when considering large changes to their build systems. A Source article, “
+  <a href="https://blog.kitware.com/divide-and-conquer/">
+   Divide and Conquer
+  </a>
+  ” describes the ITK modularization effort, and several tools and techniques were adapted from this previous work. Our motivations for modularization mirrored the ITK communities in many respects; the VTK code base has continued to grow over the years and our build system hadn’t necessarily kept pace.
+ </p>
+ <p>
+  <strong>
+   Modularizing and Modernizing
+  </strong>
+ </p>
+ <p>
+  The VTK build system was written for a much older version of CMake, with the addition of new kits being a difficult, time consuming and largely manual process. We wanted to use the modularization effort to automate the vast majority of the steps involved in adding or removing modules from VTK, and achieve greater agility as we push forward to extend the toolkit over the coming years.
+ </p>
+ <p>
+  We skipped several of the steps taken by the ITK community and moved straight to the manual classification of classes, using a two-level source tree layout; the top-level was limited to only one word (camel-cased), with the second-level being one-or-more camel-cased words. That way you can easily go from module/library name to source location and back again. For example, vtkCommonCore can be found in the source tree at Common/Core/, vtkRenderingVolumeOpenGL in Rendering/VolumeOpenGL/ etc.
+ </p>
+ <p>
+  <strong>
+   Maintaining Two Trees
+  </strong>
+ </p>
+ <p>
+  We adapted the scripts developed by the Boost community, with
+  <a href="https://github.com/cryos/vtk-modularization">
+   two files used to modularize the tree
+  </a>
+  . The manifest.txt file contained the mapping from the original source tree layout to the new module locations, and
+  <a href="https://github.com/cjh1/modularization">
+   an overlay of the new build system and patches was maintained
+  </a>
+  . This allowed us to run the modularization scripts on the updated source tree at any time, account for new files, and test the result without interrupting normal development in master. There was quite a lot of coordination with the wider community, but once we were ready to modularize VTK, the scripts were run in multiple steps involving a pure move (commit cdd4d6fd) and applying patches/new build system changes (commit 144f03ca) on April 9, 2012. This means that if you want to trace the history of a file beyond modularization, you will likely need to use the
+  <span style="font-family: courier new,courier;">
+   –follow
+  </span>
+  option for log, or
+  <span style="font-family: courier new,courier;">
+   -M
+  </span>
+  option for blame.
+ </p>
+ <p>
+  <strong>
+   Preparing for VTK 6.0
+  </strong>
+ </p>
+ <p>
+  We recently announced the
+  <a href="https://blog.kitware.com/vtk-6-0-0-rc1-is-ready-for-testing/">
+   VTK 6.0.0 rc1 release
+  </a>
+  , the first release candidate as we prepare to release VTK 6.0. As we get ready to make the first release of VTK after modularization, we would appreciate your feedback. In addition to the modularization of VTK, which involves many changes to library names, source locations, and our build system, the
+  <a href="http://vtk.org/Wiki/VTK/Remove_VTK_4_Compatibility">
+   VTK 4 compatibility layer was removed from the pipeline
+  </a>
+  ,
+  <a href="http://vtk.org/Wiki/VTK/VTK_6_Migration_Guide">
+   several API changes were made
+  </a>
+  ,
+  <a href="http://vtk.org/Wiki/VTK/Composite_data_changes">
+   composite data structures were changed
+  </a>
+  , and several changes were made as part of the modularization effort which I will summarize below.
+ </p>
+ <p>
+  <strong>
+   Minimizing Dependencies:
+  </strong>
+  We worked hard to minimize the dependencies between modules, thus enabling dependent projects to depend upon and use much smaller parts of VTK. The
+  <a href="http://www.vtk.org/Wiki/VTK/VTK_6_Migration/Overview#Removal_of_Data_Objects.E2.80.99_Dependency_on_the_Pipeline">
+   separation of the pipeline and the data model
+  </a>
+  helped to improve the situation here, but there is still more we would like to do. It wasn’t possible to reduce some of the dependencies in the rendering layer for example without making major changes to the API.
+ </p>
+ <p>
+  <strong>
+   Build Time Options Should Not Change API/Modules
+  </strong>
+  : VTK had increasingly difficult-to-follow logic where the kits would be built differently depending upon what was available on the system. This led to the rendering kit linking to Qt, the Qt kit linking to QtWebKit if available and other behaviors that were not always desirable. In VTK 6, we decided to disallow options that changed API/linking in modules, with one-or-two exceptions where it was hard to avoid. The Qt kit was split into several modules, including a vtkGUISupportQtWebkit, which contains the webkit-dependent code. Things such as vtkRenderingOpenGL had to make exceptions to account for different windowing systems, OpenGL libraries, etc.
+ </p>
+ <p>
+  <strong>
+   Optional Use of the Object Factory
+  </strong>
+  : Before VTK 6.0, all vtkObject-derived classes used the object factory in their static New method. This allowed for a great deal of flexibility as any class could be overridden by dependent code, but it also came at a great price in terms of run time cost for instantiation. In VTK 6.0, the default vtkStandardNewMacro will return the class; the new vtkObjectFactoryNewMacro will always use the object factory; and the vtkAbstractObjectFactoryNewMacro will always use the object factory and potentially return NULL if no override was specified. The VTK_ALL_NEW_OBJECT_FACTORY option allows you to switch back to the old behavior at compile time by using the object factory for all vtkObject-derived classes.
+ </p>
+ <p>
+  <strong>
+   Instantiators are Not Built by Default
+  </strong>
+  : The VTK instantiators are no longer built by default. If you still require that functionality, you can turn on VTK_MAKE_INSTANTIATORS, but they are deprecated and may be removed in a future release.
+ </p>
+ <p>
+  <strong>
+   VTK Groups and Module Options
+  </strong>
+  : Now that we have gone from 19 kits to hundreds of modules, we have created VTK groups, which turn on related modules and are somewhat akin to previous options in VTK, such as VTK_USE_RENDERING which was replaced by VTK_Group_Rendering. The Rendering and StandAlone groups are on by default. If you use Qt, then enabling VTK_GROUP_Qt will enable those modules, and VTK_Group_MPI will enable MPI modules. You can disable all groups and turn on individual modules too, the cache variables are advanced and named Module_vtkModuleName. For example, Module_vtkGUISupportQtOpenGL would enable the vtkGUISupportQtOpenGL module and all of its dependencies.
+ </p>
+ <p>
+  <strong>
+   Object Factory Initialization
+  </strong>
+  : A big change in VTK 6.0 is the use of implementation modules. These move from hardwiring object factory overrides in an ad-hoc fashion for each kit at compile time to initializing the object factory overrides at link/runtime. We thought long and hard about how to reduce the pain as much as possible here, and came up with the solution in VTK 6.0 where you must state the implementation modules you rely upon and ensure your binary is compiled with the generated compiler definitions, as
+  <a href="http://www.vtk.org/Wiki/VTK/Build_System_Migration">
+   documented here
+  </a>
+  .
+ </p>
+ <p>
+  The interface classes, such as vtkRenderWindow, are abstract and so it is not possible to return anything but NULL if their New method does not have a registered override. Linking to vtkRenderingOpenGL and adding the compiler definitions to your application’s build system will ensure the object factory overrides are initialized whether you are linking to dynamic or static libraries.These change highlighted areas where interface classes were inherently linked to OpenGL, and changes were introduced to allow other backends, opening the door to alternative implementation modules. This pattern was also used to enhance database-related classes, where each implementation module registers the additional database backends (see vtkIOMySQL for example).
+ </p>
+ <p>
+  <strong>
+   Centralized Logic
+  </strong>
+  : The new VTK build system operates in a couple of passes that loop over the majority of modules. The first pass scans two directories deep for module.cmake files, and loads all modules and their dependencies. Once that is done it assesses which modules were enabled, attempts to enable all of their dependencies and topologically sorts the result. At that point, the standard logic calls add_subdirectory to actually include the modules, and taking care to link the modules to their stated dependencies in the module.cmake files. Things like wrapping and testing are all enabled in similar ways, with the module.cmake file declaring many of the properties of any given module. This means that whole modules can be added or removed without touching the central build files/logic. It makes sweeping changes/bug fixes much easier to apply, and has allowed us to reduce the amount of repetitive boilerplate code necessary.
+ </p>
+ <p>
+  <strong>
+   Conclusions
+  </strong>
+ </p>
+ <p>
+  There are a lot of changes coming in VTK 6.0, and we would appreciate your feedback as we prepare to make the first release in the series. There is more that I have skipped over as this post is already very long, including a massive number of new features, enhancements and bug fixes made since 5.10.1. Some of these have been discussed in previous posts, and we will make a post soon summarizing major feature additions that will likely feature many screenshots. A great deal of work has gone into VTK 6.0, and we would look to thank everyone who contributed to this effort.
+ </p>
+</div>

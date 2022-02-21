@@ -1,0 +1,284 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p style="text-align: center;">
+  <strong>
+   Index To the Series
+  </strong>
+  <br/>
+  1.
+  <a href="https://blog.kitware.com/how-to-improve-software-quality-in-open-source-projects-part-i-overview-of-continuous-integration-ci-and-software-process-in-pynwb/">
+   Overview of Continuous Integration (CI) and Software Process in PyNWB
+  </a>
+  <br/>
+  2.
+  <a href="https://blog.kitware.com/improving-software-quality-in-open-source-projects-part-ii-packaging-pynwb-for-multiple-operating-systems-and-python-versions/">
+   Packaging PyNWB for Multiple Operating Systems and Python Versions
+   <br/>
+  </a>
+  3.
+  <a href="https://blog.kitware.com/how-to-improve-software-quality-in-open-source-projects-part-iii-code-coverage-documentation-and-style">
+   Code Coverage, Documentation and Style
+  </a>
+ </p>
+ <hr/>
+ <p>
+  <span style="font-weight: 400;">
+   Writing quality software requires you to have craftsmanship as well as technical expertise. While writing code is a demanding activity, you can automate portions of the day-to-day tasks to help reduce errors. By adding automated software quality processes, you can further increase the maintainability and readability of your project, which can help you build a community around and encourage contributions to open source software.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   To support software quality, it is critical that you have a
+  </span>
+  <a href="https://codeahoy.com/2016/07/05/unit-integration-and-end-to-end-tests-finding-the-right-balance/" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    variety of tests
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   check for errors at different levels of complexity in the development workflow. Other essential practices such as using
+  </span>
+  <a href="https://sethrobertson.github.io/GitBestPractices/" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    small and atomic commits
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   and writing
+  </span>
+  <a href="https://chris.beams.io/posts/git-commit/" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    intelligent commit messages
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   will help you foster consistency and gain contributions to your project. To take your software to even higher levels of capability, performance and quality, you can practice
+  </span>
+  <a href="https://www.digitalocean.com/community/tutorials/an-introduction-to-continuous-integration-delivery-and-deployment" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    continuous integration
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   (CI).
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   CI automates critical software process tasks such as compiling software, running tests, releasing and deploying software and storing artifacts. In CI, these tasks are invoked persistently as you make changes to the software. CI builds may be triggered when you push a commit to a source code repository, for example, or when you merge a topic branch into your master branch.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   In this blog series, we will explore the benefits that cloud-based CI provides. The actual examples are based on the software quality processes that we added to
+  </span>
+  <a href="https://github.com/NeurodataWithoutBorders/pynwb" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    PyNWB
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   , an open source software project. The examples present a guide for better understanding the tooling used in PyNWB.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   PyNWB
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   PyNWB is a Python software library that provides a high-level application programming interface (API) for working with files stored in the
+  </span>
+  <a href="https://nwb-schema.readthedocs.io/" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    NWB format
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   . NWB is a unified data format for cellular-based neurophysiology data. It focuses on the dynamics of groups of neurons that are measured under a large range of experimental conditions. The NWB format comes from the
+  </span>
+  <a href="http://www.nwb.org/" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    Neurodata Without Borders: Neurophysiology (NWB:N)
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   project, which consists of neuroscientists and software developers who recognize that the adoption of a unified data standard is an important step toward breaking down the barriers to sharing, reusing and reproducing data.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The goal is to have PyNWB be as accessible to as many researchers as possible. By adding automated tooling to the CI process, we enabled PyNWB to support Python 2 and Python 3; be usable on Windows, Mac and Linux operating systems; and be packaged to both PyPI and Conda-forge. To do so, we needed to test PyNWB on multiple platforms. Without automated tooling, it would have been far too much manual labor for us to keep up with our goal and pursue code development.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   In addition to making PyNWB accessible, we aim to encourage good quality and consistency in the codebase to ensure that PyNWB is maintainable. As a result, we added style enforcement in our CI tests, and we automatically build the documentation as part of our CI process.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Tool Summary
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   As we progress through this blog series, we will guide you to add tools to a new or existing software project. To do so, we will reference a large number of technologies, which include the following:
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400;">
+   <a href="https://circleci.com/docs/2.0/" rel="noopener" target="_blank">
+    CircleCI
+   </a>
+   , a cloud CI platform that PyNWB uses to run Linux tests;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://www.appveyor.com/docs/" rel="noopener" target="_blank">
+    AppVeyor
+   </a>
+   , a cloud CI provider that PyNWB uses to run Windows tests;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://docs.travis-ci.com/" rel="noopener" target="_blank">
+    Travis CI
+   </a>
+   , a cloud CI service that PyNWB uses to run Mac OS tests;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://github.com/warner/python-versioneer/blob/master/INSTALL.md" rel="noopener" target="_blank">
+    versioneer
+   </a>
+   , a tool for adding semantic versioning;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://tox.readthedocs.io/en/latest/" rel="noopener" target="_blank">
+    tox
+   </a>
+   , an automated test runner for different Python versions;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://pep8speaks.com/" rel="noopener" target="_blank">
+    PEP8 Speaks
+   </a>
+   , a Github application for checking pep8 standards on pull requests;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="http://www.sphinx-doc.org/en/stable/" rel="noopener" target="_blank">
+    Sphinx
+   </a>
+   , a tool for generating documentation;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://requires.io/" rel="noopener" target="_blank">
+    Requires.io
+   </a>
+   , a tool for checking the status of requirements;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://pythonhosted.org/six/" rel="noopener" target="_blank">
+    Six
+   </a>
+   , a Python package for creating compatibility between Python2 and Python3;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="http://flake8.pycqa.org/en/latest/" rel="noopener" target="_blank">
+    Flake8
+   </a>
+   , a Python tool for style enforcement;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://docs.codecov.io/" rel="noopener" target="_blank">
+    Codecov
+   </a>
+   , a tool for reporting code coverage;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://pypi.python.org/pypi" rel="noopener" target="_blank">
+    PyPI
+   </a>
+   , a Python Package Index, a repository of Python packages used by pip;
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://conda-forge.org/" rel="noopener" target="_blank">
+    Conda-forge
+   </a>
+   , a Python package index used by Conda; and
+  </li>
+  <li style="font-weight: 400;">
+   <a href="https://docs.readthedocs.io/en/latest/" rel="noopener" target="_blank">
+    Read the Docs
+   </a>
+   , hosting documentation generated by Sphinx.
+  </li>
+ </ul>
+ <p>
+  <span style="font-weight: 400;">
+   Many of these cloud-based CI services will create badges for the state of your software project, which you can use to display the current status in a top-level view. For PyNWB, these badges are defined in the project’s
+  </span>
+  <a href="https://raw.githubusercontent.com/NeurodataWithoutBorders/pynwb/dev/README.rst" rel="noopener" target="_blank">
+   <span style="font-weight: 400;">
+    README
+   </span>
+  </a>
+  <span style="font-weight: 400;">
+   file. They result in a page that is rendered when you access the GitHub project.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21856" style="width: 451px">
+  <img alt="" class="wp-image-21856 size-full" height="470" sizes="(max-width: 441px) 100vw, 441px" src="https://blog.kitware.com/wp-content/uploads/2018/03/PyNWB-process.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/PyNWB-process.jpg 441w, https://blog.kitware.com/wp-content/uploads/2018/03/PyNWB-process-281x300.jpg 281w, https://blog.kitware.com/wp-content/uploads/2018/03/PyNWB-process-220x234.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/03/PyNWB-process-250x266.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/03/PyNWB-process-355x378.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/03/PyNWB-process-90x96.jpg 90w" width="441"/>
+  <p class="wp-caption-text">
+   PyNWB’s page on GitHub shows badges for pypi package and Anaconda Cloud.
+  </p>
+ </div>
+ <p>
+  The page also includes a download button, a list of commits and an overview. Additional documentation on the project is available at
+  <a href="https://pynwb.readthedocs.io/en/latest" rel="noopener" target="_blank">
+   https://pynwb.readthedocs.io/en/latest
+  </a>
+  .
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Future Posts
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Moving forward, this blog series will offer a general overview of the PyNWB CI process, but it will not cover all of the setup steps in detail. The creation and management of user accounts, as examples, may be more idiosyncratic based on the needs of specific projects. Instead, we will focus on these topics:
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    cross-operating system support, Python 2 and Python 3 support, source distributions and dependency versioning;
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    code coverage, documentation and style; and
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    real-world considerations, including the challenges of maintaining services.
+   </span>
+  </li>
+ </ul>
+ <p>
+  <span style="font-weight: 400;">
+   To be clear, simply using the techniques described in this series won’t result in good code. Writing maintainable and understandable code is like walking on a tightrope, and the tools in this post are like an umbrella. They can help you reach your destination by improving your balance, but they are not enough to save you from falling.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Acknowledgements
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Many people contributed to the software quality process of PyNWB. Thanks to Andrew Tritt for creating the Python test suite; to Andrew Tritt and Oliver Ruebel from Lawrence Berkeley National Laboratory for core development of PyNWB and for setting up the accounts, permissions and discussions; to Chris Martin for coordinating resources between The Kavli Foundation and NWB; to Nick Cain and Justin Kiggins from the Allen Institute for Brain Science for planning and porting PyNWB to Python 2 using the six library; and to the entire NWB team for discussions and collaborative development.
+  </span>
+ </p>
+</div>

@@ -1,0 +1,571 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  1.Background and Introduction
+ </h1>
+ <p>
+  The Insight Toolkit (ITK) was officially modularized in version 4.0.0, released in Dec. 2011 [1,2,7]. Developers have been testing and improving the modular structure since then. At present, the toolkit contains 137 regular/internal modules [5] and four Remote modules [3].
+ </p>
+ <p>
+  Here we will provide step-by-step instructions for ITK community members to take advantage of the modular structure when building a customized ITK library or using it as a third party library in ITK applications. Finally, we will introduce the External and Remote module support, which makes extending the toolkit easier.
+ </p>
+ <p>
+  <em>
+   *The following instructions apply to ITK 4.5.0 and later.
+  </em>
+ </p>
+ <h1>
+  2. Build ITK via CMake GUI
+ </h1>
+ <p>
+  The most common way to build ITK is via the CMake GUI. There are three main approaches to selecting the modules for building the library: the default mode, the group mode, and the advanced module mode.
+ </p>
+ <h2>
+  2.1 Default Mode
+ </h2>
+ <p>
+  By default, most internal ITK modules, except those that depend on external third party libraries (such as ITKVtkGlue, ITKBridgeOpenCV, ITKBridgeVXL, etc. ) and those with legacy code (ITKReview, ITKDeprecated and ITKv3Compatibility), will be built into the ITK library. All non-default modules, which includes the remote modules, have “
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca2c887815298" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     EXCLUDE_FROM_DEFAULT
+    </span>
+   </span>
+  </span>
+  ” tags in their module definition files (itk-module.cmake).
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca33258865777" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     ITK_BUILD_DEFAULT_MODULES
+    </span>
+   </span>
+  </span>
+  is the CMake option to request that all of these default modules be built, and by default this option is
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca35099241060" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     ON
+    </span>
+   </span>
+  </span>
+  (see Figure 1).
+ </p>
+ <div style="text-align: center;">
+  <p>
+   <img alt="" height="327px;" src="https://blog.kitware.com/blog/files/Small.118_89837673.png" width="596px;"/>
+  </p>
+  <p style="line-height: 2em;">
+   Figure 1. CMake GUI for configuring ITK in the default mode: after the first Configure
+  </p>
+ </div>
+ <p>
+  In the advanced mode of the CMake GUI, you can manually toggle the non-default modules via the Module_{module name} options. The
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca37539599662" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-e">
+     Module_
+    </span>
+    <span class="crayon-sy">
+     {
+    </span>
+    <span class="crayon-e">
+     module
+    </span>
+    <span class="crayon-v">
+     name
+    </span>
+    <span class="crayon-sy">
+     }
+    </span>
+   </span>
+  </span>
+  options of the default modules are not available for toggle since they are already requested and enabled via
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca39549772501" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     ITK_BUILD_DEFAULT_MODULES
+    </span>
+    <span class="crayon-o">
+     =
+    </span>
+    <span class="crayon-v">
+     ON
+    </span>
+   </span>
+  </span>
+  (see Figure 2).
+ </p>
+ <div style="text-align: center;">
+  <p>
+   <img alt="" height="514px;" src="https://blog.kitware.com/blog/files/Small.118_1250431499.png" width="571px;"/>
+  </p>
+  <p style="line-height: 2em;">
+   Figure 2. CMake GUI for configuring ITK in the default mode: after the second Configure, in the advance mode it shows options for non-default ITK Modules
+  </p>
+ </div>
+ <p>
+  When
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca3b870181939" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     ITK_BUILD_DEFAULT_MODULES
+    </span>
+   </span>
+  </span>
+  is toggled to be
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca3d397673553" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     OFF
+    </span>
+   </span>
+  </span>
+  , users can then customize the list of default modules to be included in the ITK library, using the the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca3f284822865" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     Group
+    </span>
+   </span>
+  </span>
+  (section 2.2) and
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca41052517807" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     Module
+    </span>
+   </span>
+  </span>
+  (section 2.3) options.
+ </p>
+ <h2>
+  2.2 Group Mode
+ </h2>
+ <p>
+  The CMake variables
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca43479870954" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-e">
+     ITKGroup_
+    </span>
+    <span class="crayon-sy">
+     {
+    </span>
+    <span class="crayon-e">
+     group
+    </span>
+    <span class="crayon-v">
+     name
+    </span>
+    <span class="crayon-sy">
+     }
+    </span>
+   </span>
+  </span>
+  are visible to toggle when
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca45889301900" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     ITK_BUILD_DEFAULT_MODULES
+    </span>
+    <span class="crayon-o">
+     =
+    </span>
+    <span class="crayon-v">
+     OFF
+    </span>
+   </span>
+  </span>
+  . ITK is organized so that groups of modules that have close relationships or similar functionalities reside in the same directory. Presently, there are 11 groups (not including the External and Remote groups). The
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca47314052617" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-e">
+     CMake
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-e">
+     ITKGroup_
+    </span>
+    <span class="crayon-sy">
+     {
+    </span>
+    <span class="crayon-e">
+     group
+    </span>
+    <span class="crayon-v">
+     name
+    </span>
+    <span class="crayon-sy">
+     }
+    </span>
+   </span>
+  </span>
+  option is created for the convenience of enabling or disabling multiple modules at once. The Core group is turned on by default (see Figure 3).
+ </p>
+ <div style="text-align: center;">
+  <p>
+   <img alt="" height="581px;" src="https://blog.kitware.com/blog/files/Small.118_544332529.png" width="588px;"/>
+  </p>
+  <p style="line-height: 2em;">
+   Figure 3. CMake GUI for configuring ITK in the Group Mode
+  </p>
+ </div>
+ <p>
+  When a group is
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca49485944630" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     ON
+    </span>
+   </span>
+  </span>
+  , all the modules in that group and their (recursively) module dependencies are enabled. When a group is turned
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca4b521283319" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     OFF
+    </span>
+   </span>
+  </span>
+  , the modules in the group, except the ones that are required by other enabled modules, default to be
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca4c190464736" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     OFF
+    </span>
+   </span>
+  </span>
+  .
+ </p>
+ <h2>
+  2.3 Advanced Module Mode
+ </h2>
+ <p>
+  If you are not sure about which groups to turn on, but you do have a list of specific modules to be included in your ITK library, you can certainly skip the Group options and use the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca4e934342260" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-e">
+     Module_
+    </span>
+    <span class="crayon-sy">
+     {
+    </span>
+    <span class="crayon-e">
+     module
+    </span>
+    <span class="crayon-v">
+     name
+    </span>
+    <span class="crayon-sy">
+     }
+    </span>
+   </span>
+  </span>
+  options only. For whichever modules are selected, their (recursively) dependent modules are automatically enabled.
+ </p>
+ <p>
+  However, not all the modules will show up in the CMake GUI for toggling, due to the various levels of controls in the previous two modes. If they are already enabled by other options or other modules, they will be hidden from the GUI. For example,
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca50109340455" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-e">
+     Module_
+    </span>
+    <span class="crayon-sy">
+     {
+    </span>
+    <span class="crayon-v">
+     ITKFoo
+    </span>
+    <span class="crayon-sy">
+     }
+    </span>
+   </span>
+  </span>
+  option is hidden for toggle when the module ITKFoo itself is enabled either by 1) module dependencies: ITKBar depends on ITKFoo, or by 2) the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca52647228654" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-e">
+     ITKGroup_
+    </span>
+    <span class="crayon-sy">
+     {
+    </span>
+    <span class="crayon-v">
+     FooAndBar
+    </span>
+    <span class="crayon-sy">
+     }
+    </span>
+   </span>
+  </span>
+  option: ITKFoo belongs to the group, or by 3)
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca53409235668" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     ITK_BUILD_DEFAULT_MODULES
+    </span>
+    <span class="crayon-o">
+     =
+    </span>
+    <span class="crayon-v">
+     ON
+    </span>
+   </span>
+  </span>
+  and ITKFoo is a default module.
+ </p>
+ <p>
+  To find out why a particular module is enabled, check the CMake configuration messages where the module enablement information is displayed (Figure 1). The enablement messages are sorted in alphabetical order by module names.
+ </p>
+ <h1>
+  3. Build ITK via Command Line
+ </h1>
+ <p>
+  For those who prefer to build ITK via the command line syntax, here are some usage examples:
+ </p>
+ <ul>
+  <li>
+   <h4>
+    Example 1: All default modules
+   </h4>
+   <p>
+    <script src="https://gist.github.com/XiaoxiaoLiu/6705157.js" type="text/javascript">
+    </script>
+   </p>
+   <p>
+    The default is
+    <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca55315315607" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+     <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+      <span class="crayon-v">
+       ITK_BUILD_DEFULT_MODULES
+      </span>
+      <span class="crayon-o">
+       =
+      </span>
+      <span class="crayon-v">
+       ON
+      </span>
+     </span>
+    </span>
+    , so it is optional to have this
+    <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca57862573009" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+     <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+      <span class="crayon-o">
+       -
+      </span>
+      <span class="crayon-v">
+       D
+      </span>
+     </span>
+    </span>
+    argument.
+   </p>
+  </li>
+  <li>
+   <h4>
+    Example 2: Enable specific group(s) of modules
+   </h4>
+   <p>
+    <script src="https://gist.github.com/XiaoxiaoLiu/6705188.js" type="text/javascript">
+    </script>
+   </p>
+   <p>
+    <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca59171281064" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+     <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+      <span class="crayon-v">
+       BUILD_EXAMPLES
+      </span>
+      <span class="crayon-o">
+       =
+      </span>
+      <span class="crayon-v">
+       ON
+      </span>
+     </span>
+    </span>
+    requires
+    <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca5a244019515" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+     <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+      <span class="crayon-v">
+       ITK_BUILD_DEFAULT_MODULES
+      </span>
+      <span class="crayon-o">
+       =
+      </span>
+      <span class="crayon-v">
+       ON
+      </span>
+     </span>
+    </span>
+    , therefore it is necessary to add
+    <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca5c024257402" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+     <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+      <span class="crayon-o">
+       -
+      </span>
+      <span class="crayon-v">
+       DBUILD_EXAMPLES
+      </span>
+      <span class="crayon-o">
+       =
+      </span>
+      <span class="crayon-v">
+       OFF
+      </span>
+     </span>
+    </span>
+    to the command line.
+   </p>
+  </li>
+  <li>
+   <h4>
+    Example 3: Enable specific modules
+   </h4>
+   <p>
+    <script src="https://gist.github.com/XiaoxiaoLiu/6705233.js" type="text/javascript">
+    </script>
+   </p>
+  </li>
+ </ul>
+ <h1>
+  4. ITK Applications and Superbuild
+ </h1>
+ <p>
+  For a project that uses ITK as an external library, it is recommended to specify the individual desired ITK modules in the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca5e444679212" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     COMPONENTS
+    </span>
+   </span>
+  </span>
+  argument of the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e7d36ca5f988671355" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     find_package
+    </span>
+   </span>
+  </span>
+  CMake command:
+ </p>
+ <p>
+  <script src="https://gist.github.com/XiaoxiaoLiu/6705276.js" type="text/javascript">
+  </script>
+ </p>
+ <p>
+  If you would like to use the CMake
+  <a href="http://www.kitware.com/media/html/BuildingExternalProjectsWithCMake2.8.html" style="line-height: 2em;">
+   ExternalProject
+  </a>
+  module to download ITK source code when building your ITK application (a.k.a. superbuild ITK), here is a basic CMake snippet for setting up a superbuild in an ITKv4 application project using CMake 2.8.7+:
+ </p>
+ <p>
+  <script src="https://gist.github.com/XiaoxiaoLiu/6704246.js" type="text/javascript">
+  </script>
+ </p>
+ <p>
+  More exemple configurations for superbuild ITK projects can be found in
+  <a href="https://github.com/Slicer/Slicer/blob/master/SuperBuild/External_ITKv4.cmake" style="line-height: 2em;">
+   Slicer
+  </a>
+  ,
+  <a href="https://github.com/BRAINSia/BRAINSTools/blob/master/SuperBuild/External_ITKv4.cmake" style="line-height: 2em;">
+   BrainsTools
+  </a>
+  ,
+  <a href="https://github.com/InsightSoftwareConsortium/ITKWikiExamples/blob/master/Superbuild/External-ITK.cmake" style="line-height: 2em;">
+   ITK Wiki Examples
+  </a>
+  , and
+  <a href="https://github.com/InsightSoftwareConsortium/ITKExamples/blob/master/Superbuild/External-ITK.cmake" style="line-height: 2em;">
+   ITK Sphinx Examples
+  </a>
+  .
+ </p>
+ <h1>
+  5. Extend ITK with External and Remote modules
+ </h1>
+ <p>
+  The modularization effort has significantly improved the extensibility of the toolkit and lowered the barrier for contributions. An External module [4] is distributed outside the ITK main repository, but it could be built into ITK as a module once downloaded into the local copy of ITK source tree. When developing a new ITK module, place it into the Modules/External directory in a local ITK source tree to include it into your ITK library.
+ </p>
+ <p>
+  The next step in the module contribution process is to submit the External module to
+  <a href="http://www.insight-journal.org/">
+   Insight Journal
+  </a>
+  for review. Once the External module passes dashboard testing and peer review,  it can be made into a Remote module [3], which will be disseminated  from ITK itself while allowing its source code to be distributed independently of the main ITK repository. To be more specific, the source code of a Remote module can be downloaded by CMake (with a CMake variable switch) at ITK CMake configuration time, making it a convenient way to distribute modular source code without increasing the size of the main repository. After the Remote Module has experienced sufficient testing, and community members express broad interests in the contribution, the submitter can then move the contribution into the ITK repository via Gerrit code review.
+ </p>
+ <p>
+  It is possible but not recommended to directly submit a module to Gerrit for review without submitting to Insight Journal first. There are no established rules on whether a module should be directly merged into the main repository or not. But a nice IJ article describing the functionalities and the designs behind the module  is a great way to provide extra documentations on the code and could serve as good
+  <a href="http://www.kitware.com/products/books/ITKsoftware.html">
+   ITK Software Guide
+  </a>
+  material in the future.  Figure 4 illustrates the module contribution channels.
+ </p>
+ <div style="text-align: center;">
+  <p>
+   <img alt="" height="354px;" src="https://blog.kitware.com/blog/files/Small.118_405648281.png" width="419px;"/>
+  </p>
+  <p style="line-height: 2em;">
+   Figure 4. Contribute a module to ITK
+  </p>
+ </div>
+ <h1>
+  6. Summary and Discussion
+ </h1>
+ <p>
+  For most ITK consumers/users, the modularization of the toolkit is relatively transparent. The default configuration includes all the (default) modules into the ITK library, which is used to build their own ITK applications; For ITK developers and more advanced users, the modular structure has changed the rules for organizing the source code, building the library and contributing to ITK community. The Remote Module infrastructure enables fast dissemination of research code through ITK without increasing the size of the main repository. The Insight Journal also added supports for ITK module submissions with automatic dashboard testing. The VTK community had followed closely with the modularization progress in ITK, and VTK had been equipped with the same internal modular architecture with slightly different configuration options [6].
+ </p>
+ <p>
+  The adaptation to the new modular architecture takes time. Hopefully this blog provides some useful guidance to assist this transition for our community members. Please let us know if you find problems with the instructions, or if you have questions or suggestions. Your comments are always  welcomed.
+ </p>
+ <p>
+  <strong style="line-height: 2em;">
+   References:
+  </strong>
+ </p>
+ <p>
+  [1] Wiki page for ITK modularization:
+  <a href="http://www.itk.org/Wiki/ITK/Release_4/Modularization">
+   http://www.itk.org/Wiki/ITK/Release_4/Modularization
+  </a>
+ </p>
+ <p>
+  [2] How to organize your ITK code into a ITK module:
+  <a href="http://insightsoftwareconsortium.github.io/ITKBarCamp-doc/ITK/ConstructITKModule/index.html">
+   http://insightsoftwareconsortium.github.io/ITKBarCamp-doc/ITK/ConstructITKModule/index.html
+  </a>
+ </p>
+ <p>
+  [3] ITK remote modules:
+  <a href="http://www.itk.org/Wiki/ITK/Policy_and_Procedures_for_Adding_Remote_Modules">
+   http://www.itk.org/Wiki/ITK/Policy_and_Procedures_for_Adding_Remote_Modules
+  </a>
+ </p>
+ <p>
+  [4] ITK external modules:
+  <a href="http://www.itk.org/Wiki/ITK/Release_4/Modularization/Add_an_external_module_(external_module)">
+   http://www.itk.org/Wiki/ITK/Release_4/Modularization/Add_an_external_module_(external_module)
+  </a>
+ </p>
+ <p>
+  [5] Doxygen page for ITK modules:
+  <a href="http://www.itk.org/Doxygen/html/modules.html">
+   http://www.itk.org/Doxygen/html/modules.html
+  </a>
+ </p>
+ <p>
+  [6] VTK Modularization and Modernization:
+  <a href="https://blog.kitware.com/vtk-modularization-and-modernization/">
+   http://www.kitware.com/blog/home/post/496
+  </a>
+ </p>
+ <p>
+  [7] ITK modularization: Divide and Conquer:
+  <a href="https://blog.kitware.com/divide-and-conquer/">
+   http://www.kitware.com/source/home/post/34
+  </a>
+ </p>
+</div>

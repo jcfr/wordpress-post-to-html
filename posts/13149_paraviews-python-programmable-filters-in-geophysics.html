@@ -1,0 +1,416 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  With the ability to write data sources and filters in Python code within a ParaView pipeline, we are able to quickly prototype added functionality that our geodynamic scientists are eager to use. This article provides details on the implementation of a selection of these filters as Python programmable filters. Some of the added features are generic enough to be used by other communities of users.
+ </p>
+ <p>
+  The Visualization Toolkit (VTK) does not have a native spherical grid structure for data based on spherical coordinates (R-, θ-, Φ). Using a
+  <code>
+   vtkStructuredGrid
+  </code>
+  , we are able to maintain a spherical grid structure, enabling volume of interest (VOI) selection for certain radii or for latitudinal or longitudinal subsections.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Geophysics and Climate Related Data
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  In the study of convection-driven dynamo models in Earth-like planets, the flow in rapidly rotating convection is dominated by columns aligned with the axis of rotation. It is thus naturally more interesting to sample such spherical data with cylinders aligned with the poles. However, it is best to display the data as an unwrapped sheet on a piece of paper. Likewise, the display of constant-radius surfaces such as the outer surface of the Earth is traditionally done with well-known cartographic projections, such as the Mercator, Winkel, or Hammer projections, to cite just a few. We are in luck. VTK includes all of the mappings of the PROJ.4 library [1]. The challenge is to get to the library from ParaView.
+ </p>
+ <p>
+  We have prototyped sampling spherical data with cylinders and displaying the data as an unwrapped sheet with Python programmable sources and filters.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Cylindrical Sampling
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Our driving goal is to use a structured grid, instead of a
+  <code>
+   vtkPolyData
+  </code>
+  object, in order to further manipulate the resampled data using NumPy’s numerous methods of data analysis. To do so, we create a two-dimensional (2D)
+  <code>
+   vtkStructuredGrid
+  </code>
+  at the required sampling resolution and use two copies of the grid.
+ </p>
+ <p>
+  <a href="/source/files/134_1508377034.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1508377034.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: Cylindrical data resampling of the radial component of the magnetic field (Br).
+  </em>
+ </p>
+ <p>
+  The first one has coordinates wrapped into cylindrical space to sample the output volume, and the second one is a flat sheet for printing. We add the copies of the grid to a
+  <code>
+   vtkMultiBlockDataset
+  </code>
+  structure of a programmable source.
+ </p>
+ <p>
+  <code>
+   import numpy as np
+   <br/>
+   from vtk.numpy_interface import algorithms as algs
+   <br/>
+   from vtk.numpy_interface \
+   <br/>
+   import dataset_adapter as dsa
+   <br/>
+   executive = self.GetExecutive()
+   <br/>
+   outInfo = executive.GetOutputInformation(0)
+   <br/>
+   exts = [executive.UPDATE_EXTENT().Get(outInfo, i)
+  </code>
+  <br/>
+  <code>
+   for i in xrange(6)]
+   <br/>
+   whole = [executive.WHOLE_EXTENT().Get(outInfo, i)
+   <br/>
+   for i in xrange(6)]
+   <br/>
+   global_dims = ([whole[1]-whole[0]+1,
+   <br/>
+   whole[3]-whole[2]+1, whole[5]-whole[4]+1])
+  </code>
+ </p>
+ <p>
+  <code>
+   # first output is the wrapped plane
+   <br/>
+   sg0 = vtk.vtkStructuredGrid()
+   <br/>
+   sg0.SetExtent(exts)
+   <br/>
+   Radius = 0.8
+   <br/>
+   ThetaAxis = np.linspace(-np.pi,np.pi,
+   <br/>
+   global_dims[0])
+   <br/>
+   PhiAxis = np.linspace(-np.pi*.5,np.pi*.5,
+   <br/>
+   global_dims[1])
+   <br/>
+   xc, zc = np.meshgrid(ThetaAxis,PhiAxis,
+   <br/>
+   indexing="xy")
+   <br/>
+   Xc = Radius * np.sin(xc)
+   <br/>
+   Yc = Radius * np.cos(xc)
+   <br/>
+   coordinates = algs.make_vector(Xc.ravel(),
+   <br/>
+   Yc.ravel(), Radius * zc.ravel())
+   <br/>
+   pts = vtk.vtkPoints()
+   <br/>
+   pts.SetData(dsa.numpyTovtkDataArray(coordinates,
+   <br/>
+   "Points"))
+   <br/>
+   sg0.SetPoints(pts)
+  </code>
+ </p>
+ <p>
+  <code>
+   # second output is the “flat” plane
+   <br/>
+   sg1 = vtk.vtkStructuredGrid()
+   <br/>
+   sg1.SetExtent(exts)
+   <br/>
+   zc_other = np.zeros(xc.size).reshape(xc.shape)
+   <br/>
+   coordinates = algs.make_vector(xc.ravel(),
+   <br/>
+   zc.ravel(), zc_other.ravel())
+   <br/>
+   pts = vtk.vtkPoints()
+   <br/>
+   pts.SetData(dsa.numpyTovtkDataArray(coordinates,
+   <br/>
+   "Points"))
+   <br/>
+   sg1.SetPoints(pts)
+   <br/>
+   output.SetBlock(0, sg0)
+   <br/>
+   output.SetBlock(1, sg1)
+  </code>
+ </p>
+ <p>
+  Once the volume is resampled, the 2D array of data can be further processed. For example, we can perform one-dimensional (1D) averages over latitude or longitude. While performing the average can be done with one line of code with NumPy, it takes a few more lines of code to make it happen in ParaView, as we need to create a
+  <code>
+   vtkTable
+  </code>
+  to be able to make a plot in an
+  <code>
+   XYChartView
+  </code>
+  .
+ </p>
+ <p>
+  <a href="/source/files/134_33198430.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_33198430.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: Latitudinal average of Br.
+  </em>
+ </p>
+ <p>
+  <code>
+   import numpy as np
+   <br/>
+   executive = self.GetExecutive()
+   <br/>
+   outInfo = executive.GetOutputInformation(0)
+   <br/>
+   whole = [executive.WHOLE_EXTENT().Get(outInfo, i)
+   <br/>
+   for i in xrange(6)]
+   <br/>
+   inData = inputs[0].PointData['Br']
+   <br/>
+   data = np.mean(inData.reshape(whole[3]+1,
+   <br/>
+   whole[1]+1), axis=0)
+   <br/>
+   # used as X axis for plot
+   <br/>
+   output.RowData.append(np.linspace(-180, 180,
+   <br/>
+   whole[1]+1), "longitude")
+   <br/>
+   output.RowData.append(data, "latitudinal_average")
+  </code>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     3D Longitudinal Averaging
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  NumPy can be used on arrays with multiple dimensions. Using the original three-dimensional (3D) volume’s first meridian slice (0 degrees east longitude), we can display a longitudinal average. The input to NumPy is an
+  <code>
+   NxMxP
+  </code>
+  array. This time, NumPy’s mean will produce a
+  <code>
+   1xMxP
+  </code>
+  array, which we append to the zero-th slice of the volume in our [Φ, θ, R] space.
+ </p>
+ <p>
+  <a href="/source/files/134_1902986747.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1902986747.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3: Averaging over the first (longitude) direction.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Spherical Sampling Unwrapped
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  There are cases when we wish to sample the data on a spherical shell. Some solvers in geodynamics use unstructured grids, and the ability to recover shell-like surfaces is of great interest. We extend our previous sampling by creating a 2D grid at the required sampling resolution. It is wrapped as a sphere for sampling and unwrapped for display.
+ </p>
+ <p>
+  <a href="/source/files/134_1673889476.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1673889476.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 4: A spherical shell used to sample any grid is flattened for display (from 180 degrees west longitude to 180 degrees east longitude).
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     2D Cartographic Projections
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The outer surface of the Earth is extracted as a VOI, and it becomes an
+  <code>
+   NxMx1 vtkStructuredGrid
+  </code>
+  , which can again be mapped onto a flat sheet of paper. We attach texture coordinates to the grid in order to map photography to the display. Here, we include only a few lines of code with the following core ideas:
+ </p>
+ <p>
+  <a href="/source/files/134_1335786860.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1335786860.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 5: Texture-mapped Earth photography (top left), projected data (bottom left), and 3D spherical data (right) on the core-mantle boundary.
+  </em>
+ </p>
+ <p>
+  <code>
+   import vtk, vtkGeovisCorePython
+   <br/>
+   from vtk.numpy_interface import algorithms as algs
+   <br/>
+   import numpy as np
+  </code>
+ </p>
+ <p>
+  <code>
+   # Create a Projection Source
+   <br/>
+   proj = vtkGeovisCorePython.vtkGeoProjectionSource()
+   <br/>
+   proj.SetProjection(ProjectionName['Hammer'])
+  </code>
+ </p>
+ <p>
+  <code>
+   # Create 1D data arrays for textures and axis
+   <br/>
+   longitude = np.linspace(-180.,180., global_dims[0])
+   <br/>
+   latitude  = np.linspace(-90. ,90. , global_dims[1])
+   <br/>
+   tex_0 = np.linspace(0.,1., global_dims[0])
+   <br/>
+   tex_u = np.tile(tex_0, yres)
+   <br/>
+   tex_1 = np.linspace(0.,1., global_dims[1])
+   <br/>
+   tex_v = np.tile(tex_1, (xres, 1)).T.ravel()
+   <br/>
+   texture_coords = algs.make_vector(tex_u, tex_v)
+  </code>
+ </p>
+ <p>
+  <code>
+   newPoints = vtk.vtkPoints()
+   <br/>
+   proj.GetTransform().TransformPoints(inPts, newPoints)
+   <br/>
+   output.SetPoints(newPoints)
+   <br/>
+   output.PointData.append(texture_coords,
+   <br/>
+   "TextureCoordinates")
+   <br/>
+   output.PointData.SetActiveTCoords("TextureCoordinates")
+  </code>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Parallel Support
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The simulation outputs we use often have resolutions in the range of 100-200 m cells. Implementing a parallel reader is our first priority. Once running ParaView in parallel, we carefully implement our programmable filters to manage the data subdivisions. The filters set the key
+  <code>
+   CAN_PRODUCE_SUB_EXTENT()
+  </code>
+  , and careful indexing (not shown in the source code above for clarity) is used to treat partial results.
+ </p>
+ <p>
+  <a href="/source/files/134_1452433055.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1452433055.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 6: Data subdivision among
+   <code>
+    pvservers
+   </code>
+   .
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Summary
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  We have found the use of ParaView’s programmable filters and sources to be very convenient to prototype new ideas, giving us access to the full VTK Python modules that are available under the hood. Furthermore, combining the strength of NumPy and the ease-of-use of the
+  <code>
+   vtk.numpy_interface
+  </code>
+  package has provided a powerful environment to customize ParaView for different user communities.
+ </p>
+ <p>
+  We thank Andrew Jackson and Andrey Sheyko [2] of the Eidgenössische Technische Hochschule (ETH) Zürich Institute of Geophysics, who contributed data and motivation for these ParaView developments.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [1] Open Source Geospatial Foundation. “PROJ.4 – Cartographic Projections Library.” OSGeo/proj.4.
+  <a href="https://github.com/OSGeo/proj.4/wiki">
+   https://github.com/OSGeo/proj.4/wiki
+  </a>
+  .
+  <br/>
+  [2] Sheyko, Andrey. “Numerical investigations of rotating MHD in a spherical shell.” Diss., Eidgenössische Technische Hochschule ETH Zürich, Nr. 22035, 2014.
+ </p>
+ <p>
+  <a href="/source/files/134_1272330125.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1272330125.png" style="width: 98px; height: 121px; float: left;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Jean Favre
+  </strong>
+  is the Visualization Task Leader at the Swiss National Supercomputer Centre (CSCS) in Lugano, Switzerland.
+ </p>
+</div>

@@ -1,0 +1,152 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400">
+   The power of the open source
+  </span>
+  <a href="https://pulse.kitware.com/">
+   <span style="font-weight: 400">
+    Pulse physiology platform
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   lies in the ability to simulate whole body patient physiology faster than real-time. Pulse is also a one-stop shop for the various physiology needs of medical device and manikin developers. During our recent attendance at the International Meeting on Simulation in Healthcare (
+  </span>
+  <a href="http://imsh2018.com/">
+   <span style="font-weight: 400">
+    IMSH
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   ), we talked with several hardware developers who showed great interest in adding live, validated physiology data from the Pulse engine to their systems. Most of these manufacturers integrate their system controls on a small form factor, and require lean components to run on a single-board computer (SBC) that are portable and use minimal power. The natural question that arises is: How fast does the Pulse physiology engine run on low cost, commercially available SBCs? To this end, we have tested Pulse on various SBC architectures. This blog post reports the results and outlines our plans for the future in supporting various SBCs.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In these tests, we only focused on various boards using an
+  </span>
+  <a href="https://en.wikipedia.org/wiki/ARM_Cortex-A">
+   <span style="font-weight: 400">
+    ARM Cortex A series core
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   . Most SBCs utilize this architecture for its the low-power, low-cost option and its ability to drive the computing power necessary for a complex hardware system. In our tests we included a
+  </span>
+  <a href="https://beagleboard.org/black">
+   <i>
+    <span style="font-weight: 400">
+     BeagleBone Black
+    </span>
+   </i>
+  </a>
+  <span style="font-weight: 400">
+   with uses the first A-series processor, the A8; an
+  </span>
+  <a href="https://www.asus.com/us/Single-Board-Computer/Tinker-Board/">
+   <i>
+    <span style="font-weight: 400">
+     ASUS Tinker Board
+    </span>
+   </i>
+  </a>
+  <span style="font-weight: 400">
+   featuring an A17 processor
+  </span>
+  <span style="font-weight: 400">
+   ; an
+  </span>
+  <i>
+   <span style="font-weight: 400">
+    <a href="https://wiki.odroid.com/odroid-xu4/odroid-xu4">
+     ODROID XU4
+    </a>
+    with both an A15 and A7 processor;
+   </span>
+  </i>
+  <span style="font-weight: 400">
+   the
+  </span>
+  <a href="https://www.raspberrypi.org/products/raspberry-pi-3-model-b/">
+   <i>
+    <span style="font-weight: 400">
+     Raspberry Pi 3B
+    </span>
+   </i>
+  </a>
+  <span style="font-weight: 400">
+   , which features the latest ARM Cortex A53; the
+  </span>
+  <a href="https://developer.qualcomm.com/hardware/dragonboard-410c">
+   <i>
+    <span style="font-weight: 400">
+     DragonBoard 410c
+    </span>
+   </i>
+  </a>
+  <span style="font-weight: 400">
+   backed by Qualcomm’s A53 based SnapDragon processor; and finally the
+  </span>
+  <a href="http://en.t-firefly.com/product/Rk3399/index.html">
+   <i>
+    <span style="font-weight: 400">
+     FireFly RK3399
+    </span>
+   </i>
+  </a>
+  <span style="font-weight: 400">
+   featuring Rockchips implementation of the high performance A72 core.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21948" style="width: 883px">
+  <img alt="" class="wp-image-21948 " height="277" sizes="(max-width: 873px) 100vw, 873px" src="http://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-1024x325.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-1024x325.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-300x95.jpg 300w, https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-768x244.jpg 768w, https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-220x70.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-250x79.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-355x113.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-730x232.jpg 730w, https://blog.kitware.com/wp-content/uploads/2018/03/20180316_163123-1-e1521898590425-90x29.jpg 90w" width="873"/>
+  <p class="wp-caption-text">
+   <em>
+    From Left to Right: BeagleBone Black, Tinker Board, ODROID XU4, Raspberry Pi 3B, DragonBoard 410c, Firefly RK3399
+   </em>
+  </p>
+ </div>
+ <p>
+  <span style="font-weight: 400">
+   For each of these boards, we compiled the Pulse physiology engine (as detailed on our
+  </span>
+  <a href="https://gitlab.kitware.com/physiology/engine">
+   <span style="font-weight: 400">
+    repository
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   ) then executed it to simulate 120s of whole body physiology. The Pulse engine executes on a single core and generally uses the same computing resources regardless of how many insults given to the patient, such as a hemorrhage, drugs, or pneumothorax. During this execution, we output the amount of time it took to simulate every 10 seconds of physiology. Our goal is to ensure the engine runs fast enough on these processors so that in conjunction with other components, a hardware system will be able to provide data in real-time or faster to an end user (i.e., simulate 1 second of patient physiology faster than 1 second).
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21973" style="width: 950px">
+  <img alt="" class="wp-image-21973 size-full" height="356" sizes="(max-width: 940px) 100vw, 940px" src="http://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables.png 940w, https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables-300x114.png 300w, https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables-768x291.png 768w, https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables-220x83.png 220w, https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables-250x95.png 250w, https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables-355x134.png 355w, https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables-730x276.png 730w, https://blog.kitware.com/wp-content/uploads/2018/03/BenchMarking-Tables-90x34.png 90w" width="940"/>
+  <p class="wp-caption-text">
+   SBC performance. Red is slower than real-time; Yellow is faster than real-time, but may limit other complex system processing; and Green is faster than real time and can easily support more system processing.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_21954" style="width: 772px">
+  <img alt="" class="wp-image-21954 size-full" height="131" sizes="(max-width: 762px) 100vw, 762px" src="http://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables.png 762w, https://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables-300x52.png 300w, https://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables-220x38.png 220w, https://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables-250x43.png 250w, https://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables-355x61.png 355w, https://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables-730x125.png 730w, https://blog.kitware.com/wp-content/uploads/2018/03/Desktop-BenchMarking-Tables-90x15.png 90w" width="762"/>
+  <p class="wp-caption-text">
+   Several Benchmark statistics on average quality Intel based computers
+  </p>
+ </div>
+ <p>
+  <span style="font-weight: 400">
+   Our goal for this benchmarking was to identify a sampling of ARM cores that target various power and cost points while still being able to maintain faster than real-time calculations of the Pulse physiology engine. The key difference between the ARMv7 and the ARMv8 is that only the ARMv8 supports 64 bit processing. Pulse has been tested and validated in both 32 and 64 bit processes and has shown no discernible difference in physiology results. We did find that the power efficient A53 based boards did meet our real-time requirements in executing Pulse. While the A53 does provide time for things like a network communication processes, it may not provide enough computation power for other complex system components. We feel the A53 provides a minimum system spec for a SBC running only Pulse while the A7 was just not powerful enough to adequately run Pulse at all to be effective in a hardware architecture. The A17 and A72 are the premier ARMv7 and ARMv8 processors respectively, and provide plenty of computational power to execute Pulse at a very high rate as shown in the table.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The results of this analysis show that the Pulse engine allows system designers plenty of options in cost and architecture while designing their systems to be real-time. Kitware will continue to optimize Pulse to improve its performance on SBCs while at the same time testing Pulse on various platforms and operating systems to ensure it can be leveraged in wide-ranging system architectures. Kitware is available to help you customize, design, and integrate Pulse into your application. To learn more about how Kitware can help your development efforts, please contact
+  </span>
+  <a href="mailto:kitware@kitware.com">
+   <span style="font-weight: 400">
+    kitware@kitware.com
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+</div>

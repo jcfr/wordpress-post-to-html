@@ -1,0 +1,46 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p style="text-align: center;">
+  ParaView’s ability to process and visualize massive datasets is based on VTK’s streaming functionality. In ParaView, identical copies of the visualization pipeline are run on many machines and each pipeline is asked to process a different small portion, or piece, of the input data. Together the machines process the entire dataset simultaneously, and no machine ever exceeds the capacity of its local RAM.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" src="https://blog.kitware.com/source/files/3_1739435014_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Refinement at work in the analysis of a 3600x2400x42 chlorofluorocarbon (CFC) concentration simulation study, being performed on a 32-bit laptop PC. Yellow outlines identify “pieces”. At this point, ParaView has progressed seven levels down into a nine level deep piece refinement tree. Blue outlines show individual cells. At the lowest level cells are already at sub-pixel resolution.
+  </em>
+ </p>
+ <p>
+  VTK’s ability to break up data is called streaming, because when the data can be divided it is also possible to iterate over the pieces. In data parallel processing you stretch the problem over a larger amount of RAM whereas in streaming you stretch the problem over a longer time. Iterative streamed rendering proceeds, for example, by rendering each piece in turn without clearing the color or depth buffer, using the persistent Z-buffer to resolve occlusion for individual triangles both within a piece and across pieces. In practice, streaming and data parallel processing are orthogonal and can be combined by dividing the problem into P sets of I pieces.
+ </p>
+ <p>
+  In many computational processes and especially rendering, it is often the case that only a small fraction of the entire data contributes to the end result. Prioritized streaming processes only those pieces that contribute to the final result (ignoring pieces that are off-screen, for example) and processes them in a most important (i.e. nearest to the camera) to least important order. This variation of streaming has great benefits including eliminating unnecessary processing and IO [1] and providing more immediate feedback to the user to speed the data discovery process [2]. Prioritized streaming is the basis for the experimental branded application called StreamingParaView. StreamingParaView was first introduced in ParaView 3.6.
+ </p>
+ <p>
+  VTK’s streaming has an interesting feature in that it’s possible to ask for data in arbitrarily small chunks. Streaming is driven by asking for different pieces at the downstream end of the pipeline (ex vtkPolyDataMapper::SetPiece()). One asks for smaller pieces by asking for pieces out of a larger set (ex vtkPolyDataMapper::SetNumberOfPieces()). What is interesting about this is that as the chunk size decreases – assuming prioritization is in effect – the work done to produce a given visualization approaches the minimal amount necessary.
+ </p>
+ <p>
+  We recently added the ability to ask for data at differing resolution levels to VTK’s streaming support. It is now possible to not only ask for arbitrary pieces, but also to ask for them at arbitrary resolutions. The mechanics are similar to VTK’s temporal support [3]. One asks the pipeline to provide data at a given requested resolution. This request is a dimensionless number that ranges from 0.0 meaning lowest resolution to 1.0 meaning full resolution. If unspecified, full resolution is assumed. The request travels up the pipeline to the reader, which decides how to interpret this number. Structured data sources use the resolution to choose how coarsely to subsample in the i, j and k dimensions and adjust their x, y and z spacing to compensate accordingly. As in the temporal pipeline, the result is free to vary from what was requested. To support this, the reader inserts a resolution answer key into the data it produces, which then travels back down the pipeline to the requester.
+ </p>
+ <p>
+  The following is a code example from VTK which asks the pipeline to: compute the priority for a particular piece at a particular resolution, conditionally update the pipeline to produce the requested piece and then examine the returned resolution result.
+ </p>
+ <table border="0" style="width: 650px; background-color: #d2d2d0;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      vtkStreamingDemandDrivenPipeline * filtersExec =
+      <br/>
+      vtkStreamingDemandDrivenPipeline::SafeDownCast
+      <br/>
+      (aFilter-&gt;GetExecutive());
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+</div>

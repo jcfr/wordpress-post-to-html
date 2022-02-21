@@ -1,0 +1,749 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  According to a report published by the International Telecommunication Union, there were six billion mobile subscriptions at the end of 2011 (see Figure 1). Also, in 2011, sales of smartphone surged to 472 million units. A smartphone is a mobile phone built on a mobile computing platform, with more advanced computing ability and connectivity than a feature phone.  The new generation of smartphones offer various multimedia capabilities including interactive games and applications.  This is become possible because of the recent improvements in mobile hardware and software. These significant improvements also enabled scientific community to use mobile devices for visualization purposes.  For example, Zhou et al [3] has investigated how to achieve volume visualization on mobile devices; Tesch et al [4] developed a system that uses mobile devices for interacting and exchanging data between heterogeneous scientific visualization systems; and Roudaut et al [5] presented their work on interaction techniques for mobile devices. Though technically impressive, none of these offer a general, extensible, and open-source framework for enabling developers to build high performance visualization applications on mobile devices.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_1458255118.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1458255118.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <em>
+   <strong>
+    <br/>
+    Figure 1: Unstructured Mesh for YF-17 Visualized using VTK and VES Library
+   </strong>
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_1278176544.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1278176544.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <strong>
+   <em>
+    <br/>
+    Figure 2: Growth of Mobile Subscriptions
+   </em>
+  </strong>
+ </p>
+ <p>
+  The VES framework [11] has been developed to address these limitations. It puts powerful tools at the fingertips of developers to enable the building of high performance visualization applications on mobile devices. VES is an open-source framework for accelerating mobile visualizations on current generation mobile hardware. VES consists of two core libraries: VES and Kiwi. The VES library provides rendering capabilities and infrastructure for scene management by utilizing OpenGL ES 2.0 [8] whereas the Kiwi library provides an application framework and is built on top of VES and VTK [6]. In this article, we will discuss the architecture and various components of the VES library along with code snippets to explain the API offered by the VES library.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_331015252.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_331015252.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <strong>
+   <em>
+    <br/>
+    Figure 3: Architecture of VES
+   </em>
+  </strong>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: small; color: #333399;">
+    Architecture &amp; Implementation
+   </span>
+  </strong>
+  <br/>
+  As previously mentioned, the VES library provides scene management and rendering functionalities to the applications developed using the VES framework. It uses OpenGL ES 2.0 as the underlying rendering API, which is a subset of OpenGL for desktop and replaces the fixed function transformations and fragment pipeline of OpenGL 1.x. OpenGL does not provide a high-level, object-oriented API for the application development, which the VES library provides to reduce time and effort to build visualization applications.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_639272944.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_639272944.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <em>
+   <strong>
+    <br/>
+    Figure 4: Components of VES Library
+   </strong>
+  </em>
+ </p>
+ <p>
+  <strong>
+  </strong>
+  As shown in Figure 4, the VES library is composed of multiple components, each of which offers a unique feature within the library. The next few sections will cover some of these components and the underlying technology in detail.
+ </p>
+ <p>
+  <strong>
+   Scene Graph
+  </strong>
+  <br/>
+  The VES library uses scene graph data structures to manage scenes efficiently. A scene graph is a data structure that provides spatial and logical relationships between various entities of a scene. A scene graph can be implemented in many ways and some of the open source implementations of a scene graph are inspired by the design of OpenGL Performer, one of the well-known scene graph libraries from SGI [7]. The VES library is built using the same core principles and additionally provides a consistent, easy-to-use API to allow applications to take advantage of programmable pipeline functionality of OpenGL ES 2.0. Figure 5 shows the inheritance hierarchy in the VES scene graph.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_650182827.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_650182827.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <em>
+   <strong>
+    <br/>
+    Figure 5: Inheritance Hierarchy in VES Scene Graph
+   </strong>
+  </em>
+ </p>
+ <p>
+  <strong>
+   Rendering Pipeline
+  </strong>
+  <br/>
+  Rendering in the VES library is a three-pass algorithm as shown in Figure 6. VES renders the scene by traversing it in a depth-first manner. At the API level, the VES library separates the geometry data from the appearance of the geometry. The appearance of the geometry is captured by the notion of a material in the VES library.
+ </p>
+ <p>
+  <a href="/source/files/4_652258427.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_652258427.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <strong>
+   <em>
+    Figure 6: Rendering Model in VES
+   </em>
+  </strong>
+ </p>
+ <p>
+  <strong>
+  </strong>
+  This separation facilitates reuse of geometry and/or material if required by an application. Since state change in OpenGL is an expensive operation, VES library constructs and renders a scene tree in which geometry data is grouped by the material. Also, the library provides a notion of bins, where a material and associated geometries with a higher bin number are rendered after the material and associated geometries with a lower bin number.
+ </p>
+ <p>
+  <strong>
+   Programmable Pipeline
+  </strong>
+  <br/>
+  OpenGL ES 2.0 replaces the fixed function pipeline of OpenGL 1.x. Figure 7 shows the programmable pipeline of ES 2.0.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_312392210.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_312392210.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <br/>
+  <em>
+   <strong>
+    Figure 7: OpenGL ES 2.0 Programmable Pipeline (source: khronos.org)
+   </strong>
+  </em>
+ </p>
+ <p>
+  In OpenGL ES 2.0, it is necessary to provide a vertex and a fragment shader in order to render geometry primitives. Vertex shaders can be used for traditional, vertex-based operations such as transforming the position with a matrix, computing the lighting equation to generate a per-vertex color, and generating or transforming the texture coordinates. The fragment shader is a general-purpose method for interacting with fragments. A simple in-source shader to render geometry in the VES library is shown in Listing 1.
+ </p>
+ <p>
+  <span style="font-size: x-small;">
+   <strong>
+   </strong>
+   <span style="font-family: courier new,courier;">
+    // Define vertex shader to be used
+   </span>
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // for rendering
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   const std::string vertexShaderSource =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   “uniform highp mat4 modelViewMatrix;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   uniform highp mat4 projectionMatrix;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   attribute highp vec4 vertexPosition;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   attribute mediump vec4 vertexColor;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   varying mediump vec4 varColor;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   void main()
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   gl_Position = projectionMatrix *
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   modelViewMatrix * vertexPosition;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   varColor = vertexColor;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   }”;
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // Define fragment shader to be used for
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // rendering
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   const std::string fragmentShaderSource =
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   “varying mediump vec4 varColor;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   void main()
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   {
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   gl_FragColor = varColor;
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   }”;
+  </span>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <strong>
+    Listing 1: Simple Shader to Render a Geometry in the VES Library
+   </strong>
+  </em>
+ </p>
+ <p>
+  The way vertex attributes and uniforms are passed to the pipeline are somewhat different; but due to the fact that they are both inputs to the shader program, it is important to provide a consistent API to bind uniforms and vertex attributes to a shader. In Listing 2, we have shown how to pass uniforms and vertex attributes to the rendering pipeline.
+ </p>
+ <p>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // See listing 1 for vertexShaderSource and
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // fragmentShaderSource
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   ….
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   ….
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // Create shader objects
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   vesShader::Ptr m_vertexShader
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (new vesShader(vesShader::Vertex));
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   vesShader::Ptr m_fragmentShader
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (new vesShader(vesShader::Fragment));
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // Set shader sources (from Listing 1)
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_vertexShader-&gt;setShaderSource
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (vertexShaderSource);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_fragmentShader-&gt;setShaderSource
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (fragmentShaderSource);
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // Add shader to shader program
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_shaderProgram-&gt;addShader
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_vertexShader);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_shaderProgram-&gt;addShader
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_fragmentShader);
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // Add uniforms to the shader program
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_shaderProgram-&gt;addUniform
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_modelViewUniform);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_shaderProgram-&gt;addUniform
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_projectionUniform);
+  </span>
+  <br/>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // Add vertex attributes to the shader program
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_shaderProgram-&gt;addVertexAttribute
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_positionVertexAttribute,
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   vesVertexAttributeKeys::Position);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_shaderProgram-&gt;addVertexAttribute
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_normalVertexAttribute,
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   vesVertexAttributeKeys::Normal);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_shaderProgram-&gt;addVertexAttribute
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_colorVertexAttribute,
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   vesVertexAttributeKeys::Color);
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // Shader program is an attribute of
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   // the material.
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   this-&gt;m_material-&gt;addAttribute
+  </span>
+  <br/>
+  <span style="font-family: courier new,courier; font-size: x-small;">
+   (this-&gt;m_shaderProgram);
+  </span>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <strong>
+    Listing 2: Uniforms and Vertex Attributes Binding  to the Pipeline
+   </strong>
+  </em>
+ </p>
+ <p>
+  In the previous example, we used predefined vertex attributes keys such as Position, Normal, and Color. These keys are provided for convenience (internally defined as enums) and applications are allowed to add a new key if desired. This design makes it convenient and flexible to bind multiple vertex attributes to the shader, where each attribute is identified by its key. The mechanism for linking vertex attributes to the geometry data using a key is explained in the following section on geometry data.
+ </p>
+ <p>
+  <strong>
+   Geometry Data
+  </strong>
+  <br/>
+  The VES library provides a very flexible data structure for defining geometry for the purpose of rendering. Some of the highlights of the VES library geometry data are:
+ </p>
+ <ul>
+  <li>
+   Support for interleaved or separated data arrays
+  </li>
+  <li>
+   Any number of coordinate systems for the point data
+  </li>
+  <li>
+   Support for different basic types for the point data
+  </li>
+  <li>
+   Separation of point data from the cell data
+  </li>
+  <li>
+   Extensible data structure
+  </li>
+ </ul>
+ <p>
+  VES geometry data structure is inspired by the collada file format specifications [9] where geometry is composed of one-or-more sources. Source in the VES library defines the per vertex data to be used for rendering or computation purposes. For example, in Listing 3, we have shown a code snippet to define a source data, which stores the vertex positions of a geometry.
+ </p>
+ <p>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   // Define vertex data structure
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   struct vesVertexDataP3f
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vesVector3f m_position;
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   };
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   // Define source data structure to store
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vertex positions
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   class vesSourceDataP3f :
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   public vesGenericSourceData&lt;vesVertexDataP3f&gt;
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   public:
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vesTypeMacro(vesSourceDataP3f);
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vesSourceDataP3f() :
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vesGenericSourceData&lt;vesVertexDataP3f&gt;()
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   {
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   const int totalNumberOfFloats = 3;
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   const int stride = sizeof(float) *
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   totalNumberOfFloats;
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   this-&gt;setAttributeDataType
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   (vesVertexAttributeKeys::Position,
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vesDataType::Float);
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   …
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   …
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   }
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   };
+  </span>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <strong>
+    Listing 3: Source Data to Store Positions
+   </strong>
+  </em>
+ </p>
+ <p>
+  It is to be noted that in the code above,vesGenericSourceData uses vesVertexData3f as the template argument. The VES library provides several such source data types for convenience. Developers can create their own source data type that can use either predefined vesVertexData* types or some other custom vertex data structure. Also in the previous section we mentioned that the vertex attribute binding to the shader uses attribute keys. In order to notify VES library to link a vertex attribute to the vertex source data it is required that they both share the same key value; for example, Position as shown in the example code.
+ </p>
+ <p>
+  VES library source data structure enables applications to define and use interleaved or separate arrays for each vertex attributes. Interleaved vertex arrays are useful to achieve performance in most situations. Information on how to construct cells from the source data is defined by the vesPrimitive. Just like source data, VES library geometry data can contain one or more instances of vesPrimitive. Listing 4 shows a code snippet to define triangle primitives.
+ </p>
+ <p>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vesPrimitive::Ptr triangles
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   (new vesPrimitive());
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   vesSharedPtr&lt; vesIndices&lt;unsigned short&gt; &gt;
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   indices (new vesIndices&lt;unsigned short&gt;());
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   indices-&gt;pushBackIndices(0, 3, 2);
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   indices-&gt;pushBackIndices(1, 0, 2);
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   triangles-&gt;setVesIndices(indices);
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   triangles-&gt;setPrimitiveType
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   (vesPrimitiveRenderType::Triangles);
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   triangles-&gt;setIndexCount(3);
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   triangles-&gt;setIndicesValueType
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   (vesPrimitiveIndicesValueType::
+  </span>
+  <br/>
+  <span style="font-size: x-small; font-family: courier new,courier;">
+   UnsignedShort);
+  </span>
+  <br/>
+  <em>
+   <strong>
+   </strong>
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <strong>
+    Listing 4: Creation of vesPrimitive of Type Triangles
+   </strong>
+  </em>
+ </p>
+ <p>
+  VES library enables developers to use unsigned short or unsigned int type for the indices based on the requirement and whether or not the device and the driver supports unsigned int as the index type.
+ </p>
+ <p>
+  <strong>
+   Appearance and State Management
+  </strong>
+  <br/>
+  In the VES library, appearance and rendering state of the geometry is defined by the material used by the node of the scene graph. A material is composed of one or more material attributes. For example, shader program and textures are attributes of a material. Similar to a shader program (see Listing 2), a texture can be added to a material. VES provides support for 1D and 2D textures. Below is a list of data formats and types supported by VES library texture:
+  <br/>
+  <strong>
+   <br/>
+   Internal and pixel format:
+  </strong>
+  <br/>
+  Alpha, Luminance, LuminanceAlpha, RGB, and RGBA.
+  <br/>
+  <strong>
+   <br/>
+   Pixel data type:
+  </strong>
+  <br/>
+  PixelDataTypeNone, UnsignedByte, UnsignedShort565,
+  <br/>
+  UnsignedShort4444, UnsignedShort5551.
+ </p>
+ <p>
+  Control over depth buffer and blending is provided by vesDepth and vesBlend material attributes. The VES library API
+  <br/>
+  makes it easy to add a new material attribute in case the functionally is not provided by the existing attributes.
+  <br/>
+  <strong>
+   <br/>
+   OpenGL ES Extensions
+  </strong>
+  <br/>
+  The VES library provides basic support to query OpenGL ES extensions available on a hardware. For example, using this feature, an application can query for the GL_OES_element_index_uint extension and if available, can use an unsigned int type for the index to support large geometry data. However, current implementations do not support applications acquiring function pointer for the extensions.
+  <br/>
+  <strong>
+   <br/>
+   FrameBuffer Object (FBO)
+  </strong>
+  <br/>
+  Framebuffer Objects are a mechanism for rendering to images other than the OpenGL default Framebuffer. OpenGL introduced FBO to make rendering to texture objects much more efficient and easier to perform when compared with pbuffer alternatives. The VES library enables applications to use the render to texture feature by creating an instance of vesRenderToTexture, setting appropriate parameters for the render target and setting the render target on the camera.  Currently, VES supports attachments of type  GL_COLOR_ATTACHMENT0 and GL_DEPTH_ATTACHMENT.
+  <br/>
+  <strong>
+   <br/>
+   Interfacing with VTK
+  </strong>
+  <br/>
+  One of the strong motivations behind VES development is to enable developers to take advantage of state-of-the-art VTK algorithms on mobile devices. In order to provide an interface similar to VTK, the VES library offers vesActor and vesMapper. It is important to mention that the VES library does not depend on VTK as it is expected that an application that requires VTK support will be developed using the application level API provided by Kiwi.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Results
+    </span>
+   </strong>
+  </span>
+  <br/>
+  In Figure 7 we show the performance of VES and Kiwi against different size models.  We measured the rendering performance of the VES library using KiwiViewer [REF 10]  on a  third generation Apple iPad. We measured the interactive frames per second (FPS) by averaging the number of times rendering is triggered by the iPad in a 20 second interval. In  order to get a consistent performance measure, we didn’t include FPS value reported by the application at the start and exit of the application.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_296331763.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_296331763.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <br/>
+  <em>
+   <strong>
+    Figure 8: Performance Graph of VES Rendering
+   </strong>
+  </em>
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: small; color: #000080;">
+    Conclusions &amp; Future Work
+   </span>
+  </strong>
+  <br/>
+  The VES library, along with Kiwi, have been very successful in delivering a high performance application on iOS and Android platforms. Since the time we open sourced the VES and Kiwi libraries, we have received many contributions and much feedback from the community. We will continue to improve the current features of the VES library, and look forward to adding support for new features such as volume rendering and vector text rendering.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/4_1925991153.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1925991153.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="400"/>
+  </a>
+  <br/>
+  <em>
+   <strong>
+    Figure 9: Rendering on Qt based MeeGO Platform
+   </strong>
+  </em>
+ </p>
+ <p>
+  Special thanks to Riccardo Vianello for porting VES to the Qt-based MeeGO platform and providing screen captures for this article.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: small; color: #000080;">
+    References
+   </span>
+  </strong>
+  <br/>
+  [1] International Telecomunicaiton Union (ICT), Facts and Figures,  http://www.itu.int/ITU-D/ict/facts/2011/material/ICTFactsFigures2011.pdf
+  <br/>
+  [2]   Be Mindful of OpenGL ES State Variables: http://developer.apple.com/libraryios/#documentation/3DDrawing/
+  <br/>
+  Conceptual/OpenGLES_ProgrammingGuide/OpenGLES ApplicationDesign/OpenGLESApplicationDesign.html
+  <br/>
+  [3]   Hong Zhou, Huamin Qu, Yingcai Wu, Ming-Yuen Chan. 2006. “Volume Visualization on Mobile Devices”,
+  <br/>
+  Proceedings of 14th Pacific Conference on Computer Graphics and Applications (Pacific Graphics’06).
+  <br/>
+  [4]  Tesch, J., Dietze, L. &amp; Encarnação, L.M., 2003. Personal Interfaces-To-Go : Mobile devices for Data Exchange and Interaction in Heterogeneous Visualization Environments University for Applied Sciences ( FH ) Mainz. Distributed Computing, p.2-5.
+  <br/>
+  [5]   Roudaut, A., 2009. Visualization and interaction techniques for mobile devices. Proceedings of the 27th international conference extended abstracts on Human factors in computing systems CHI EA 09, p.3153. Available at: http://portal.acm.org/citation.cfm?doid=1520340.1520450.
+  <br/>
+  [6]    Visualization Toolkit (VTK), http://vtk.org
+  <br/>
+  [7]    OpenGL Performer, http://oss.sgi.com/projects/performer
+  <br/>
+  [8]    OpenGL ES, http://www.khronos.org/opengles
+  <br/>
+  [9]    COLLADA, https://collada.org
+  <br/>
+  [10]  KiwiViewer, http://www.kiwiviewer.org
+  <br/>
+  [11]  VES, http://www.vtk.org/Wiki/VES
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1753729716.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1753729716.jpg" style="float: left;" width="100"/>
+  </a>
+  <strong>
+   Aashish Chaudhary
+  </strong>
+  is an R&amp;D Engineer on the Scientific Computing team at Kitware. Prior to joining Kitware, he developed  a graphics engine and open-source tools for information and geo-visualization. Some of his interests are software engineering, rendering, and visualization
+ </p>
+</div>

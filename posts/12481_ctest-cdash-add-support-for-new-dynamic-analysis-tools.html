@@ -1,0 +1,3424 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  CTest and CDash now support the new suite of “sanitizer” dynamic analysis tools that are available for gcc and clang!  Support for these tools will be included in the upcoming release of CMake 3.1.  They can be found in the first release candidate
+  <a href="https://blog.kitware.com/cmake-3-1-rc1-is-now-ready/">
+   CMake 3.1-rc1
+  </a>
+  , or you can
+  <a href="http://www.cmake.org/Wiki/CMake/Git/Download">
+   checkout CMake master from git
+  </a>
+  and
+  <a href="http://www.cmake.org/install/">
+   build it from source
+  </a>
+  .
+ </p>
+ <p>
+  <span style="line-height: 1.6em">
+   These new features were added as part of the
+   <a href="https://developers.google.com/tango/">
+    Google Tango
+   </a>
+   <span style="line-height: 1.6em">
+    effort to create mobile 3D scanning devices.  The sanitizer tools allow for low overhead run time error checking similar to what you can find in
+   </span>
+   <a href="http://valgrind.org/" style="line-height: 1.6em">
+    valgrind
+   </a>
+   <span style="line-height: 1.6em">
+    . However, instead of running a machine code level simulator to detect the errors, the compiler based sanitizers add extra error checks that are compiled into the code. This provides better performance. There is one price that is paid for that performance gain. Once the first error is detected, the program halts.
+   </span>
+  </span>
+ </p>
+ <p>
+  This blog will provide examples of how to use CTest and CDash to run sanitized test programs and collect and display the results. In order to make it easier for you to replicate the examples below, all of the sample code is available as an attachment to this blog post.
+ </p>
+ <p>
+  Use of the sanitizer tools requires building your code with extra compile flags that inject the error checking into the final executable. There are several ways to do that. You can set
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e806d71e5588988848" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     CMAKE_C_FLAGS
+    </span>
+   </span>
+  </span>
+  and
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e806d71ed520616223" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     CMAKE_CXX_FLAGS
+    </span>
+   </span>
+  </span>
+  on the command line of cmake or by preloading the cache with values in a ctest script.
+ </p>
+ <p>
+ </p>
+ <h1>
+  ThreadSanitizer
+ </h1>
+ <p>
+  <a href="https://code.google.com/p/thread-sanitizer/">
+   ThreadSanitizer (TSan)
+  </a>
+  allows us to detect data races in our programs.
+ </p>
+ <h2>
+  Example code
+ </h2>
+ <p>
+  Here’s a simple example of a program with a data race:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d71f0712571367" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
+
+int Global;
+
+void *Thread1(void *x) {
+Global++;
+return NULL;
+}
+
+void *Thread2(void *x) {
+Global--;
+return NULL;
+}
+
+int main() {
+pthread_t t[2];
+pthread_create(&amp;t[0], NULL, Thread1, NULL);
+pthread_create(&amp;t[1], NULL, Thread2, NULL);
+pthread_join(t[0], NULL);
+pthread_join(t[1], NULL);
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f0712571367-22">
+        22
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-1">
+        <span class="crayon-p">
+         #include &lt;pthread.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-2">
+        <span class="crayon-p">
+         #include &lt;stdio.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-4">
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-m">
+         Global
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-6">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-e">
+         Thread1
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-7">
+        <span class="crayon-m">
+         Global
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-8">
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-9">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-10">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-11">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-e">
+         Thread2
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-12">
+        <span class="crayon-m">
+         Global
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-13">
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-14">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-16">
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         main
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-17">
+        <span class="crayon-v">
+         pthread
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        t
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         t
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-18">
+        <span class="crayon-e">
+         pthread_create
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         &amp;t
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Thread1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-19">
+        <span class="crayon-e">
+         pthread_create
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         &amp;t
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Thread2
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-20">
+        <span class="crayon-e">
+         pthread_join
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         t
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-21">
+        <span class="crayon-e">
+         pthread_join
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         t
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f0712571367-22">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0006 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Building with TSan
+ </h2>
+ <p>
+  All we need to do to test this program with ThreadSanitizer is add some flags to the C and CXX flags used to build the project. The flags required are:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d71f3650169696" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+-g -O1 -fsanitize=thread -fno-omit-frame-pointer -fPIC</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d71f3650169696-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d71f3650169696-1">
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         g
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         O1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         fsanitize
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         thread
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         fno
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         omit
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         frame
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         pointer
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         fPIC
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Example Output
+ </h2>
+ <p>
+  After we build this executable and run it, we see the following output from TSan:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d71f4266433561" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+==================
+WARNING: ThreadSanitizer: data race (pid=5618)
+Write of size 4 at 0x7f47f6025c3c by thread T2:
+#0 Thread2(void*) simple_race.cc:12 (simple_race+0x0000000a8883)
+
+Previous write of size 4 at 0x7f47f6025c3c by thread T1:
+#0 Thread1(void*) simple_race.cc:7 (simple_race+0x0000000a8843)
+
+Location is global 'Global' of size 4 at 0x7f47f6025c3c (simple_race+0x0000016f0c3c)
+
+Thread T2 (tid=5622, running) created by main thread at:
+#0 pthread_create &lt;null&gt;:0 (simple_race+0x00000004de4b)
+#1 main simple_race.cc:19 (simple_race+0x0000000a88e1)
+
+Thread T1 (tid=5621, finished) created by main thread at:
+#0 pthread_create &lt;null&gt;:0 (simple_race+0x00000004de4b)
+#1 main simple_race.cc:18 (simple_race+0x0000000a88ca)
+
+SUMMARY: ThreadSanitizer: data race simple_race.cc:12 Thread2(void*)
+==================
+ThreadSanitizer: reported 1 warnings</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f4266433561-21">
+        21
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-1">
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-2">
+        <span class="crayon-v">
+         WARNING
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         ThreadSanitizer
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         data
+        </span>
+        <span class="crayon-e">
+         race
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pid
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         5618
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-3">
+        <span class="crayon-e">
+         Write
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-i">
+         size
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         at
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x7f47f6025c3c
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         by
+        </span>
+        <span class="crayon-e">
+         thread
+        </span>
+        <span class="crayon-v">
+         T2
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-4">
+        <span class="crayon-p">
+         #0 Thread2(void*) simple_race.cc:12 (simple_race+0x0000000a8883)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-6">
+        <span class="crayon-e">
+         Previous
+        </span>
+        <span class="crayon-e">
+         write
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-i">
+         size
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         at
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x7f47f6025c3c
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         by
+        </span>
+        <span class="crayon-e">
+         thread
+        </span>
+        <span class="crayon-v">
+         T1
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-7">
+        <span class="crayon-p">
+         #0 Thread1(void*) simple_race.cc:7 (simple_race+0x0000000a8843)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-9">
+        <span class="crayon-e">
+         Location
+        </span>
+        <span class="crayon-st">
+         is
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-m">
+         global
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'Global'
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-i">
+         size
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         at
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x7f47f6025c3c
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         simple_race
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-cn">
+         0x0000016f0c3c
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-10">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-11">
+        <span class="crayon-e">
+         Thread
+        </span>
+        <span class="crayon-e">
+         T2
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tid
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         5622
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         running
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         created
+        </span>
+        <span class="crayon-e">
+         by
+        </span>
+        <span class="crayon-e">
+         main
+        </span>
+        <span class="crayon-e">
+         thread
+        </span>
+        <span class="crayon-v">
+         at
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-12">
+        <span class="crayon-p">
+         #0 pthread_create &lt;null&gt;:0 (simple_race+0x00000004de4b)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-13">
+        <span class="crayon-p">
+         #1 main simple_race.cc:19 (simple_race+0x0000000a88e1)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-14">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-15">
+        <span class="crayon-e">
+         Thread
+        </span>
+        <span class="crayon-e">
+         T1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tid
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         5621
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         finished
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         created
+        </span>
+        <span class="crayon-e">
+         by
+        </span>
+        <span class="crayon-e">
+         main
+        </span>
+        <span class="crayon-e">
+         thread
+        </span>
+        <span class="crayon-v">
+         at
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-16">
+        <span class="crayon-p">
+         #0 pthread_create &lt;null&gt;:0 (simple_race+0x00000004de4b)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-17">
+        <span class="crayon-p">
+         #1 main simple_race.cc:18 (simple_race+0x0000000a88ca)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-18">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-19">
+        <span class="crayon-v">
+         SUMMARY
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         ThreadSanitizer
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         data
+        </span>
+        <span class="crayon-e">
+         race
+        </span>
+        <span class="crayon-v">
+         simple_race
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         cc
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-cn">
+         12
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Thread2
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-20">
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f4266433561-21">
+        <span class="crayon-v">
+         ThreadSanitizer
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         reported
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         warnings
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0087 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Submitting to CDash
+ </h2>
+ <p>
+  Here’s a CTest script that you can use to run this example and submit the results to
+  <a href="http://open.cdash.org/index.php?project=PublicDashboard">
+   CDash’s public dashboard
+  </a>
+  .
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d71f7926330873" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+set(CTEST_PROJECT_NAME "tsan_example")
+set(CTEST_SITE "localhost")
+set(CTEST_BUILD_NAME "ThreadSanitizer")
+
+set(CTEST_SOURCE_DIRECTORY "${CTEST_SCRIPT_DIRECTORY}")
+set(CTEST_BINARY_DIRECTORY "${CTEST_SCRIPT_DIRECTORY}/bin")
+
+set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
+set(CTEST_MEMORYCHECK_TYPE "ThreadSanitizer")
+ctest_start(Experimental)
+file(WRITE "${CTEST_SCRIPT_DIRECTORY}/bin/CMakeCache.txt" "
+CMAKE_CXX_FLAGS=-g -O1 -fsanitize=thread -fno-omit-frame-pointer -fPIC
+")
+ctest_configure()
+ctest_build()
+ctest_test()
+ctest_memcheck()
+
+set(CTEST_DROP_METHOD "http")
+set(CTEST_DROP_SITE "open.cdash.org")
+set(CTEST_DROP_LOCATION "/submit.php?project=PublicDashboard")
+ctest_submit()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71f7926330873-22">
+        22
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-1">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_PROJECT
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        NAME
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "tsan_example"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-2">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        SITE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "localhost"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-3">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_BUILD
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        NAME
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "ThreadSanitizer"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-5">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_SOURCE
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        DIRECTORY
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "${CTEST_SCRIPT_DIRECTORY}"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-6">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_BINARY
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        DIRECTORY
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "${CTEST_SCRIPT_DIRECTORY}/bin"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-7">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-8">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_CMAKE
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        GENERATOR
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Unix Makefiles"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-9">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_MEMORYCHECK
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        TYPE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "ThreadSanitizer"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-10">
+        <span class="crayon-e">
+         ctest_start
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         Experimental
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-11">
+        <span class="crayon-e">
+         file
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-i">
+         WRITE
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "${CTEST_SCRIPT_DIRECTORY}/bin/CMakeCache.txt"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-12">
+        <span class="crayon-s">
+         CMAKE_CXX_FLAGS=-g -O1 -fsanitize=thread -fno-omit-frame-pointer -fPIC
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-13">
+        <span class="crayon-s">
+         "
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-14">
+        <span class="crayon-e">
+         ctest_configure
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-15">
+        <span class="crayon-e">
+         ctest_build
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-16">
+        <span class="crayon-e">
+         ctest_test
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-17">
+        <span class="crayon-e">
+         ctest_memcheck
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-18">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-19">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_DROP
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        METHOD
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "http"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-20">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_DROP
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        SITE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "open.cdash.org"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-21">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_DROP
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        LOCATION
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "/submit.php?project=PublicDashboard"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71f7926330873-22">
+        <span class="crayon-e">
+         ctest_submit
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+  Other than the compile flags mentioned earlier, of particular note here is the line
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d71f9920327645" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+set(CTEST_MEMORYCHECK_TYPE "ThreadSanitizer")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d71f9920327645-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d71f9920327645-1">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_MEMORYCHECK
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        TYPE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "ThreadSanitizer"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  This is what tells CTest how to intrepret the output of the dynamic analysis (memcheck) step.
+ </p>
+ <p>
+  After you’ve submitted your results to CDash, you should see a new row in the Dynamic Analysis section of the page.  Here’s an example of what this will look like:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21866" style="width: 1034px">
+  <img alt="" class="size-large wp-image-21866" height="101" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-1024x101.png" srcset="https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-1024x101.png 1024w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-300x29.png 300w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-768x75.png 768w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-220x22.png 220w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-250x25.png 250w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-355x35.png 355w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-730x72.png 730w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row-90x9.png 90w, https://blog.kitware.com/wp-content/uploads/2014/10/threadsanitizer_row.png 1589w" width="1024"/>
+  <p class="wp-caption-text">
+   Example of ThreadSanitizer on CDash
+  </p>
+ </div>
+ <p>
+  When you click on the “1” (under Defect Count) you’ll be taken to a page displaying the following information:
+ </p>
+ <p>
+  <a href="/blog/files/235_842458775.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.235_842458775.png" style="width: 247px;height: 82px"/>
+  </a>
+ </p>
+ <p>
+  From here, if you click on the name of the test (simple_race) you will see the output of the sanitizer tool.
+ </p>
+ <p>
+ </p>
+ <h1>
+  AddressSanitizer
+ </h1>
+ <p>
+  <a href="https://code.google.com/p/address-sanitizer/">
+   AddressSanitizer (asan)
+  </a>
+  allows us to detect buffer overflows and cases where memory is read after being freed.
+ </p>
+ <h2>
+  Example code
+ </h2>
+ <p>
+  Here’s an example C program that attempts to read some memory after freeing it:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d71fc200256395" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include &lt;stdlib.h&gt;
+int main() {
+  char *x = (char*)malloc(10 * sizeof(char*));
+  free(x);
+  return x[5];
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d71fc200256395-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71fc200256395-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71fc200256395-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71fc200256395-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71fc200256395-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d71fc200256395-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d71fc200256395-1">
+        <span class="crayon-p">
+         #include &lt;stdlib.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71fc200256395-2">
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         main
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71fc200256395-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-e">
+         malloc
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         10
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         sizeof
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71fc200256395-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         free
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71fc200256395-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         5
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d71fc200256395-6">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Building with ASan
+ </h2>
+ <p>
+  Similarly to the TSan example, we enable ASan dynamic analysis by modifying the flags that we use to compile our program:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d71fe651474552" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+-DCMAKE_C_FLAGS="-g -O1 -fsanitize=address -fno-omit-frame-pointer"</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d71fe651474552-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d71fe651474552-1">
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         DCMAKE_C_FLAGS
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "-g -O1 -fsanitize=address -fno-omit-frame-pointer"
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Example output
+ </h2>
+ <p>
+  Here is an example of the output you should expect when ASan detects a defect in your program:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d7200620253954" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+=================================================================
+==6140==ERROR: AddressSanitizer: heap-use-after-free on address 0x60700000dfb5 at pc 0x4820cb bp 0x7fffa1ac1130 sp 0x7fffa1ac1128
+READ of size 1 at 0x60700000dfb5 thread T0
+#0 0x4820ca in main use-after-free.c:5
+#1 0x7fb5d55b776c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+#2 0x481f9c in _start (bin/use-after-free+0x481f9c)
+
+0x60700000dfb5 is located 5 bytes inside of 80-byte region [0x60700000dfb0,0x60700000e000)
+freed by thread T0 here:
+#0 0x46bd39 in free (bin/use-after-free+0x46bd39)
+#1 0x48209a in main use-after-free.c:4
+#2 0x7fb5d55b776c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+
+previously allocated by thread T0 here:
+#0 0x46beb9 in __interceptor_malloc (bin/use-after-free+0x46beb9)
+#1 0x48208f in main use-after-free.c:3
+#2 0x7fb5d55b776c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+
+SUMMARY: AddressSanitizer: heap-use-after-free use-after-free.c:5 main</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7200620253954-19">
+        19
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-1">
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-2">
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-cn">
+         6140
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-v">
+         ERROR
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         AddressSanitizer
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         heap
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-st">
+         use
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         after
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         free
+        </span>
+        <span class="crayon-e">
+         on
+        </span>
+        <span class="crayon-i">
+         address
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x60700000dfb5
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         at
+        </span>
+        <span class="crayon-i">
+         pc
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x4820cb
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         bp
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x7fffa1ac1130
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         sp
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x7fffa1ac1128
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-3">
+        <span class="crayon-e">
+         READ
+        </span>
+        <span class="crayon-e">
+         of
+        </span>
+        <span class="crayon-i">
+         size
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         at
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0x60700000dfb5
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         thread
+        </span>
+        <span class="crayon-v">
+         T0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-4">
+        <span class="crayon-p">
+         #0 0x4820ca in main use-after-free.c:5
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-5">
+        <span class="crayon-p">
+         #1 0x7fb5d55b776c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-6">
+        <span class="crayon-p">
+         #2 0x481f9c in _start (bin/use-after-free+0x481f9c)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-7">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-8">
+        <span class="crayon-cn">
+         0x60700000dfb5
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         is
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         located
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         5
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         bytes
+        </span>
+        <span class="crayon-e">
+         inside
+        </span>
+        <span class="crayon-i">
+         of
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         80
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-t">
+         byte
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         region
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0x60700000dfb0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-cn">
+         0x60700000e000
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-9">
+        <span class="crayon-e">
+         freed
+        </span>
+        <span class="crayon-e">
+         by
+        </span>
+        <span class="crayon-e">
+         thread
+        </span>
+        <span class="crayon-e">
+         T0
+        </span>
+        <span class="crayon-v">
+         here
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-10">
+        <span class="crayon-p">
+         #0 0x46bd39 in free (bin/use-after-free+0x46bd39)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-11">
+        <span class="crayon-p">
+         #1 0x48209a in main use-after-free.c:4
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-12">
+        <span class="crayon-p">
+         #2 0x7fb5d55b776c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-13">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-14">
+        <span class="crayon-e">
+         previously
+        </span>
+        <span class="crayon-e">
+         allocated
+        </span>
+        <span class="crayon-e">
+         by
+        </span>
+        <span class="crayon-e">
+         thread
+        </span>
+        <span class="crayon-e">
+         T0
+        </span>
+        <span class="crayon-v">
+         here
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-15">
+        <span class="crayon-p">
+         #0 0x46beb9 in __interceptor_malloc (bin/use-after-free+0x46beb9)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-16">
+        <span class="crayon-p">
+         #1 0x48208f in main use-after-free.c:3
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-17">
+        <span class="crayon-p">
+         #2 0x7fb5d55b776c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-18">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7200620253954-19">
+        <span class="crayon-v">
+         SUMMARY
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         AddressSanitizer
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         heap
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-st">
+         use
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         after
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         free
+        </span>
+        <span class="crayon-st">
+         use
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         after
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         free
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         c
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-cn">
+         5
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         main
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0006 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Submitting to CDash
+ </h2>
+ <p>
+  To submit these results to CDash, you can use a script very similar to the one above in the TSan example.  The only important difference is that instead of:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d7202442470690" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+set(CTEST_MEMORYCHECK_TYPE "ThreadSanitizer")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d7202442470690-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d7202442470690-1">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_MEMORYCHECK
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        TYPE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "ThreadSanitizer"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  you should specify:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d7204657131133" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+set(CTEST_MEMORYCHECK_TYPE "AddressSanitizer")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d7204657131133-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d7204657131133-1">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_MEMORYCHECK
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        TYPE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "AddressSanitizer"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  and the cache should will be:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d7206079246520" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+file(WRITE "${CTEST_SCRIPT_DIRECTORY}/bin/CMakeCache.txt" "
+CMAKE_C_FLAGS=-g -O1 -fsanitize=address -fno-omit-frame-pointer
+")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d7206079246520-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7206079246520-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7206079246520-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d7206079246520-1">
+        <span class="crayon-e">
+         file
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-i">
+         WRITE
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "${CTEST_SCRIPT_DIRECTORY}/bin/CMakeCache.txt"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7206079246520-2">
+        <span class="crayon-s">
+         CMAKE_C_FLAGS=-g -O1 -fsanitize=address -fno-omit-frame-pointer
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7206079246520-3">
+        <span class="crayon-s">
+         "
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  Here are a couple views of these results from CDash:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21867" style="width: 1034px">
+  <img alt="" class="size-large wp-image-21867" height="89" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-1024x89.png" srcset="https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-1024x89.png 1024w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-300x26.png 300w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-768x67.png 768w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-220x19.png 220w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-250x22.png 250w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-355x31.png 355w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-730x64.png 730w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_row-90x8.png 90w" width="1024"/>
+  <p class="wp-caption-text">
+   Example of AddressSanitizer on CDash
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_21868" style="width: 310px">
+  <img alt="" class="wp-image-21868 size-medium" height="84" sizes="(max-width: 300px) 100vw, 300px" src="https://blog.kitware.com/wp-content/uploads/2014/10/asan_details-300x84.png" srcset="https://blog.kitware.com/wp-content/uploads/2014/10/asan_details-300x84.png 300w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_details-220x62.png 220w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_details-250x70.png 250w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_details-355x100.png 355w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_details-90x25.png 90w, https://blog.kitware.com/wp-content/uploads/2014/10/asan_details.png 541w" width="300"/>
+  <p class="wp-caption-text">
+   List of ASan defects
+  </p>
+ </div>
+ <h1>
+ </h1>
+ <h1>
+  MemorySanitizer
+ </h1>
+ <p>
+  <a href="https://code.google.com/p/memory-sanitizer/">
+   MemorySanitizer (msan)
+  </a>
+  allows us to detect reads of uninitialized memory.
+ </p>
+ <h2>
+  Example code
+ </h2>
+ <p>
+  In this example, our program reads from memory before it has been initialized:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d7209506172526" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include &lt;stdio.h&gt;
+
+int main(int argc, char** argv) {
+  int* a = new int[10];
+  a[5] = 0;
+  if (a[argc])
+    printf("xx\n");
+  return 0;
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7209506172526-9">
+        9
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-1">
+        <span class="crayon-p">
+         #include &lt;stdio.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-3">
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         main
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         argc
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         argv
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         10
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         5
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         argc
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         printf
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "xx\n"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7209506172526-9">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0048 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Building with MSan
+ </h2>
+ <p>
+  As before, we simply need to modify the compile flags for the executable that we wish to test.  In this case, we specify -fsanitize=memory instead of =thread or =address.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d720b997454085" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+-DCMAKE_CXX_FLAGS="-g -O1 -fsanitize=memory -fno-omit-frame-pointer"</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d720b997454085-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d720b997454085-1">
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         DCMAKE_CXX_FLAGS
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "-g -O1 -fsanitize=memory -fno-omit-frame-pointer"
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Example output
+ </h2>
+ <p>
+  Here is the output you should expect if you run the example above through MSan:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d720d262554052" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+==6805== WARNING: MemorySanitizer: use-of-uninitialized-value
+#0 0x7ff16024fcb6 in main umr.cc:6
+#1 0x7ff15edd276c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+#2 0x7ff16024fadc in _start (bin/umr+0x7badc)
+
+SUMMARY: MemorySanitizer: use-of-uninitialized-value umr.cc:6 main</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d720d262554052-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d720d262554052-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d720d262554052-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d720d262554052-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d720d262554052-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d720d262554052-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d720d262554052-1">
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-cn">
+         6805
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         WARNING
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         MemorySanitizer
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         use
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         of
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         uninitialized
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         value
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d720d262554052-2">
+        <span class="crayon-p">
+         #0 0x7ff16024fcb6 in main umr.cc:6
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d720d262554052-3">
+        <span class="crayon-p">
+         #1 0x7ff15edd276c in __libc_start_main /build/buildd/eglibc-2.15/csu/libc-start.c:226
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d720d262554052-4">
+        <span class="crayon-p">
+         #2 0x7ff16024fadc in _start (bin/umr+0x7badc)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d720d262554052-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d720d262554052-6">
+        <span class="crayon-v">
+         SUMMARY
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         MemorySanitizer
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         use
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         of
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         uninitialized
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         value
+        </span>
+        <span class="crayon-v">
+         umr
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         cc
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-cn">
+         6
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         main
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <h2>
+  Submitting to CDash
+ </h2>
+ <p>
+  You can follow the pattern outlined above for TSan.  The important change is to specify
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d720f606057143" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+set(CTEST_MEMORYCHECK_TYPE "MemorySanitizer")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d720f606057143-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d720f606057143-1">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_MEMORYCHECK
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        TYPE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "MemorySanitizer"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  instead of:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d7210619245192" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+set(CTEST_MEMORYCHECK_TYPE "ThreadSanitizer")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d7210619245192-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d7210619245192-1">
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         CTEST_MEMORYCHECK
+        </span>
+        <span class="crayon-sy">
+         _
+        </span>
+        TYPE
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "ThreadSanitizer"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  and the cache should have:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e806d7212681242637" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+file(WRITE "${CTEST_SCRIPT_DIRECTORY}/bin/CMakeCache.txt" "
+CMAKE_C_FLAGS=-g -O1 -fsanitize=memory -fno-omit-frame-pointer
+")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e806d7212681242637-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7212681242637-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e806d7212681242637-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e806d7212681242637-1">
+        <span class="crayon-e">
+         file
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-i">
+         WRITE
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "${CTEST_SCRIPT_DIRECTORY}/bin/CMakeCache.txt"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7212681242637-2">
+        <span class="crayon-s">
+         CMAKE_C_FLAGS=-g -O1 -fsanitize=memory -fno-omit-frame-pointer
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e806d7212681242637-3">
+        <span class="crayon-s">
+         "
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  Finally, here’s what these results look like on CDash:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21873" style="width: 1034px">
+  <img alt="" class="size-large wp-image-21873" height="83" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-1024x83.png" srcset="https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-1024x83.png 1024w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-300x24.png 300w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-768x62.png 768w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-220x18.png 220w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-250x20.png 250w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-355x29.png 355w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-730x59.png 730w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_row-90x7.png 90w" width="1024"/>
+  <p class="wp-caption-text">
+   Example of MemorySanitizer on CDash
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_21874" style="width: 310px">
+  <img alt="" class="size-medium wp-image-21874" height="73" sizes="(max-width: 300px) 100vw, 300px" src="https://blog.kitware.com/wp-content/uploads/2014/10/msan_details-300x73.png" srcset="https://blog.kitware.com/wp-content/uploads/2014/10/msan_details-300x73.png 300w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_details-220x53.png 220w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_details-250x61.png 250w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_details-355x86.png 355w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_details-90x22.png 90w, https://blog.kitware.com/wp-content/uploads/2014/10/msan_details.png 628w" width="300"/>
+  <p class="wp-caption-text">
+   List of MSan defects
+  </p>
+ </div>
+ <p>
+ </p>
+ <p>
+  <span style="line-height: 1.6em">
+   That’s all there is to it!  I hope that you found these examples useful.  With the use of these new tools, you can be more confident that there aren’t any nasty memory defects lurking in your codebase.  If you have any questions or comments about these new features of CTest &amp; CDash, please contact us on the
+  </span>
+  <a href="http://www.cmake.org/mailman/listinfo/cmake" style="line-height: 1.6em">
+   CMake users mailing list
+  </a>
+  <span style="line-height: 1.6em">
+   .
+  </span>
+ </p>
+</div>

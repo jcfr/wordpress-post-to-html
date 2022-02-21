@@ -1,0 +1,372 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  This post is geared towards
+  <a href="http://vtk.org">
+   VTK
+  </a>
+  ,
+  <a href="http://paraview.org">
+   ParaView
+  </a>
+  , and
+  <a href="http://www.computationalmodelbuilder.org/">
+   CMB
+  </a>
+  developers who are using
+  <a href="http://gitlab.kitware.com">
+   Gitlab
+  </a>
+  to contribute changes to these open source projects. The automated testing infrastructure used by these projects has several parts:
+ </p>
+ <ul>
+  <li>
+   <a href="http://buildbot.net/">
+    Buildbot
+   </a>
+   is used to monitor the git repositories and schedule builds and tests when merge requests are created or the integration branches (master/release) are changed.
+  </li>
+  <li>
+   <a href="http://cmake.org">
+    CMake/CTest
+   </a>
+   deals with the actual building and testing, and then posting the results on dashboards hosted by
+   <a href="http://www.cdash.org/">
+    CDash
+   </a>
+   .
+  </li>
+ </ul>
+ <p>
+  Whenever you make a merge request for any of the buildbot supported projects listed, you can request test builds on your branch. To do that, a
+  <em>
+   developer
+  </em>
+  puts a
+  <strong>
+   @buildbot test
+   <em>
+   </em>
+  </strong>
+  message as a comment on the merge request. Our buildbot instance hosted at
+  <a href="https://buildbot.kitware.com/">
+   buildbot.kitware.com
+  </a>
+  monitors merge requests for such comments. As as soon as an appropriate comment posted by a
+  <em>
+   developer
+  </em>
+  is processed by Buildbot, it will schedule several builds on various platforms, with multiple configurations to ensure that the changes in the merge request do not introduce any regressions.
+ </p>
+ <p>
+  When Buildbot schedules these tests, it will post a comment back on the merge request with qualified links to CDash and Buildbot web pages that show the build and test results for the merge request, as follows.
+ </p>
+ <p>
+  <a href="/blog/files/48_218865297.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_218865297.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  Let's take a closer look at the Buildbot status page.
+ </p>
+ <h1>
+  Understanding the Buildbot Status Page
+ </h1>
+ <p>
+  Clicking on the Buildbot link will take you to the Buildbot web status page for the specfic merge request, as follows:
+ </p>
+ <p>
+  <a href="/blog/files/48_1463483871.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_1463483871.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  This is called the
+  <b>
+   Grid View
+  </b>
+  . The rows are
+  <em>
+   builders
+  </em>
+  and columns are source
+  <em>
+   revisions
+  </em>
+  .
+ </p>
+ <p>
+  Simply put, a builder is a dashboard run with a specific configuration. The name of the builder enumerates all the build options and enabled features e.g.
+  <strong>
+   <em>
+    vtk-bigmac-osx-shared-debug+clang+opengl2+python
+   </em>
+  </strong>
+  means this is a
+  <em>
+   VTK
+  </em>
+  build on a machine named
+  <strong>
+   <em>
+    bigmac
+   </em>
+  </strong>
+  which is an
+  <strong>
+   <em>
+    OS X
+   </em>
+  </strong>
+  machine, using
+  <strong>
+   <em>
+    shared
+   </em>
+  </strong>
+  libraries, and in
+  <strong>
+   <em>
+    debug
+   </em>
+  </strong>
+  mode using a
+  <strong>
+   <em>
+    clang
+   </em>
+  </strong>
+  compiler, with
+  <strong>
+   <em>
+    OpenGL2
+   </em>
+  </strong>
+  rendering and
+  <strong>
+   <em>
+    Python
+   </em>
+  </strong>
+  wrapping enabled.
+ </p>
+ <p>
+  There are 8 builders for this project. A merge request is considered fully tested when all rows have a valid status next to it.
+ </p>
+ <p>
+  Sometimes there may be multiple columns, as shown below.
+ </p>
+ <p>
+  <a href="/blog/files/48_1586858681.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_1586858681.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  This happens when you amend your merge request, either by adding new commits or modifying existing commits. When a merge request is amended, buildbot will rescehule a new round of tests on the updated merge request. For any builders that haven't tested the previous state of the merge request yet, buildbot will simply skip testing the old revision(s) and schedule builds only on the newest revision. When this happens, it shows up empty cells, as seen in the image above. The column header mentions the revision that was tested by that column e.g.
+  <strong>
+   <em>
+    b063141a4f3b… in cell_data_overhaul
+   </em>
+  </strong>
+  implies revision
+  <strong style="line-height: 20.7999992370605px;">
+   <em>
+    b063141a4f3b
+   </em>
+  </strong>
+  in branch
+  <strong style="line-height: 20.7999992370605px;">
+   <em>
+    cell_data_overhaul
+   </em>
+  </strong>
+  .
+ </p>
+ <p>
+  To see why a builder passed (or failed), click on the link in the appropriate cell. That will take you to the builder status page.
+ </p>
+ <p>
+ </p>
+ <p>
+  <center>
+   <a href="/blog/files/48_1002944692.png" target="_blank">
+    <img src="https://blog.kitware.com/blog/files/Small.48_1002944692.png" width="50%"/>
+   </a>
+  </center>
+ </p>
+ <p>
+ </p>
+ <p>
+  It's a long page that provides details for the specific build. Let's look at important parts of this page.
+ </p>
+ <p>
+  The title mentions the name of the builder and the buildnumber. The buildnumber is a unique number for the specific builder indentifying the build. No two builds on the same builder will have the same buildnumber.
+ </p>
+ <p>
+  <a href="/blog/files/48_1278644841.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_1278644841.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The
+  <strong>
+   SourceStamp
+  </strong>
+  provides information about the source revision being tested. It includes the
+  <strong>
+   Repository, Branch
+  </strong>
+  , and
+  <strong>
+   Revision
+  </strong>
+  number for the source code tested.
+ </p>
+ <p>
+  <a href="/blog/files/48_72164390.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_72164390.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The
+  <strong>
+   Steps and Logfiles
+  </strong>
+  item lists individual steps in this build.
+ </p>
+ <p>
+  <a href="/blog/files/48_903129131.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_903129131.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  Most of these steps can be ignored by users, the only ones of concern are the
+  <b>
+   git
+  </b>
+  step and the
+  <strong>
+   build-n-test
+  </strong>
+  step. The
+  <strong>
+   git
+  </strong>
+  step checks is the step that checks out the source for the merge request. The
+  <strong>
+   build-n-test
+  </strong>
+  step, builds and runs tests on the merge-request. When available, the
+  <strong>
+   stdio
+  </strong>
+  link takes you to the raw output generated by that step. This can be useful in determining why the step failed. The
+  <strong>
+   build-n-test
+  </strong>
+  step also has a
+  <strong>
+   cdash
+  </strong>
+  link. This link will take you to the results of this run on CDash. You can look at the details on the CDash page including build errors, test failures, image differences, etc. When there are failed tests, a link that directly takes you to the failed tests is also added to this
+  <strong>
+   build-n-test
+  </strong>
+  step.
+ </p>
+ <h1>
+  Navigating the Buildbot Page
+ </h1>
+ <p>
+  Besides using the link posted on the merge request, you can directly visit
+  <a href="https://buildbot.kitware.com/">
+   <strong>
+    buildbot.kitware.com
+   </strong>
+  </a>
+  to view the Buldbot status page. The header provides links to standard pages for various projects.
+ </p>
+ <p>
+  <a href="/blog/files/48_1882078954.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_1882078954.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  Clicking on the name of the project e.g.
+  <a href="https://buildbot.kitware.com/grid?width=12&amp;category=vtk-expected&amp;branch=master">
+   <strong>
+    VTK
+   </strong>
+  </a>
+  ,
+  <a href="https://buildbot.kitware.com/grid?width=12&amp;category=paraview-expected&amp;branch=master">
+   <strong>
+    ParaView
+   </strong>
+  </a>
+  will take you to a Grid View showing results for
+  <strong>
+   master
+  </strong>
+  branch for these projects. This can be used to check the status of various builds for the
+  <strong>
+   master
+  </strong>
+  branch. Similar to the Grid View for merge requests, this view has rows for each of the builders and columns for revisions tested on the
+  <strong>
+   master
+  </strong>
+  branch.
+ </p>
+ <p>
+  <a href="/blog/files/48_1893895778.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_1893895778.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  This page limits itself to show the
+  <strong>
+   master
+  </strong>
+  branch. To see the status for all branches, including merge requests, click on the
+  <a href="https://buildbot.kitware.com/grid?width=12&amp;category=vtk-expected">
+   <strong>
+    expected
+   </strong>
+  </a>
+  link for the specific project. This page will show all branches tested/being tested with columns ordered in chronological order.
+ </p>
+ <p>
+  <a href="/blog/files/48_1001455108.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_1001455108.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The
+  <a href="https://buildbot.kitware.com/grid?width=12&amp;category=vtk-experimental">
+   <strong>
+    experimental
+   </strong>
+  </a>
+  link points to the experimental builders that are still being setup, meant for developers adding new test machines, or test configurations. These will often be red i.e. failing, hence are generally not considered in determining if the merge request is ready for merge.
+ </p>
+ <p>
+  <a href="/blog/files/48_1504399462.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_1504399462.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The
+  <b>
+   superbuild
+  </b>
+  link, when present, will take you to the superbuilds for the project i.e. the builders that build the project binaries.
+ </p>
+ <p>
+  <a href="/blog/files/48_408351209.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_408351209.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+ </p>
+</div>

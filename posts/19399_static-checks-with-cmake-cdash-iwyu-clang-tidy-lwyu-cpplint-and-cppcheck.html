@@ -1,0 +1,298 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One of the great features of CMake/CTest/CDash is the ability to setup useful but rarely used tools to automatically run on a project and report the results to a web page. For example,
+  <a href="http://valgrind.org/">
+   valgrind
+  </a>
+  is a great tool to run dynamic checks on C/C++ code catching tough to find memory errors. Since valgrind is slow to run, developers often times only run it when they suspect a problem in the code. CMake/CTest/CDash have supported running nightly valgrind tests for years making sure an entire code base is checked each night. Individual developers on a project don’t even have to know how to run valgrind, they just have to look at the results on a web page. Recently,  several open source tools have been developed to perform various static or compile time analysis of C++ code. These tools are able to ingest the C++ source code and discover various defects in the source code without running it. As of CMake 3.9, five different tools of this type are supported directly by CMake/CTest:
+ </p>
+ <ul>
+  <li>
+   <strong>
+    <a href="https://include-what-you-use.org/">
+     iwyu
+    </a>
+   </strong>
+   (include what you use) : This parses C++ source files and determines the exact include files required to compile that file, no more no less.
+  </li>
+  <li>
+   <a href="http://clang.llvm.org/extra/clang-tidy/">
+    <strong>
+     clang-tidy
+    </strong>
+   </a>
+   :  is a clang-based C++ “linter” tool. Its purpose is to provide an extensible framework for diagnosing and fixing typical programming errors, like style violations, interface misuse, or bugs that can be deduced via static analysis. clang-tidy is modular and provides a convenient interface for writing new checks.
+  </li>
+  <li>
+   <strong>
+    lwyu
+   </strong>
+   (link what you use): This is a built in CMake feature that uses options of ld and ldd to print out if executables link more libraries than they actually require.
+  </li>
+  <li>
+   <strong>
+    <a href="https://github.com/cpplint/cpplint">
+     cpplint
+    </a>
+   </strong>
+   :  a C++ style checker following
+   <a href="http://google.github.io/styleguide/cppguide.html">
+    Google’s C++ style guide
+   </a>
+   .
+  </li>
+  <li>
+   <strong>
+    <a href="http://cppcheck.sourceforge.net/">
+     cppcheck
+    </a>
+   </strong>
+   : a
+   <a href="http://en.wikipedia.org/wiki/Static_analysis_tool">
+    static analysis tool
+   </a>
+   for C/C++ code. Cppcheck primarily detects the types of bugs that the compilers normally do not detect. The goal is to detect only real errors in the code (i.e. have zero false positives).
+  </li>
+ </ul>
+ <p>
+  All of these tools except for lwyu basically shadow the compiler. By shadowing, it means that for each compiler invocation in a build process CMake will run both the analysis  tool and the compiler command line. This allows for the entire project to be built including code wrappers and anything else done during the build, but at the same time checking the code base with the static analysis tool. This can then be used to send the analysis output to a
+  <a href="http://www.cdash.org">
+   CDash
+  </a>
+  dashboard. By integrating these tools into CMake, any CMake based project is able to take advantage of these tools. This integration with the build system provides significant benefits to larger code bases where a simple
+  <strong>
+   <em>
+    checker-tool *.cxx
+   </em>
+  </strong>
+  command is not feasible.
+ </p>
+ <p>
+  These tools are all enabled using
+  <a href="https://cmake.org/cmake/help/v3.9/manual/cmake-properties.7.html#properties-on-targets">
+   target properties
+  </a>
+  . Although these properties can be set on individual targets by modifying CMakeLists.txt code, a better approach is to initialize the properties by using a global CMake cache variable. This allows you to run these tools on a CMake project without having to modify the projects CMakeLists.txt files. Those variables can be set on the cmake command line using -Dvar=value. The variables could also be set from a cache inside a ctest -S style script which are used for setting up CDash builds.
+ </p>
+ <p>
+  The target properties and the global initialization variables for the static checking tools available at the time of writing this blog are as follows:
+ </p>
+ <ul>
+  <li>
+   &lt;LANG&gt;_CLANG_TIDY  can be set with cache variable CMAKE_&lt;LANG&gt;_CLANG_TIDY
+  </li>
+  <li>
+   &lt;LANG&gt;_CPPCHECK can be set with cache variable CMAKE_&lt;LANG&gt;_CPPCHECK
+  </li>
+  <li>
+   &lt;LANG&gt;_CPPLINT can be set with cache variable CMAKE_&lt;LANG&gt;_CPPLINT
+  </li>
+  <li>
+   &lt;LANG&gt;_INCLUDE_WHAT_YOU_USE  can be set with cache variable CMAKE_&lt;LANG&gt;_INCLUDE_WHAT_YOU_USE
+  </li>
+  <li>
+   LINK_WHAT_YOU_USE can be set with cache variable CMAKE_LINK_WHAT_YOU_USE
+  </li>
+ </ul>
+ <p>
+  &lt;LANG&gt; denotes the language that is being checked, and is usually either C (for C code) or CXX (for C++ code). All of the &lt;LANG&gt; properties are expected to contain CMake semi-colon separated list containing the checker tool command line to run with any options. At a minimum only the path to the tool itself is required. CMake will add the options to send the source file and other required options to the tool. However, if extra options are required then they can be provided. Examples are a good way to show how to use these options, so in the next section an example will be given for each tool.
+ </p>
+ <h3>
+  Clang Tidy
+ </h3>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c41d5e3e2255930981" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-i">
+     cmake
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-s">
+     "-DCMAKE_CXX_CLANG_TIDY=/usr/bin/clang-tidy-3.9;-checks=*"
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     path
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-st">
+     to
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     source
+    </span>
+   </span>
+  </span>
+ </p>
+ <p>
+  This will run /usr/bin/clang-tidy-3.9 -checks=* on each of the C++ source files in the project being built.
+ </p>
+ <h3>
+  CppCheck
+ </h3>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c41d5e3ec808694427" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-i">
+     cmake
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-s">
+     "-DCMAKE_CXX_CPPCHECK=/usr/bin/cppcheck;--std=c++11"
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     path
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-st">
+     to
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     source
+    </span>
+   </span>
+  </span>
+ </p>
+ <p>
+  This will run /usr/bin/cppcheck;–std=c++11″ –source=/path/to/source/file.cxx  on each c++ file in the project being built.
+ </p>
+ <h3>
+  CppLint
+ </h3>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c41d5e3ee194111519" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-i">
+     cmake
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-s">
+     "-DCMAKE_CXX_CPPLINT=/usr/local/bin/cpplint;--linelength=79"
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+   </span>
+  </span>
+ </p>
+ <p>
+  This will run /usr/local/bin/cpplint –linelength=79 on each c++ file in the project being built.
+ </p>
+ <h3>
+  IWYU
+ </h3>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c41d5e3f1321142510" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-i">
+     cmake
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-s">
+     "-DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=/usr/bin/iwyu;--transitive_includes_only"
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+   </span>
+  </span>
+ </p>
+ <p>
+  This will run /usr/bin/iwyu –transitive_includes_only on each c++ file in the project being built.
+ </p>
+ <h3>
+  LWYU
+ </h3>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c41d5e3f3846393406" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     cmake
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-o">
+     -
+    </span>
+    <span class="crayon-v">
+     DCMAKE_LINK_WHAT_YOU_USE
+    </span>
+    <span class="crayon-o">
+     =
+    </span>
+    <span class="crayon-t">
+     TRUE
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+    <span class="crayon-sy">
+     .
+    </span>
+   </span>
+  </span>
+ </p>
+ <p>
+  This will modify the flags to ld to show any libraries being linked into targets that are not contributing symbols to the target being linked.
+ </p>
+ <p>
+  The output of these tools will be prefixed with Warning: so that CDash will automatically recognize it as a warning. The warnings will show up in the build column in CMake as each of the commands is run during the build.
+ </p>
+ <div class="wp-caption alignnone" id="attachment_20879" style="width: 500px">
+  <img alt="" class="wp-image-20879" height="178" sizes="(max-width: 490px) 100vw, 490px" src="https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-300x109.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-300x109.jpg 300w, https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-768x278.jpg 768w, https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-220x80.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-250x90.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-355x128.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-730x264.jpg 730w, https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash-90x33.jpg 90w, https://blog.kitware.com/wp-content/uploads/2018/02/iwyuCDash.jpg 832w" width="490"/>
+  <p class="wp-caption-text">
+   Include what you use output in CDash.
+  </p>
+ </div>
+ <p>
+  In summary, CMake provides easy access to many popular compile time code analyzers.
+ </p>
+</div>

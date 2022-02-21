@@ -1,0 +1,160 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  3D printers are quickly becoming a commodity technology. One can easily find 3D printers at supply stores, and they are sold at what used to be the price of Laser printers. The process of preparing 3D models as input for the 3D printer has also been de-facto standardized with the wide adoption of STL files.  Today, the STL file is to 3D printing as the PDF file is to standard 2D ink printing.
+ </p>
+ <p>
+  <a href="/source/files/4_1660276158.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1660276158.jpg" style="width: 500px; height: 376px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p>
+  Due to this ubiquitous adoption, it is important for any software that can potentially produce models for 3D printing to be able to export the models into STL files.
+ </p>
+ <p>
+  ITK currently provides data structures to represent meshes, in particular 2D manifolds in 3D space, which are probably the most common type of structure printed. However, until recently, ITK did not have a writer class capable of exporting a surface model into an STL file. Therefore, we wrote one.
+ </p>
+ <p>
+  A full description of this new C++ class is available in this article in the Insight Journal:
+  <br/>
+  “STL file format MeshIO class for ITK”
+  <br/>
+  http://www.insight-journal.org/browse/publication/913
+ </p>
+ <p>
+  The source code is available as an ITK remote module at:
+  <br/>
+  https://github.com/luisibanez/ITKSTLMeshIO
+ </p>
+ <p>
+  The new itkSTLMeshIO class can write surfaces to STL files and can also read the content of an STL file into an ITK mesh, typically a QuadEdgeMesh.
+ </p>
+ <p>
+  An STL file contains the description of a surface in the form of a collection of triangles. This description is typically passed to a “slicer” application (such as skeinforge or Slic3r, not to be confused with “www.slicer.org”) that will be aware of the geometric parameters of a specific printer and the materials it uses. By combining this information, the slicer application will generate GCode, which is a description of the paths and actions that the heads (extruders) in the printer must take in order to progressively deposit the material and compose the shape. Since GCode files are fine-tuned to the specific characteristics of the printer, they are not portable across different devices.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <strong>
+    <span style="color: #000080;">
+     Implementation
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  The STL standard supports two modes: ASCII and Binary.  In both cases, the file contains a list of triangles, each of which is defined by three points. The points are specified by their x,y,z coordinates.
+  <br/>
+  The ASCII version of an STL file starts with the line:  “solid ascii” and ends with the line “endsolid.” In between, it has a sequence of triangles. Each one is specified by the block of text with the form:
+ </p>
+ <div style="background: #eee; border: 1px solid #ccc; padding: 5px 10px;">
+  <code>
+   facet normal nx ny nz
+   <br/>
+   outer loop
+   <br/>
+   vertex v1x v1y v1z
+   <br/>
+   vertex v2x v2y v2z
+   <br/>
+   vertex v3x v3y v3z
+   <br/>
+   endloop
+   <br/>
+   endfacet
+  </code>
+ </div>
+ <p>
+  The first line indicates the components of the normal to the triangle, and the three “vertex” lines inside the “outer loop” provide the coordinates of every vertex of the triangle.  In principle, an STL file could represent polygons with more than three edges. In practice, however, most STL files contain only triangles.
+ </p>
+ <p>
+  The Binary version of an STL file starts with an 80-bytes header. The header should not have the characters “solid” in its first five bytes, since those are commonly used as an indication that the file format is ASCII and would, therefore, misguide readers of the file.
+ </p>
+ <p>
+  After the header, the total number of triangles in the shape is encoded into a 32-bit little endian integer. This already defines a limit to the total number of triangles that can be stored in an STL file. From then on, the file contains blocks of data per triangle, where every block has:
+ </p>
+ <div style="background: #eee; border: 1px solid #ccc; padding: 5px 10px;">
+  <code>
+   REAL32[3] – Normal vector
+   <br/>
+   REAL32[3] – Vertex 1
+   <br/>
+   REAL32[3] – Vertex 2
+   <br/>
+   REAL32[3] – Vertex 3
+   <br/>
+   UINT16 – Attribute byte count
+  </code>
+ </div>
+ <p>
+  That is, vectors and points are represented as triplets of 32-bit integers (float types in C++).
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <strong>
+    <span style="color: #000080;">
+     How to Use It
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  The typical usage of this new ITK class will look like the following code
+ </p>
+ <div style="background: #eee; border: 1px solid #ccc; padding: 5px 10px;">
+  <p>
+   <code>
+    const unsigned int Dimension = 3;
+    <br/>
+    typedef float PixelType;
+   </code>
+  </p>
+  <p>
+   itk::STLMeshIOFactory::RegisterOneFactory();
+  </p>
+  <p>
+   typedef itk::QuadEdgeMesh&lt;PixelType, Dimension&gt;    QEMeshType;
+   <br/>
+   typedef itk::MeshFileWriter&lt; QEMeshType &gt;          WriterType;
+  </p>
+  <p>
+   WriterType::Pointer writer = WriterType::New();
+   <br/>
+   writer-&gt;SetFileName(“myfileto3Dprint.stl”);
+  </p>
+  <p>
+   writer-&gt;SetFileTypeAsASCII();
+   <br/>
+   writer-&gt;SetInput( reader-&gt;GetOutput() );
+   <br/>
+   writer-&gt;Update();
+  </p>
+ </div>
+ <p>
+  We hope you find this new ITK feature useful, and we will be happy to receive your feedback on how to improve it.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <strong>
+    <span style="color: #000080;">
+     References
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  [1] http://en.wikipedia.org/wiki/STL_(file_format)#ASCII_STL
+  <br/>
+  [2] http://www.insight-journal.org/browse/publication/913
+ </p>
+ <p>
+  <a href="/source/files/4_166182040.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_166182040.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Luis Ibáñez
+  </strong>
+  is a Technical Leader at Kitware, Inc. He is one of the main developers of the Insight Toolkit (ITK). Luis is a strong supporter of Open Access publishing and the verification of reproducibility in scientific publications.
+ </p>
+</div>

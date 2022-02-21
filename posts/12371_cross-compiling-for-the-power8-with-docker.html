@@ -1,0 +1,170 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Continuing our series on cross-compiling
+  <a href="http://itk.org">
+   ITK
+  </a>
+  with
+  <a href="http://cmake.org">
+   CMake
+  </a>
+  and
+  <a href="http://docker.io">
+   Docker
+  </a>
+  , we will cross-compile for the
+  <a href="https://en.wikipedia.org/wiki/POWER8">
+   POWER8
+  </a>
+  , which is a
+  <a href="https://en.wikipedia.org/wiki/Power_Architecture">
+   PowerPC 64
+  </a>
+  <a href="https://en.wikipedia.org/wiki/Endianness">
+   little endian
+  </a>
+  system, i.e. ppc64le.  This entry follows articles on cross-compiling for
+  <a href="http://kitware.com/blog/home/post/877">
+   Windows
+  </a>
+  and the
+  <a href="http://kitware.com/blog/home/post/887">
+   Raspberry Pi
+  </a>
+  with Docker. The POWER8 is interesting because it is a highly parallel system, running 8 threads on each core with up to 12 cores per chip. By cross-compiling, we can test
+  <a href="http://review.source.kitware.com/#/c/19793/j">
+   patches
+  </a>
+  that address
+  <a href="https://open.cdash.org/index.php?project=Insight&amp;filtercount=1&amp;showfilters=1&amp;field1=buildname/string&amp;compare1=63&amp;value1=POWER8">
+   dashboard build
+  </a>
+  warnings so we can have a working system on which to perform parallel performance benchmarking.
+ </p>
+ <p>
+  <a href="/blog/files/152_1546257853.jpg" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.152_1546257853.jpg" style="width: 300px;"/>
+  </a>
+ </p>
+ <p>
+  When cross-compiling with Docker and CMake, there are three basic steps.
+ </p>
+ <h2>
+  1) Get the cross-compiling toolchain
+ </h2>
+ <p>
+  Obtaining the toolchain with Docker is easy — just download it with
+  <em>
+   docker pull
+  </em>
+  :
+ </p>
+ <p>
+  <code>
+   <span style="line-height: 1.6em;">
+    docker pull thewtex/cross-compiler-linux-ppc64le
+   </span>
+  </code>
+ </p>
+ <h2>
+ </h2>
+ <h2>
+  2) Start up a container, mounting the source and build tree
+ </h2>
+ <p>
+  If there is a source tree and build tree, e.g.
+ </p>
+ <p>
+  <code>
+   cd ~/src
+  </code>
+ </p>
+ <p>
+  <code>
+   <span style="line-height: 1.6em;">
+    git clone http://itk.org/ITK.git
+   </span>
+  </code>
+ </p>
+ <p>
+  <code>
+   mkdir -p ~/bin/ITK-build
+  </code>
+ </p>
+ <p>
+ </p>
+ <p>
+  Then mount these directories as Docker
+  <a href="http://docs.docker.com/userguide/dockervolumes/#data-volumes">
+   volumes
+  </a>
+  when the
+  <a href="http://docs.docker.com/terms/container/">
+   container
+  </a>
+  is started:
+ </p>
+ <p>
+  <code>
+   docker run --rm -it \
+  </code>
+ </p>
+ <p>
+  <code>
+   -v ~/src/ITK:/usr/src/ITK:ro \
+  </code>
+ </p>
+ <p>
+  <code>
+   -v ~/bin/ITK-build:/usr/src/ITK-build:rw \
+  </code>
+ </p>
+ <p>
+  <code>
+   thewtex/cross-compiler-linux-ppc64le
+  </code>
+ </p>
+ <p>
+ </p>
+ <h2>
+  <span style="line-height: 1.6em;">
+   3) Point CMake to the CMAKE_TOOLCHAIN_FILE
+  </span>
+ </h2>
+ <p>
+  Inside the container, the environmental variable
+  <em>
+   CMAKE_TOOLCHAIN_FILE
+  </em>
+  has been
+  <a href="https://github.com/thewtex/cross-compilers/blob/master/linux-ppc64le/Dockerfile#L28">
+   configured
+  </a>
+  to point to the toolchain file CMake uses to
+  <a href="http://www.cmake.org/cmake/help/git-master/manual/cmake-toolchains.7.html">
+   inform itself about the build environment
+  </a>
+  .  Pass this file to CMake during configuration.
+ </p>
+ <p>
+  <code>
+   cd /usr/src/ITK-build
+  </code>
+ </p>
+ <p>
+  <code>
+   cmake -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} ../ITK
+  </code>
+ </p>
+ <p>
+  <code>
+   make -j$(nproc)
+  </code>
+ </p>
+ <p>
+ </p>
+ <p>
+  Enjoy!
+ </p>
+</div>

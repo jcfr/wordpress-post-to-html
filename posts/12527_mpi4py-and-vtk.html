@@ -1,0 +1,1116 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  We recently added
+  <a href="http://mpi4py.scipy.org/">
+   mpi4py
+  </a>
+  as one of the third party libraries in VTK. Below is a quote from the mpi4py explaining what it is.
+ </p>
+ <blockquote>
+  <p>
+   MPI for Python (mpi4py) provides bindings of the Message Passing Interface (MPI) standard for the Python programming language, allowing any Python program to exploit multiple processors.
+  </p>
+  <p>
+   This package is constructed on top of the MPI–1/MPI–2 specification and provides an object oriented interface which closely follows MPI–2 C++ bindings. It supports point-to-point (sends, receives) and collective (broadcasts, scatters, gathers) communications of any picklable Python object as well as optimized communications of Python object exposing the single-segment buffer interface (NumPy arrays, builtin bytes/string/array objects).
+  </p>
+ </blockquote>
+ <p>
+  See the mpi4py page for details.
+ </p>
+ <p>
+  We have been using mpi4py in ParaView for several years and with the recent introduction of the
+  <code>
+   numpy_interface
+  </code>
+  module to VTK, we decided to move the mpi4py dependency to VTK as well. This allowed us to support data parallelism with MPI in the
+  <code>
+   numpy_interface
+  </code>
+  module. I will discuss this in an upcoming blog in more detail.
+ </p>
+ <p>
+  Using mpi4py is pretty straightforward. The following can be called from vtkpython, pvtkpython and python.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8027133a757801836" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+from mpi4py import MPI</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8027133a757801836-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8027133a757801836-1">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-e">
+         mpi4py
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-v">
+         MPI
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  Note that if you are going to mix parallel VTK and mpi4py, we recommend using pvtkpython, which initializes several VTK data structures that make it easier for algorithms to access MPI communicators.
+ </p>
+ <p>
+  VTK also provides a Python-accessible interface to MPI in the vtkMPIController and vtkMPICommunicator classes. However, these classes were not designed to be used from Python and as such provide only a small set of methods. Most often, you will use mpi4py when coding in Python.
+ </p>
+ <p>
+  In some cases, specially when using MPI groups, it is necessary to pass the communicator used by VTK to mpi4py or vice versa. We developed a simple utility class to enable this. This class is called vtkMPI4PyCommunicator and is used as follows.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e80271342029572561" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import vtk
+from mpi4py import MPI
+
+# GlobalController is defined automatically when running pvtkpython
+# Otherwise, you need to manually create a vtkMPIController and set
+# it yourself.
+contr = vtk.vtkMultiProcessController.GetGlobalController()
+comm = vtkMPI4PyCommunicator.ConvertToPython(controller.GetCommunicator())
+
+acomm = vtkMPI4PyCommunicator.ConvertToVTK(comm)
+acontr = vtk.vtkMPIController()
+acontr.SetCommunicator(acomm)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271342029572561-12">
+        12
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-2">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-e">
+         mpi4py
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-v">
+         MPI
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-4">
+        <span class="crayon-p">
+         # GlobalController is defined automatically when running pvtkpython
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-5">
+        <span class="crayon-p">
+         # Otherwise, you need to manually create a vtkMPIController and set
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-6">
+        <span class="crayon-p">
+         # it yourself.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-7">
+        <span class="crayon-v">
+         contr
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkMultiProcessController
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetGlobalController
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-8">
+        <span class="crayon-v">
+         comm
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkMPI4PyCommunicator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ConvertToPython
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         controller
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetCommunicator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-10">
+        <span class="crayon-v">
+         acomm
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkMPI4PyCommunicator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ConvertToVTK
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         comm
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-11">
+        <span class="crayon-v">
+         acontr
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkMPIController
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271342029572561-12">
+        <span class="crayon-v">
+         acontr
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetCommunicator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         acomm
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+  Since mpi4py works very nicely with numpy arrays and VTKArray is a subclass of
+  <code>
+   numpy.ndarray
+  </code>
+  (see previous posts [
+  <a href="https://blog.kitware.com/improved-vtk-numpy-integration/">
+   1
+  </a>
+  ], [
+  <a href="https://blog.kitware.com/improved-vtk-numpy-integration-part-2/">
+   2
+  </a>
+  ] and [
+  <a href="https://blog.kitware.com/improved-vtk-numpy-integration-part-3/">
+   3
+  </a>
+  ]), it is very straightforward to use them together as follows.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e80271345253992294" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import vtk
+from vtk.numpy_interface import dataset_adapter as dsa
+from mpi4py import MPI
+import numpy
+
+gc = vtk.vtkMultiProcessController.GetGlobalController()
+
+rank = gc.GetLocalProcessId()
+
+fa = vtk.vtkFloatArray()
+fa.SetNumberOfTuples(10)
+fa.FillComponent(0, rank)
+if rank == 0:
+    fa.SetValue(3, 10)
+
+vtk_array = dsa.vtkDataArrayToVTKArray(fa)
+result = numpy.array(vtk_array)
+
+comm = vtk.vtkMPI4PyCommunicator.ConvertToPython(gc.GetCommunicator())
+comm.Allreduce([vtk_array, MPI.FLOAT], [result, MPI.FLOAT], MPI.MAX)
+
+if rank == 0:
+    print result</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e80271345253992294-23">
+        23
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-2">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         numpy_interface
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         dataset_adapter
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         dsa
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-3">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-e">
+         mpi4py
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         MPI
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-4">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         numpy
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-6">
+        <span class="crayon-v">
+         gc
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkMultiProcessController
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetGlobalController
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-7">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-8">
+        <span class="crayon-v">
+         rank
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gc
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetLocalProcessId
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-10">
+        <span class="crayon-v">
+         fa
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkFloatArray
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-11">
+        <span class="crayon-v">
+         fa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfTuples
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         10
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-12">
+        <span class="crayon-v">
+         fa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         FillComponent
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rank
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-13">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rank
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         fa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         10
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-16">
+        <span class="crayon-v">
+         vtk_array
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         dsa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkDataArrayToVTKArray
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         fa
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-17">
+        <span class="crayon-v">
+         result
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-t">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk_array
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-18">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-19">
+        <span class="crayon-v">
+         comm
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkMPI4PyCommunicator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ConvertToPython
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         gc
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetCommunicator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-20">
+        <span class="crayon-v">
+         comm
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Allreduce
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         vtk_array
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         MPI
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-t">
+         FLOAT
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         result
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         MPI
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-t">
+         FLOAT
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         MPI
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         MAX
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-21">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-22">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rank
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e80271345253992294-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         result
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0007 seconds] -->
+ <p>
+  When this is executed as
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8027134e420568775" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+mpiexec -n 2 pvtkpython parallel_array.py</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8027134e420568775-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8027134e420568775-1">
+        <span class="crayon-v">
+         mpiexec
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         n
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         pvtkpython
+        </span>
+        <span class="crayon-v">
+         parallel_array
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         py
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  it prints
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e80271350037786165" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+[  1.   1.   1.  10.   1.   1.   1.   1.   1.   1.]</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e80271350037786165-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e80271350037786165-1">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         10.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  In my next blog, I will talk about how to use the
+  <code>
+   algorithms
+  </code>
+  module in parallel. Until then, happy Message Passing.
+ </p>
+ <p>
+  <em>
+   Many thanks to Ben Boeckel for moving mpi4py to VTK and implementing vtkMPI4PyCommunicator.
+  </em>
+ </p>
+</div>

@@ -1,0 +1,340 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  A fundamental task in most aspects of medical image computing is segmentation, i.e., delineation of anatomical structures of interest for further processing and quantification. Segmentation can be manual, it can be semi-automatic (through the initialization of an algorithm with limited input), or it can be fully automatic (through an autonomous algorithm). A multitude of software tools and algorithms exist for each type of segmentation, and segmentation has served as the subject of extensive research in the field of medical image computing.
+ </p>
+ <p>
+  Most commonly, three-dimensional (3D) binary volumes (labelmaps) store segmentation results. Each volume simply indicates whether a volumetric element (voxel) is inside or outside of the structure of interest. Three-dimensional binary volumes are optimal for most processing algorithms. To visualize structures, however, surface models are optimal. Instead of a structured grid of voxels, each surface model consists of a point cloud. Triangles connect the point cloud, which a 3D visualization can illustrate.
+ </p>
+ <p>
+  Several other representations exist. In radiation therapy (RT), the Digital Imaging and Communications in Medicine (DICOM) standard [1] specifies planar contours. In addition, certain segmentation algorithms yield labelmaps with voxels that indicate probabilities instead of binary decisions. Even more obscure representations include ribbons, which help to quickly visualize planar contours.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17919" style="width: 777px">
+  <img alt="" class="size-full wp-image-17919" height="845" sizes="(max-width: 767px) 100vw, 767px" src="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1.png 767w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1-272x300.png 272w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1-220x242.png 220w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1-250x275.png 250w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1-355x391.png 355w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1-730x804.png 730w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-1-90x99.png 90w" width="767"/>
+  <p class="wp-caption-text">
+   A brain stem structure appears in different representations. “A” shows planar contours, “B” shows a closed surface, “C” shows a binary labelmap, and “D” shows a ribbon model.
+  </p>
+ </div>
+ <p>
+  Unfortunately, representing and processing anatomical structures present major difficulties. These difficulties include operation, as it may be necessary to perform conversion. Another difficulty is identity, since it is important to keep track of the origin (provenance) of the structures and what they represent. A third difficulty is validity: Representations may change after conversions, so invalid data must remain inaccessible at all times. Coherence serves as an additional point of difficulty. As structure sets typically correspond to the same entity (i.e., the patient), the in-memory objects that relate to the structures need to form a unified whole.
+ </p>
+ <p>
+  3D Slicer [2] is one of the most popular open-source platforms in the world for medical image analysis and visualization. The Laboratory for Percutaneous Surgery (PerkLab) at Queen’s University uses 3D Slicer extensively for a wide variety of research projects. Previously, representing segmentations in 3D Slicer posed considerable hurdles, not only in terms of the four above mentioned difficulties but also in regards to processing time. Researchers and clinicians spent time manually converting one representation to another. For example, they used the
+  <span style="font-family: courier new,courier;">
+   ModelMaker
+  </span>
+  module to create 3D surfaces of labelmaps. They did this every time the labelmaps changed.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    A Mechanism for Dynamic Anatomical Structure Management
+   </strong>
+  </span>
+ </p>
+ <p>
+  PerkLab designed and implemented a new data type in 3D Slicer (and before that in the
+  <span style="font-family: courier new,courier;">
+   SlicerRT
+  </span>
+  extension [3]), called
+  <span style="font-family: courier new,courier;">
+   segmentation node
+  </span>
+  . This data type contains multiple structures and multiple representations in the same object, which addresses the “identity” difficulty. (See the following image.) The structures can remain synchronized after changes occur in the underlying data, which attends to the “coherence” difficulty.
+ </p>
+ <p>
+  The data type is part of a complete mechanism that manages the contained representations. Whenever 3D Slicer requests a representation—such as when the 3D view tries to access the surface model of a segmentation—the mechanism automatically performs conversion. This overcomes the “operation” difficulty.
+ </p>
+ <p>
+  A master representation makes sure that invalid data does not become available, which tackles the “validity” difficulty. The master representation is the representation in which the data creation initially occurred (i.e., the labelmap, when segmenting manually or semi-automatically, and the planar contour, when loading from
+  <span style="font-family: courier new,courier;">
+   DICOM-RT
+  </span>
+  ). The master representation also serves as the source of all conversions. When the master representation changes, e.g., during the segmentation of an organ, all other representations get cleared. The representations get re-converted, when they become requested again.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17920" style="width: 435px">
+  <img alt="" class="size-full wp-image-17920" height="548" sizes="(max-width: 425px) 100vw, 425px" src="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing.png 425w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-233x300.png 233w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-220x284.png 220w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-250x322.png 250w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-355x458.png 355w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-90x116.png 90w" width="425"/>
+  <p class="wp-caption-text">
+   An example of the
+   <span style="font-family: courier new,courier;">
+    segmentation node
+   </span>
+   data type stores each structure of an entity (patient) with each representation in one place.
+  </p>
+ </div>
+ <p>
+  PerkLab carefully chose and implemented conversion algorithms to cover the widest variety of datasets. (For more information, see “Reconstruction of surfaces from planar contours through contour interpolation” [4].) A directed graph drives the algorithms. The graph contains the representations as nodes and the conversion algorithms as edges. It attempts to find the computationally cheapest conversion between the master representation and the requested representation.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Applications
+   </strong>
+  </span>
+ </p>
+ <p>
+  The infrastructure of the mechanism potentially spans every workflow that includes segmented anatomical structures. As the core implementation only depends on the Visualization Toolkit (VTK) [5], a wide variety of software tools in the field of medical image computing are already compatible for adoption. Similarly, in 3D Slicer, the infrastructure potentially spans all segmentation-related operations.
+ </p>
+ <p>
+  The design and implementation of the new
+  <span style="font-family: courier new,courier;">
+   Segment Editor
+  </span>
+  module started from scratch. The module aspires to be the main module for manual and semi-automatic segmentation. It is the successor of the 3D Slicer
+  <span style="font-family: courier new,courier;">
+   Editor
+  </span>
+  module, which served as the starting point for the
+  <span style="font-family: courier new,courier;">
+   Segment Editor
+  </span>
+  design. The user interface of
+  <span style="font-family: courier new,courier;">
+   Segment Editor
+  </span>
+  is very similar to that of
+  <span style="font-family: courier new,courier;">
+   Editor
+  </span>
+  , which makes the transition easier for users. The underlying implementation, however, is very different. It is, in some ways, simpler. New features include these:
+ </p>
+ <ul>
+  <li>
+   real-time visualization of the 3D surface that results from the current state of the edited labelmap;
+  </li>
+  <li>
+   support for overlapping segments (e.g., structures) and advanced masking options;
+  </li>
+  <li>
+   a
+   <span style="font-family: courier new,courier;">
+    Segments Table
+   </span>
+   panel, which allows robust per-structure handling and provides advanced visualization settings;
+  </li>
+  <li>
+   brushes that paint in 3D rather than in a slice-by-slice manner;
+  </li>
+  <li>
+   a
+   <span style="font-family: courier new,courier;">
+    Segment Editor
+   </span>
+   widget, which any module or slicelet (i.e., a stripped-down user interface that focuses on a single task and provides a streamlined workflow) can embed;
+  </li>
+  <li>
+   editing options for oblique slices that do not align with the main axes of the anatomical volume; and
+   <br/>
+   new editor tools or effects such as
+   <span style="font-family: courier new,courier;">
+    Scissors
+   </span>
+   ,
+   <span style="font-family: courier new,courier;">
+    Fill between slices
+   </span>
+   ,
+   <span style="font-family: courier new,courier;">
+    Grow from seeds
+   </span>
+   , etc.
+  </li>
+ </ul>
+ <p>
+  The overall mechanism fills the basic needs of manual and semi-automatic segmentation. Thus, a wide range of applications can benefit from it. Since the mechanism makes it easy to convert representations from one data type to
+  <span style="font-family: courier new,courier;">
+   segmentation node
+  </span>
+  , users can rely on the mechanism, even if their data comes from a third-party tool.
+ </p>
+ <p>
+  The aforementioned field of RT was the first target area for the mechanism, as most workflows in the field use numerous types of data representations. Visualizing and analyzing RT datasets became immensely more straightforward and robust since the adoption of the mechanism. More specialized use cases have also benefited from its utilization. These use cases include the fusion of magnetic resonance and ultrasound images for brachytherapy applications [6]. Use cases also include the evaluation of dosimetric measurements with gel [7] and film dosimeters. To facilitate more widespread adoption, however, a more prominent and mainstream use case needed to demonstrate and prove the mechanism.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    3D Printing Tutorial
+   </strong>
+  </span>
+ </p>
+ <p>
+  3D printing is a popular and continually growing field, and so it offers a natural use case that presents the power of the new module and infrastructure. A recent tutorial [8] walks through the necessary steps to create a spine phantom from a partial spine structure and a phantom base. In the tutorial, 3D Slicer segments the partial spine structure on a computed tomography (CT) image. The phantom base comes from a separate computer-aided design (CAD) application. The base facilitates reproducible and stable placement of the phantom in its plastic container, and it incorporates a marker holder into which electromagnetic (EM) sensors can accurately fit. Thus, the tutorial exemplifies the use of an external CAD design with a custom segmentation from 3D Slicer.
+ </p>
+ <p>
+  A simulation for facet joint injection training [9] inspired the design of the phantom. The simulation teaches trainees the complex technique of needle insertion but does not involve a live patient. It aims to support competency-based education by quantitatively evaluating the collected electromagnetic tracking and video data with the
+  <span style="font-family: courier new,courier;">
+   PerkTutor
+  </span>
+  extension [10]. The extension is a training platform for image-guided interventions.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17921" style="width: 633px">
+  <img alt="" class="size-full wp-image-17921" height="577" sizes="(max-width: 623px) 100vw, 623px" src="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-2.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-2.png 623w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-2-300x278.png 300w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-2-220x204.png 220w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-2-250x232.png 250w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-2-355x329.png 355w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-2-90x83.png 90w" width="623"/>
+  <p class="wp-caption-text">
+   The tutorial results in a printed training phantom.
+  </p>
+ </div>
+ <p>
+  The tutorial uses a recent 3D Slicer nightly release instead of version 4.6.2. Although the modules in version 4.6.2 are stable, the 3D Slicer community continues to add useful features to Segment Editor. These features increase usability, and they provide new and convenient segmentation effects.
+ </p>
+ <p>
+  The tutorial can run on all of the operating systems that support 3D Slicer, which include Windows, macOS, and Linux. The featured effects are as follows.
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    Threshold
+   </span>
+   : This effect provides a very simple segmentation tool that creates a segment from a range of intensity values in the anatomical image. It also specifies an intensity-based mask.
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    Islands
+   </span>
+   : This effect handles connected components in a segment.
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    Scissors
+   </span>
+   : This effect selects areas in two dimensions and volumes in three dimensions.
+   <span style="font-family: courier new,courier;">
+    Segment Editor
+   </span>
+   can erase these selections, or it can fill inside or outside of them.
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    Logical Operators
+   </span>
+   : This effect contains a set of morphological operators that add, subtract, intersect, etc.
+  </li>
+ </ul>
+ <p>
+  <span style="font-family: courier new,courier;">
+   Segment Editor
+  </span>
+  includes many other editor effects, and the module can obtain more through downloadable extensions. Using the above four effects, however, it is possible to create a printable patient-specific phantom, as it is easy to export segmentation results to a STereoLithography (STL) file that is ready for 3D printing.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Summary
+   </span>
+  </strong>
+ </p>
+ <p>
+  To address a very common need in medical image computing, PerkLab implemented a complex software infrastructure in 3D Slicer that facilitates more automated and structured handling of segmentation results. PerkLab created Segment Editor to provide an easy-to-use tool to manually or semi-automatically segment anatomical structures.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17923" style="width: 960px">
+  <img alt="" class="size-full wp-image-17923" height="739" sizes="(max-width: 950px) 100vw, 950px" src="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3.jpg 950w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3-300x233.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3-768x597.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3-220x171.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3-250x194.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3-355x276.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3-730x568.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/04/3D-Printing-3-90x70.jpg 90w" width="950"/>
+  <p class="wp-caption-text">
+   3D Slicer 4.7 creates the final phantom model.
+  </p>
+ </div>
+ <p>
+  A tutorial demonstrates the features of these developments. During the tutorial, 3D Slicer generates a partial spinal column segmentation and merges it with a CAD model to create a training phantom that can become printed in three dimensions.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Discussion
+   </strong>
+  </span>
+ </p>
+ <p>
+  This mechanism and related modules have undergone development for years, over multiple iterations, and they are now stable. In the spirit of continual improvement, however, PerkLab encourages the community to contact developers to convey their ideas and comments via the 3D Slicer forum on Discourse [11].
+ </p>
+ <p>
+  To further help the community, PerkLab plans to create a video tutorial of the same workflow with more examples that use
+  <span style="font-family: courier new,courier;">
+   Segment Editor
+  </span>
+  . Also, PerkLab plans to add more modules to the mechanism such as the
+  <span style="font-family: courier new,courier;">
+   Segment Statistics
+  </span>
+  module, which calculates volume, image intensity, and other statistics on segmented structures. Other work will integrate fractional labelmaps. Although these store segmentations in the same resolution as binary labelmaps, the segmentations have considerably higher accuracy. In addition, fractional labelmaps provide support for probabilistic segmentations. Updates will follow.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Acknowledgment
+   </span>
+  </strong>
+ </p>
+ <p>
+  Funding for this work came in part from Cancer Care Ontario, through Applied Cancer Research Unit and Research Chair in Cancer Imaging grants, and from Ontario Consortium for Adaptive Invention in Radiation Oncology.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    References
+   </span>
+  </strong>
+ </p>
+ <ol>
+  <li>
+   Mildenberger, Peter, Marco Eichelberg, and Eric Martin. “Introduction to the DICOM standard.” European Radiology 12 (2002): 920-927.
+  </li>
+  <li>
+   Fedorov, Andriy, Reinhard Beichel, Jayashree Kalpathy-Cramer, Julien Finet, Jean-Christophe Fillion-Robin, Sonia Pujol, Christian Bauer, Dominique Jennings, Fiona Fennessy, Milan Sonka, John Buatti, Stephen Aylward, James V. Miller, Steve Pieper, and Ron Kikinis. “3D Slicer as an image computing platform for the Quantitative Imaging Network.” Magnetic Resonance Imaging 30 (2012): 1323-1341.
+  </li>
+  <li>
+   Pinter, Csaba, Andras Lasso, An Wang, David Jaffray, and Gabor Fichtinger. “SlicerRT: Radiation therapy research toolkit for 3D Slicer.” Medical Physics 39 (2012): 6332-6338.
+  </li>
+  <li>
+   Sunderland, Kyle, Boyeong Woo, Csaba Pinter, and Gabor Fichtinger. “Reconstruction of surfaces from planar contours through contour interpolation.” In Proc. SPIE, 94151R. Medical Imaging 2015: Image-Guided Procedures, Robotic Interventions, and Modeling, Orlando, Florida. The International Society for Optics and Photonics, 2015.
+  </li>
+  <li>
+   Schroeder, Will, Ken Martin, and Bill Lorensen. The Visualization Toolkit: An Object-Oriented Approach to 3D Graphics (4th edition). Clifton Park: Kitware, 2006.
+  </li>
+  <li>
+   Poulin, Eric, Karim Boudam, Csaba Pinter, Samuel Kadoury, Andras Lasso, Gabor Fichtinger, and Cynthia Ménard. “Validation of MRI To US Registration For Focal HDR Prostate Brachytherapy Treatment.” In proceedings of the 2017 ABS annual meeting. The Value of Brachytherapy in Multidisciplinary Cancer Care, Boston, Massachusetts. American Brachytherapy Society, 2017.
+  </li>
+  <li>
+   Alexander, Kevin M., Csaba Pinter, Jennifer Andrea, Gabor Fichtinger, and L. John Schreiner. (2015). “3D Slicer gel dosimetry analysis: Validation of the calibration process.” In IFMBE Proceedings, 521-524. World Congress on Medical Physics and Biomedical Engineering, Toronto, Canada. Springer International Publishing, 2015.
+  </li>
+  <li>
+   Pinter, Csaba. “Segmentation for 3D Printing” (tutorial presented at the 24th project week of the National Alliance for Medical Image Computing, Cambridge, Massachusetts, January 9-13, 2017).
+   <a href="http://www.na-mic.org/Wiki/images/a/a6/SegmentationFor3DPrinting_TutorialContestWinter2017.pdf" rel="noopener noreferrer" target="_blank">
+    http://www.na-mic.org/Wiki/images/a/a6/SegmentationFor3DPrinting_TutorialContestWinter2017.pdf
+   </a>
+   .
+  </li>
+  <li>
+   Moult, Eric, Tamas Ungi, Mattea Welch, J. Lu, Robert C. McGraw, and Gabor Fichtinger. “Ultrasound-guided facet joint injection training using Perk Tutor.” International Journal of Computer Assisted Radiology and Surgery 8 (2013): 831-836.
+  </li>
+  <li>
+   Ungi, Tamas, Derek Sargent, Eric Moult, Andras Lasso, Csaba Pinter, Robert C. McGraw, and Gabor Fichtinger. “Perk Tutor: An Open-Source Training Platform for Ultrasound-Guided Needle Insertions.” IEEE Transactions on Biomedical Engineering 59 (2012): 3475-3481.
+  </li>
+  <li>
+   “3D Slicer.” April 19, 2017.
+   <a href="https://discourse.slicer.org" rel="noopener noreferrer" target="_blank">
+    https://discourse.slicer.org
+   </a>
+   .
+  </li>
+ </ol>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17926 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/04/Csaba-Pinter.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/Csaba-Pinter.jpg 100w, https://blog.kitware.com/wp-content/uploads/2017/04/Csaba-Pinter-90x113.jpg 90w" width="100"/>
+   Csaba Pinter
+  </strong>
+  is a research software engineer at Queen’s University in Canada. He spent several years in the industry, working on projects for medical image computing. He now delves into the world of open source. He is an active contributor to 3D Slicer, and he is the owner of the SlicerRT toolkit for radiation therapy. His main interest is the design of innovative medical applications.
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17927 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/04/Andras-Lasso.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/Andras-Lasso.jpg 100w, https://blog.kitware.com/wp-content/uploads/2017/04/Andras-Lasso-90x113.jpg 90w" width="100"/>
+   Andras Lasso
+  </strong>
+  is a senior software engineer and the associate director of PerkLab. He joined PerkLab in 2009, after he spent nine years at GE Healthcare as a software engineer. His main interests are the development of high-quality reusable open-source software components and the employment of these components for building systems for translational research and clinical use.
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17928 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/04/Gabor-Fichtinger.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/04/Gabor-Fichtinger.jpg 100w, https://blog.kitware.com/wp-content/uploads/2017/04/Gabor-Fichtinger-90x113.jpg 90w" width="100"/>
+   Gabor Fichtinger
+  </strong>
+  is currently the director of PerkLab. He received his doctoral degree in computer science from Budapest University of Technology and Economics in 1990. He is a professor of computer science, electrical engineering, mechanical engineering, and surgery at Queen’s University, with adjunct appointments at Johns Hopkins University. He specializes in robot-assisted image-guided needle-placement procedures, primarily for cancer diagnosis and therapy.
+ </p>
+</div>

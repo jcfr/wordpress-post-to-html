@@ -1,0 +1,209 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  At present, the majority of the climate science community still relies heavily on primitive analysis and visualization tools that are based on the thick (or fat) client application concept. This means that the user must download software to the appropriate machines or hardware where the data resides (e.g., laptops, desktops, or HPC machines). In such cases, the user encounters multiple levels of installation challenges such as finding the right prerequisite software packages, software versions, and currently supported hardware and operating systems.
+ </p>
+ <p>
+  Analysis and visualization tools have thus begun moving toward the thin client application concept, where the user installs very little software. In most cases, only a web browser is needed. In such cases, an analysis and visualization software is deployed on a central server rather than on each individual system, which eliminates the user’s installation and operating system requirement challenges. This approach also provides the flexibility to install the software on the user’s system using VM (virtual operating system) in case scientists need an installation.
+ </p>
+ <p>
+  Thin clients are well suited for environments in which the same information is going to be accessed by a general group of users. The tradeoff, however, is that thick clients provide users with more features, analysis and visualization, and interaction choices that make the software more customizable. Nevertheless, this trend is changing due to new web standards (HTML5) and more capable browsers that have been developed by leading web technology companies.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <strong>
+    <span style="color: rgb(0, 0, 128);">
+     UVis Background
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  The need for highly scalable, collaborative, and easy to install and use software for large climate and geospatial data analysis and visualization led us to develop the UVis toolkit. UVis utilizes the latest in web-technologies such as RESTful API and HTML5 to provide powerful visualization and analysis capabilities on modern web-browsers. Underneath, it is built on top of UV-CDAT [REF], ParaViewWeb, and DJango python web-framework. A complete architecture of UVis is shown in Figure 1. The UVis backend python API is developed on top of UV-CDAT to utilize its analysis and visualization capabilities. The web API of UVis utilizes ParaViewWeb at its core. ParaViewWeb enables communication with a ParaView [REF] / UV-CDAT server running on a remote visualization node or cluster using a light-weight JavaScript API. By utilizing UV-CDAT and ParaViewWeb, UVis provides capabilities including interactive 2D and 3D visualization, remote job submission and processing, and exploratory and batch-mode analysis for scientific models and observational datasets.
+ </p>
+ <p>
+  <a href="/source/files/4_1260799836.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1260799836.jpg" style="width: 500px; height: 278px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: UVis overall architecture
+  </em>
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <strong>
+    <span style="color: rgb(0, 0, 128);">
+     Javascript API and Thin Clients
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  We consider our web-based analysis and visualization toolkit clients that use UVis to be neither thick nor thin clients. Instead, we consider them to be smart clients. That is, they are based more on the traditional client-server architecture concept within the web-based model, as is shown in Figure 1. They are more similar to thick clients in that UVis smart clients are Internet-connected devices that allow a user’s local applications to interact with server-based applications through the use of web services. As is the case with thick clients, this provides for increased analysis and visualization interaction, as well as software customization. On the other hand, like thin clients, software downloads are minimal. In most cases, the only software application needed is the appropriate web browser for a particular operating system. With UVis, a user will be able to work offline via the locally installed UVis backend (using VM) and access the appropriate local data or connect to the Internet and access distributed data from Earth System Grid Federation (ESGF). With this architecture in place, UVis has the ability to be deployed and updated in real-time over the network from a centralized server, support multiple platforms and operating systems, and run on almost any device including mobile phones, notebooks, tablet PCs, laptops, desktops, and HPC machines.
+ </p>
+ <p>
+  The main goal of this design is to facilitate collaboration among distributed users by connecting them through a user-friendly, web-based system to conduct visualization and analysis on both real-time simulation and archived data sets with intuitive visual output and online steering capability. Figure 2 depicts how users access the UVis client interface. It should be noted that the interface can be changed as per the requirement and need of a particular organization or project, as long as it uses the UVis javascript API.
+ </p>
+ <p>
+  <a href="/source/files/4_972149616.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_972149616.jpg" style="width: 500px; height: 337px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: UVis client interface showing comparison between model output and observation
+  </em>
+ </p>
+ <p>
+  Although the system is standalone, it is part of the large end-to-end climate science system that will enable users to run models and collect workflow and provenance for sharing scientific results and reproducibility. The system is directly connected to the ESGF distributed archive, requiring all users to log in at ESGF. ESGF login accounts are required for authentication and authorization before any data is accessed. However, a login is not needed for local data or for ESGF data that is open to the public.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     Server Side Analysis and Visualization
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  One of the important components of Uvis will be server-side analysis and visualization. Server-side computation is necessary, as the increase in data size and complexity of algorithms has led to data- and compute-intensive challenges for climate data analysis and visualization. In this architecture, a web-server receives a request for data processing, analysis, or remote rendering from a thin client such as a web browser. A prerequisite to this is user authentication, which involves the user providing a username/password to the server. If the prerequisite is satisfied, upon receiving the request, the server may create a process specific to the user’s session (per session ID). A separate process per session strengthens security and offers solutions for scalability. Any subsequent requests for data processing are then forwarded to this process until the session ends. At this time, the process is deleted on the server side. Certain requests that do not require intensive computing are served directly by the web-server. For instance, accessing pre-computed climatology for diagnostics is served directly by the server. The server delivers most of the static content to thin clients, as needed.
+ </p>
+ <p>
+  In the design of server-side analysis, we have adopted standard protocols and communication channels between the client and the server. Most of the static content and some dynamic content for exploratory analysis are served in a RESTful manner. The client can access this content by invoking an AJAX call over the web. For interactive visualization and analysis, data is accessed via WebSockets, as it provides the required flexibility and interactivity.
+ </p>
+ <p>
+  The UVis server-side analysis is built on top of an open-source parallel remote data processing framework known as ParaViewWeb. ParaViewWeb enables communication with a ParaView server running on a remote visualization node or cluster using a lightweight JavaScript API. Using this API, web applications can easily embed interactive 2D and 3D visualization components. Application developers can write simple Python scripts to extend the server capabilities, including to create custom visualization pipelines. Essentially, we have utilized this ability to extend ParaViewWeb to support the remote rendering of VCS and DV3D plots, as shown in Figure 3.  In the UVis architecture, a plot on the frontend has its corresponding instance on the backend. Based on the plot type requested by the frontend, UVis plot factory creates the corresponding plot type on the backend with a specific ID for that plot. Any subsequent calls to the newly created plot are then mapped via its ID by the backend.
+ </p>
+ <p>
+  <a href="/source/files/4_133386204.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_133386204.jpg" style="width: 500px; height: 201px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <div style="text-align: center;">
+  <span style="font-size:12px;">
+   <em>
+    Figure 3: Remotely rendered VCS and DV3D plot in UVis
+   </em>
+  </span>
+ </div>
+ <p>
+  We chose Python as the binding language for the server-side analysis. Python was the natural choice for the framework due to its support in the scientific computing community and widespread use in almost every field of computer science. In addition, a Python-based platform enabled us to integrate existing UV-CDAT source code on the backend with minimal effort.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     Conclusion &amp; Remarks
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  In this article, we presented some of our initial work in creating an open-source, web-based toolkit for the analysis and visualization of large climate datasets as part of the UV-CDAT project.  Although we did not describe the integration of UVis with the diagnostics framework in this article, it has been successfully demonstrated and deployed on a working system. The preliminary results are encouraging, as they have proven the usability of the toolkit in terms of its ease of use and effectiveness in providing a sophisticated computing and visualization environment for climate scientists.  We are very thankful to the Department of Energy (DOE) and NASA for providing the support required for this effort.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     REFERENCES
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [UVCDAT] D. Williams, A. Chaudhary, et. al. The ultra-scale visualization climate data analysis tools (uv-cdat): Data analysis and visualization for geoscience data.  Computer, vol. 46, no. 9, pp. 68-76, Sept. 2013
+ </p>
+ <p>
+  [ParaView] J. Ahrens, B. Geveci, C. Law, C. D. Johnson, C. R. Hansen, Eds. Energy 836, 717-732 (2005).
+ </p>
+ <p>
+  <a href="/source/files/4_833972109.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_833972109.jpg" style="width: 100px; float: left; padding-right: 10px; height: 125px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Elo Leung
+  </strong>
+  is a computer scientist at Lawrence Livermore National Laboratory.  She received her Ph.D in bioinformatics from George Mason University in 2008.  Her research interests include bioinformatics, machine learning, scientific visualization, and high-performance computing.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_233248573.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_233248573.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Aashish Chaudhary
+  </strong>
+  is an R&amp;D Engineer on the Scientific Computing team at Kitware. Prior to joining Kitware, he developed a graphics engine and open-source tools for information and geo-visualization. Some of his interests are software engineering, rendering, and visualization
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_74096338.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_74096338.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Chris Harris
+  </strong>
+  is an R&amp;D Engineer at Kitware. His background includes middleware
+  <br/>
+  development at IBM and working on highly-specialized, high performance, mission critical systems.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1385299050.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1385299050.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Charles Doutriaux
+  </strong>
+  is a senior Lawrence Livermore National Laboratory research computer scientist, where he is known for his work in climate analytics, informatics, and management systems supporting model intercomparison projects. He shares in the recognition of the Intergovernmental Panel on Climate Change 2007 Nobel Peace Prize.
+ </p>
+ <p>
+  <a href="/source/files/4_909289375.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_909289375.jpg" style="width: 100px; float: left; height: 125px; padding-right: 10px;"/>
+  </a>
+  <strong>
+   Thomas Maxwell
+  </strong>
+  is a lead scientist in analysis and visualization at the NASA Center for Climate Simulation, Goddard Space Flight Center.  He is the developer of DV3D and a collaborator in the UV-CDAT development program.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1867593655.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1867593655.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Dean N. Williams
+  </strong>
+  is the Analytical and Informatics Management Systems project lead at LLNL. He is the principal investigator for several large-scale international software projects.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1516670671.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1516670671.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Gerald Potter
+  </strong>
+  works for NASA GSFC and the University of Michigan. His current interests are testing software for use by the climate modeling community and exploring new ways to aid in analyzing and displaying climate related data.
+ </p>
+</div>

@@ -1,0 +1,252 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <table border="0" style="margin-left: auto; margin-right: auto;">
+  <tbody>
+   <tr>
+    <td style="text-align: center;">
+     <strong>
+      Index To the Series
+     </strong>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/raspberry-pi-likes-open-source/">
+      1. Raspberery Pi likes Open Source
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/cross-compiling-for-raspberry-pi/">
+      2. Cross-Compiling for Raspberry Pi
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/cross-compiling-itk-for-raspbery-pi/">
+      3. Cross-Compiling ITK for Raspberry Pi
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/raspberry-pi-likes-vtk/">
+      4. Raspberry Pi likes VTK
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td>
+     <a href="https://blog.kitware.com/raspberry-pi-likes-node-js/">
+      5. Raspberry Pi likes Node.js
+     </a>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+ </p>
+ <hr/>
+ <p style="text-align: center;">
+  Following on our
+  <a href="https://blog.kitware.com/cross-compiling-for-raspberry-pi/">
+   previous posts on using the Raspberry Pi
+  </a>
+  ,
+  <br/>
+  here we describe the process of Cross-Compiling
+  <a href="http://www.itk.org/">
+   ITK
+  </a>
+  for the
+  <a href="http://en.wikipedia.org/wiki/RaspberryPi">
+   Raspberry Pi
+  </a>
+  .
+ </p>
+ <table border="0" style="margin-left: auto; margin-right: auto;">
+  <tbody>
+   <tr>
+    <td>
+     <a href="http://www.itk.org/">
+      <img alt="http://www.itk.org/Doxygen43/html/itkLogo.jpg" class="decoded" height="182" src="http://www.itk.org/Doxygen43/html/itkLogo.jpg" width="285"/>
+     </a>
+    </td>
+    <td>
+     <a href="http://en.wikipedia.org/wiki/File:RaspberryPi.jpg" rel="noopener" target="_blank">
+      <img alt="" height="180" src="https://blog.kitware.com/blog/files/Small.6_1187232131.jpg" width="272"/>
+     </a>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <ul>
+  <li>
+   In our
+   <a href="https://blog.kitware.com/raspberry-pi-likes-open-source/">
+    first post we described how to build ITK natively in the Raspberry Pi
+   </a>
+   board,
+   <br/>
+   and how the time that it takes to do so, makes it desirable to pursue cross-compilation.
+  </li>
+  <li>
+   In our
+   <a href="https://blog.kitware.com/cross-compiling-for-raspberry-pi/">
+    second post, with the kind help of Andrew Maclean,
+    <br/>
+    we described how to set up a cross-compilation environment with CMake
+   </a>
+   .
+  </li>
+  <li>
+   Here we apply that same environment to cross-compile ITK in a
+   <br/>
+   <a href="http://www.dell.com/us/business/p/precision-m6700/pd">
+    Dell Precision M6700 Laptop
+   </a>
+   (Intel based) host running Ubuntu 12.10,
+   <br/>
+   and with an ARM architecture as a target.
+  </li>
+ </ul>
+ <p>
+  <p>
+   <span style="color: #ff6600;">
+    <strong>
+     Note:
+    </strong>
+   </span>
+   as with the previous post, many of the images below may appear blurred due to subsampling. Please simply click on them, to see them in full resolution, where the text will be clearly readable.
+  </p>
+  <p>
+   <p>
+    <strong>
+     Step 1. Set up the tool chain.
+    </strong>
+   </p>
+   <p>
+    As described in the
+    <a href="https://blog.kitware.com/cross-compiling-for-raspberry-pi/">
+     previous blog post
+    </a>
+   </p>
+   <p>
+    <p>
+     <strong>
+      Step 2. Set up the tool chain CMake file
+     </strong>
+    </p>
+    <p>
+     As described in the
+     <a href="https://blog.kitware.com/cross-compiling-for-raspberry-pi/">
+      previous blog post
+     </a>
+    </p>
+    <ul>
+     <li>
+      We named this file:
+      <span style="font-family: courier new,courier;">
+       Toolchain-RaspberryPi.cmake
+      </span>
+     </li>
+     <li>
+      and put it in the directory:
+      <span style="font-family: courier new,courier;">
+       /home/ibanez/bin/RaspberryPi/CMakeToolChain
+      </span>
+     </li>
+    </ul>
+    <p>
+     Any other filename and any other directory would have worked as well.
+     <br/>
+     This is specified here only to make easier to follow the steps below.
+    </p>
+    <p>
+     The file content is:
+    </p>
+    <table border="0" style="background-color: #f2dec4; margin-left: auto; margin-right: auto;">
+     <tbody>
+      <tr>
+       <td>
+        <span style="font-family: courier new,courier;">
+         # this one is important
+        </span>
+        <br/>
+        <span style="font-family: courier new,courier;">
+         SET(CMAKE_SYSTEM_NAME Linux)
+        </span>
+        <br/>
+        <span style="font-family: courier new,courier;">
+         #this one not so much
+        </span>
+        <br/>
+        <span style="font-family: courier new,courier;">
+         SET(CMAKE_SYSTEM_VERSION 1)
+        </span>
+       </td>
+      </tr>
+     </tbody>
+    </table>
+   </p>
+   <p>
+    <span style="font-family: courier new,courier;">
+     # specify the cross compiler
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     SET(CMAKE_C_COMPILER
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     /home/ibanez/local/x-tools/arm-unknown-linux-gnueabi/bin/arm-unknown-linux-gnueabi-gcc)
+    </span>
+   </p>
+   <p>
+    <span style="font-family: courier new,courier;">
+     SET(CMAKE_CXX_COMPILER
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     /home/ibanez/local/x-tools/arm-unknown-linux-gnueabi/bin/arm-unknown-linux-gnueabi-g++)
+    </span>
+   </p>
+   <p>
+    <span style="font-family: courier new,courier;">
+     # where is the target environment
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     SET(CMAKE_FIND_ROOT_PATH
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     /home/ibanez/local/x-tools/arm-unknown-linux-gnueabi)
+    </span>
+   </p>
+   <p>
+    <span style="font-family: courier new,courier;">
+     # search for programs in the build host directories
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     # for libraries and headers in the target directories
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+    </span>
+    <br/>
+    <span style="font-family: courier new,courier;">
+     SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+    </span>
+   </p>
+  </p>
+ </p>
+</div>

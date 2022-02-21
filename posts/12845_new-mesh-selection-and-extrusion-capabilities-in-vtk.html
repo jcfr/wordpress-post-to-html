@@ -1,0 +1,219 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  This blog entry is the second in a series of articles reporting on the results of our ongoing collaboration with
+  <em>
+   Commissariat à l’Energie Atomique
+  </em>
+  (CEA),
+  <em>
+   Direction des Applications Militaires Île-de-France
+  </em>
+  (DIF), France, where a domain-specific visualization tool based on VTK and ParaView server is developed. In the
+  <a href="https://blog.kitware.com/annotation-features-added-to-vtk/">
+   first article
+  </a>
+  , we explained how we extended the annotation capabilities of VTK by either integrating into VTK routines that had been developed in-house at CEA/DIF, or by writing new functionalities altogether.
+ </p>
+ <p>
+  In this second article, we are reporting on new capabilities added in VTK 5.10, specifically in the field of mesh manipulation:
+ </p>
+ <ol>
+  <li>
+   Element selection along a line or a broken line.
+  </li>
+  <li>
+   Broken line widget for interactive element selection with a mesh.
+  </li>
+  <li>
+   Quadrangle-generating mesh extrusion from a multi-block polygonal input.
+  </li>
+ </ol>
+ <p>
+  In this article, we briefly report on these new capabilities, available since VTK 5.10.
+ </p>
+ <p>
+  <strong>
+   <span style="text-decoration: underline; font-size: medium;">
+    Linear Selector
+    <br/>
+   </span>
+  </strong>
+ </p>
+ <p>
+  A class for the selection of cells along a segment defined by its endpoints, within a composite data set, had been developed at CEA/DIF. In the context of this current collaboration, we developed a new subclass of
+  <span style="font-size: small; font-family: terminal,monaco;">
+   vtkSelectionAlgorithm
+  </span>
+  , called
+  <span style="font-size: small; font-family: terminal,monaco;">
+   vtkLinearSelector
+  </span>
+  ,  which extends the method to support selection along broken lines within an input composite dataset. In particular, the API of this new selection algorithm allows for 2 different ways of defining a broken line: either  by passing a list of
+  <span style="font-size: small; font-family: terminal,monaco;">
+   vtkPoints
+  </span>
+  , or by only specifying two endpoints in order to preserve backwards-compatibility for the CEA/DIF visualization application.
+ </p>
+ <p>
+  In addition, we enhanced the original method by allowing for the exclusion of line endpoints in the selection process; i.e., selection along open segments. We noticed with early experiments that typical use cases with CEA/DIF datasets were leading to numerous unwanted cells being selected in cases where a segment endpoint coincides (numerically) with a cell vertex within the input mesh. This exclusion method is based on an
+  <span style="font-size: small; font-family: terminal,monaco;">
+   IncludeVertices
+  </span>
+  option, which when turned off, makes use of a user-defined relative tolerance; thus defining a closed segment contained within, and numerically approaching the actual open segment.
+ </p>
+ <p>
+  Incidentally, we discovered that the current implementation of the
+  <span style="font-size: small; font-family: terminal,monaco;">
+   IntersectWithLine()
+  </span>
+  method of
+  <span style="font-size: small; font-family: terminal,monaco;">
+   vtkTriangle
+  </span>
+  does not specifically handle the case of degenerate intersection; i.e., the (unstable) case where a segment is both coplanar and secant to a triangle. The current implementation works effectively as a dichotomy between either secant or coplanar, with the degenerate intersection belonging to the former case. This design is not faulty
+  <em>
+   per se
+  </em>
+  , for it was conceived as such for speed in the context of facet picking within a mesh. However, when using VTK in the context of topological/geometric manipulation, this becomes a problem as we discovered here. We initiated a discussion amongst VTK developers as to whether a modification of
+  <span style="font-size: small; font-family: terminal,monaco;">
+   vtkTriangle::IntersectWithLine()
+  </span>
+  is warranted in order to support the ternary division between generic intersection, non-intersecting coplanarity, and degenerate (co-planar) intersection. Due to the potential ramifications of such a change, we have decided to not not modify
+  <span style="font-family: terminal,monaco; font-size: small;">
+   vtkTriangle::IntersectWithLine()
+  </span>
+  until a consensus is reached in this regard. In the meantime however, this degeneracy does not cause any trouble for our CEA/DIF partners, for their visualisation application uses a version of
+  <span style="font-size: small; font-family: terminal,monaco;">
+   vtkTriangle
+  </span>
+  which they modified to handle this numerical issue in particular.
+ </p>
+ <p>
+  <strong>
+   <span style="text-decoration: underline; font-size: medium;">
+    Broken Line Widget
+    <br/>
+   </span>
+  </strong>
+ </p>
+ <p>
+  Following the development of the broken line selection mechanism, we implemented a broken line widget to allow for interactive selection of cells within an input mesh. For consistency within VTK, we devised the API and behavior of the new
+  <span style="font-family: terminal,monaco; font-size: small;">
+   vtkBrokenLineWidget
+  </span>
+  to be similar to those of the
+  <span style="font-family: terminal,monaco; font-size: small;">
+   vtkSplineWidget
+  </span>
+  , so the developer already familiar with the latter will find it natural to use the former. In particular, mouse/button events produce the same results in terms of handle addition/deletion, panning, zooming, etc.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/128_833256677.png" rel="noopener" target="_blank">
+   <img alt="" height="237" src="https://blog.kitware.com/blog/files/Small.128_833256677.png" style="display: block; margin-left: auto; margin-right: auto;" width="476"/>
+  </a>
+ </p>
+ <p>
+  The behaviour of the new selection mechanism combined with broken line widget interaction can be interactively tested with the
+  <span style="font-family: terminal,monaco; font-size: small;">
+   SegmentAndBrokenLineSources.py
+  </span>
+  script which we put under
+  <span style="font-family: terminal,monaco; font-size: small;">
+   Examples/Graphichs/Python/
+  </span>
+  in VTK 5.10. It demonstrates the operation of the widget and lets the user interactively select cells within an example mesh, chosen for its peculiarity at the apex with multiple coincident pyramids, thus illustrating the use of endpoint elimination during the selection process.
+ </p>
+ <p>
+  <strong>
+   <span style="text-decoration: underline; font-size: medium;">
+    Rotational Extrusion in Quadrangles
+   </span>
+  </strong>
+ </p>
+ <p>
+  Among the modeling capabilities of VTK is the class called
+  <span style="font-family: terminal,monaco; font-size: small;">
+   vtkRotationalExtrusionFilter
+  </span>
+  , which takes polygonal data as input and sweeps it around the z-axis to create new polygonal primitives. These primitives form a “skirt” or swept surface. For example, sweeping a line results in a cylindrical shell, and sweeping a circle creates a torus. A number of control parameters are available: for instance, one can decide whether the skirt sweep of a 2D object (i.e., polygon or triangle strip) is to be capped with the generating geometry. It is also possible to control the angle of the rotation, and whether translation should be performed at the same time as rotation (screw action). The output skirt is generated by locating certain topological features: free edges (edges of polygons or triangle strips only used by one polygon or triangle strips), lines; and polylines generate surfaces, whereas vertices generate lines.
+ </p>
+ <p>
+  This class however has the following limitations:
+ </p>
+ <ol>
+  <li>
+   It can only generate triangle strips as output.
+  </li>
+  <li>
+   It can only sweep around the z-axis.
+  </li>
+  <li>
+   It does not allow to natively process multi-block inputs, with independent rotation angles specified for each block.
+  </li>
+ </ol>
+ <p style="text-align: center;">
+  <p>
+   <a href="/blog/files/128_988933987.png" rel="noopener" target="_blank">
+    <img alt="" height="260" src="https://blog.kitware.com/blog/files/Small.128_988933987.png" style="float: right;" width="260"/>
+   </a>
+   <a href="/blog/files/128_2056904369.png" rel="noopener" target="_blank">
+    <img alt="" height="260" src="https://blog.kitware.com/blog/files/Small.128_2056904369.png" style="display: block; margin-left: auto; margin-right: auto;" width="260"/>
+   </a>
+  </p>
+  <p>
+  </p>
+  <p>
+   In order to address these limitations, a new class called
+   <span style="font-family: terminal,monaco; font-size: small;">
+    vtkQuadRotationalExtrusionFilter
+   </span>
+   has been developed at CEA/DIF. In particular,  the output of this new filter is a skirt made of quadrangles, as illustrated above: left, the result of a rotational extrusion in triangles from a polyline containing 10 segments using
+   <span style="font-family: terminal,monaco; font-size: small;">
+    vtkQuadExtrusionFilter
+   </span>
+   ; right, the output of
+   <span style="font-family: terminal,monaco; font-size: small;">
+    vtkQuadRotationalExtrusionFilter
+   </span>
+   applied to the same input, with the same parameters.
+  </p>
+  <p>
+   <a href="/blog/files/128_1224683719.png" rel="noopener" target="_blank">
+    <img alt="" height="300" src="https://blog.kitware.com/blog/files/Small.128_1224683719.png" style="display: block; margin-left: auto; margin-right: auto;" width="300"/>
+   </a>
+   As part of this collaboration with CEA/DIF, we ported the new class to VTK 5.10. We made a number of changes to make it easier to maintain and extend. In particular, we decided to keep it separate from
+   <span style="font-family: terminal,monaco; font-size: small;">
+    vtkRotationalExtrusion
+   </span>
+   , as opposed to merging the capabilities of both classes into a single new one; as illustrated above,
+   <span style="font-family: terminal,monaco;">
+    <span style="font-size: small;">
+     vtkQuadRotationalExtrusionFilter
+    </span>
+    is
+   </span>
+   intrinsically a
+   <span style="font-family: terminal,monaco; font-size: small;">
+    vtkMultiBlockDataSet
+   </span>
+   algorithm, so we thought that for backwards-compatibility it was desirable to keep the triangle strip generating class as a
+   <span style="font-family: terminal,monaco; font-size: small;">
+    vtkPolyDataAlgorithm
+   </span>
+   , at least until a compelling reason to do otherwise would become manifest. The new, quadrangle-generating, multi-block filter is now fully-available with VTK 5.10.
+  </p>
+  <p>
+   <strong>
+    <span style="text-decoration: underline; font-size: medium;">
+     Acknowledgments
+    </span>
+   </strong>
+  </p>
+  <p>
+   This work was made possible thanks to a contract with CEA, Direction des Applications Militaires Île-de-France (DIF),  Bruyères-le-Châtel, 91297 Arpajon, France. We extend special thanks to Daniel Aguilera, Thierry Carrard, and Claire Guilbaud for this fruitful collaboration. We are looking forward to continued collaboration with CEA/DIF in this and other areas of scientific visualization.
+  </p>
+ </p>
+</div>

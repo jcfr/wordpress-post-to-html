@@ -1,0 +1,78 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Recently, support for building ParaView using a static Python with NumPy support landed in the ParaView superbuild. In the superbuild, all that is required is to set the
+  <code>
+   BUILD_SHARED_LIBS
+  </code>
+  option to
+  <code>
+   OFF
+  </code>
+  and the superbuild will take care of things from there. What this enables is a single binary for ParaView which has Python and NumPy support and doesn't use the disk for any Python modules. This is required for systems which do not support shared libraries (typically super computers, but Apple also rejects shared libraries on the App Store prior to iOS 8) and for situations for which loading files from the filesystem can be slow (also super computers when 1024 nodes all ask to open the
+  <code>
+   six.py
+  </code>
+  module files at the same time). For those interested in the details of how this works, keep reading.
+ </p>
+ <p>
+  To accomplish this, Python and NumPy must first be compiled statically. Since they are not normally built this way, the superbuild's Python has been replaced with a CMake-ified source tree along with some other minor patches which don't affect ParaView (namely
+  <code>
+   openpty
+  </code>
+  and
+  <code>
+   forkpty
+  </code>
+  support being removed since being static means that all resulting binaries need to know about the required libraries). This Python is built with all of the required modules necessary for the NumPy and ParaView builds plus some modules which are useful in ParaView's use cases as well as either "builtin" (for compiled modules) and "frozen" (for pure Python modules). Builtin modules are functions added to a table which is used to initalize modules rather than opening a shared library and calling a function from it. Frozen modules are implemented using a table containing the bytecode of the compiled Python module.
+ </p>
+ <p>
+  Once Python is built, NumPy is built statically. Unfortunately, NumPy does lots of intricate checks of the system which would be tedious to port accurately and keep in sync with a pure CMake build system for NumPy. Instead, a CMake wrapper is wrapped around the NumPy build which generates the necessary headers containing the defines and dependency detections which then are used by CMake to build a single static library with all of the parts of the NumPy build which ParaView uses.
+ </p>
+ <p>
+  The superbuild then sets an option in the ParaView build informing it that support for NumPy must be added to the binaries and ParaView's Python modules need to be frozen as well. Once that is complete, a single ParaView binary (or
+  <code>
+   pvpython
+  </code>
+  ,
+  <code>
+   pvbatch
+  </code>
+  , etc.) is all that is needed to use Python and NumPy.
+ </p>
+ <p>
+  For comparison, running
+  <code>
+   strace -e file
+  </code>
+  over Fedora's system Python and a static
+  <code>
+   pvpython
+  </code>
+  for an
+  <code>
+   import numpy
+  </code>
+  statement shows that a shared Python makes 1174 calls to
+  <code>
+   stat
+  </code>
+  or
+  <code>
+   open
+  </code>
+  (860 of which come back with "
+  <tt>
+   ENOENT (No such file or directory)
+  </tt>
+  ") versus
+  <code>
+   pvpython
+  </code>
+  's 57 (55 of them with
+  <tt>
+   ENOENT
+  </tt>
+  errors).
+ </p>
+</div>

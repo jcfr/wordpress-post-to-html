@@ -1,0 +1,336 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  It is difficult to create distributable executables for Linux because of issues like incompatible C libraries and C++ standard libraries. Creating
+  <a href="https://en.wikipedia.org/wiki/Static_build">
+   static executables
+  </a>
+  avoids some of  the dependencies, although
+  <a href="http://www.akkadia.org/drepper/no_static_linking.html">
+   it may not necessarily help with portability
+  </a>
+  . Static builds are useful for other problems, as discussed
+  <a href="https://blog.kitware.com/cross-compiling-for-android-with-docker/">
+   in future posts
+  </a>
+  .
+  <a href="http://www.itk.org/Wiki/ITK/Git">
+   ITK Git master
+  </a>
+  recently added support for building static executables.  In this post, we will describe how to build static executables against ITK.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" src="http://upload.wikimedia.org/wikipedia/commons/8/80/Gnu-and-penguin-color.png" style="width: 300px; height: 277px;"/>
+ </p>
+ <p>
+  When configuring ITK, use the following options:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41cc118fffe366501733" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cmake \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DITK_DYNAMIC_LOADING=OFF \
+  ~/src/ITK</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41cc118fffe366501733-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc118fffe366501733-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc118fffe366501733-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc118fffe366501733-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41cc118fffe366501733-1">
+        cmake \
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc118fffe366501733-2">
+        -DBUILD_SHARED_LIBS=OFF \
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc118fffe366501733-3">
+        -DITK_DYNAMIC_LOADING=OFF \
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc118fffe366501733-4">
+        ~/src/ITK
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  The
+  <a href="http://www.cmake.org/cmake/help/git-master/variable/BUILD_SHARED_LIBS.html?highlight=build_shared_libs#variable:BUILD_SHARED_LIBS">
+   <em>
+    BUILD_SHARED_LIBS
+   </em>
+  </a>
+  option tells CMake to build static libraries instead of shared libraries, which can be linked into the static executable. Also, the
+  <em>
+   ITK_DYNAMIC_LOADING
+  </em>
+  option disables ITK’s ability to load libraries at runtime into its
+  <a href="https://en.wikipedia.org/wiki/Factory_method_pattern">
+   object factory
+  </a>
+  — this requires dynamic loading.
+ </p>
+ <p>
+  When building executables against ITK, use the following configuration,
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41cc1190006256767877" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+  cmake \
+    -DITK_DIR=/path/to/static/ITK \
+    -DCMAKE_EXE_LINKER_FLAGS="-static" \
+    -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+    ~/src/BuildAHelloWorldProgram</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41cc1190006256767877-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190006256767877-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190006256767877-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190006256767877-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190006256767877-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41cc1190006256767877-1">
+        cmake \
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190006256767877-2">
+        -DITK_DIR=/path/to/static/ITK \
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190006256767877-3">
+        -DCMAKE_EXE_LINKER_FLAGS="-static" \
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190006256767877-4">
+        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190006256767877-5">
+        ~/src/BuildAHelloWorldProgram
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  <span style="line-height: 20.7999992370605px;">
+   The
+  </span>
+  <em style="line-height: 20.7999992370605px;">
+   -static
+  </em>
+  <span style="line-height: 20.7999992370605px;">
+   flag
+  </span>
+  <a href="http://www.cmake.org/cmake/help/git-master/variable/CMAKE_EXE_LINKER_FLAGS.html?highlight=cmake_exe_linker_flags#variable:CMAKE_EXE_LINKER_FLAGS" style="line-height: 20.7999992370605px;">
+   is passed
+  </a>
+  <span style="line-height: 20.7999992370605px;">
+   to the linker so it will create a static executable instead of a dynamically linked executable.
+  </span>
+  The
+  <i>
+   <a href="http://www.cmake.org/cmake/help/git-master/variable/CMAKE_FIND_LIBRARY_SUFFIXES.html?highlight=cmake_find_library_suffixes#variable:CMAKE_FIND_LIBRARY_SUFFIXES">
+    CMAKE_FIND_LIBRARY_SUFFIXES
+   </a>
+  </i>
+  variable will ensure that CMake only finds static libraries, which end it
+  <em>
+   .a.
+  </em>
+  In this case, it is not strictly necessary since we only built ITK with static libraries.
+ </p>
+ <p>
+  When we examine the executable created from a dynamic build:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41cc1190009873099964" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ file BuildAHelloWorldProgram
+BuildAHelloWorldProgram: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.12.0, not stripped
+
+$ du -sh BuildAHelloWorldProgram
+124K    BuildAHelloWorldProgram</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41cc1190009873099964-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190009873099964-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190009873099964-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190009873099964-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc1190009873099964-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41cc1190009873099964-1">
+        $ file BuildAHelloWorldProgram
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190009873099964-2">
+        BuildAHelloWorldProgram: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.12.0, not stripped
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190009873099964-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190009873099964-4">
+        $ du -sh BuildAHelloWorldProgram
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc1190009873099964-5">
+        124K    BuildAHelloWorldProgram
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  we see that it is
+  <strong>
+   dynamically linked
+   <em>
+   </em>
+  </strong>
+  and uses an
+  <em>
+   interpreter,
+  </em>
+  i.e. the
+  <a href="https://en.wikipedia.org/wiki/Dynamic_loading">
+   dynamic loader
+  </a>
+  ,
+  <em>
+   /lib64/ld-linux-x86-64.so.2
+  </em>
+  .  The file size is 124 kilobytes.
+ </p>
+ <p>
+  And the executable created from a static build:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41cc119000e238040787" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ file BuildAHelloWorldProgram
+BuildAHelloWorldProgram: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, for GNU/Linux 3.12.0, not stripped
+
+$ du -sh BuildAHelloWorldProgram
+6.0M    BuildAHelloWorldProgram</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41cc119000e238040787-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc119000e238040787-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc119000e238040787-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc119000e238040787-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cc119000e238040787-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41cc119000e238040787-1">
+        $ file BuildAHelloWorldProgram
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc119000e238040787-2">
+        BuildAHelloWorldProgram: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, for GNU/Linux 3.12.0, not stripped
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc119000e238040787-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc119000e238040787-4">
+        $ du -sh BuildAHelloWorldProgram
+       </div>
+       <div class="crayon-line" id="crayon-5c41cc119000e238040787-5">
+        6.0M    BuildAHelloWorldProgram
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p style="line-height: 20.7999992370605px;">
+  In this case, the executable is
+  <strong>
+   statically linked
+  </strong>
+  . The disadvantage to statically linked executables is their size — 6.0 megabytes versus 124 kilobytes.  There are other
+  <a href="http://www.akkadia.org/drepper/no_static_linking.html">
+   important disadvantages to consider when statically linking in glibc
+  </a>
+  into executables, especially when creating executables for distribution.
+ </p>
+ <p style="line-height: 20.7999992370605px;">
+  Enjoy ITK!
+ </p>
+</div>

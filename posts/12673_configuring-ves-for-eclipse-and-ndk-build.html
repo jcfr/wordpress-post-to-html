@@ -1,0 +1,853 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <div>
+  This is a guest blog post by Candemir Doger on configuring VES for Eclipse and ndk-build. VES is the VTK for Embedded Systems. It is a C++ rendering library for mobile devices using OpenGL ES 2.0. For more information on VES please visit
+  <a href="http://ves.vtk.org" target="_blank">
+   http://ves.vtk.org
+  </a>
+  .
+ </div>
+ <div class="yj6qo ajU">
+ </div>
+ <p>
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ </p>
+ <p>
+  Recently, I needed a visualization framework for my project. Since one of the requirements of the project is to render scientific datasets and since this is not the main requirement (there are more important features to be implemented), I needed a quick solution. After some search and with the suggestions of my advisor in
+  <a href="http://aviz.fr/">
+   Aviz
+  </a>
+  I decided to use
+  <a href="http://www.vtk.org/Wiki/VES">
+   VES
+  </a>
+  , which is VTK OpenGL ES Rendering Toolkit. VES integrates with the
+  <a href="http://www.vtk.org/">
+   Visualization Toolkit (VTK)
+  </a>
+  to deliver scientific and medical visualization capabilities to mobile application developers. However, VES is not the only layer on top of VTK there is one more layer called Kiwi. The architecture is basically as follows:
+ </p>
+ <p>
+  <a href="/blog/files/96_1835353416.png" target="_blank">
+   <img alt="" height="229" src="https://blog.kitware.com/blog/files/Small.96_1835353416.png" width="228"/>
+  </a>
+ </p>
+ <p>
+  As you can see the architecture has two different branches on top of Kiwi. These are to be used for iOS or Android. I will talk about the Android part here. Before talking about the Eclipse and ndk-build configuration I highly recommend you too watch
+  <a href="http://vimeo.com/68386768">
+   this webinar
+  </a>
+  about VES.
+ </p>
+ <p>
+  The biggest problem I had through the building process was to create an Eclipse project. The project itself uses
+  <a href="http://www.cmake.org/">
+   CMake
+  </a>
+  and is configured to create makefiles which can be used via Nmake. After creating these makefiles and building VES some other scripts needed to be run to create an Android project. You can import this Android project directly to Eclipse but you cannot build the native part from it. You should run a separate compile script to build the native part and create the .so library file. Then you can run the project from Eclipse again.
+ </p>
+ <p>
+  Consequently, I started trying to create a one-button build configuration. At first I played with the CMake configurations (for about two weeks) but I couldn't manage to create a decent eclipse project which can be built (maybe it's because I was not very experienced in Cmake but I don't know). Then I turned to
+  <a href="http://developer.android.com/tools/sdk/ndk/index.html">
+   ndk-build
+  </a>
+  which is android's native development kit's build script. For ndk-build to be run you need an Android.mk and Application.mk(optional) file. These files are a little different from a normal makefile. After a 2 days of struggle I had the project building with the help of my colleague. At the end, the project we had was not building the whole ves source code but it was linking the libraries created by ves build to the
+  <span style="background-color: #c0c0c0;">
+   KiwiNative.cpp
+  </span>
+  .
+ </p>
+ <p>
+  Returning to the project itself, the first step to start building apps with VES of course compiling and building it. The best way to start this process is either the video I linked above or the
+  <a href="http://www.vtk.org/Wiki/VES/Developers_Guide_(Windows)">
+   developer guide
+  </a>
+  in their website (developer guide for Linux and Mac can be found
+  <a href="http://www.vtk.org/Wiki/VES/Developers_Guide_(Windows)">
+   here
+  </a>
+  ). I will briefly go over the project structure and some scripts here and then explain my approach to make the project more portable with eclipse and ndk-build.
+ </p>
+ <p>
+  For building a visual studio command prompt is necessary to use the
+  <a href="http://en.wikipedia.org/wiki/Make_(software)">
+   nmake
+  </a>
+  command.
+  <a href="http://www.microsoft.com/visualstudio/eng/downloads#d-2012-express">
+   VS Express 2012
+  </a>
+  is enough for this or any other VS distribution which includes the nmake tool.
+ </p>
+ <p>
+  <strong>
+   The project structure
+  </strong>
+ </p>
+ <p>
+  Following the instructions in the website or in the video you will see that some scripts should be run. I will give a brief explanation of these script and the folder structure of the project.
+ </p>
+ <p>
+  <span style="font-family: times new roman,times; font-size: small;">
+   +—Apps
+   <br/>
+   |   +—Android
+   <br/>
+   |   |   +—CMakeBuild
+   <br/>
+   |   |   |       configure.bat
+   <br/>
+   |   |   |   \—build
+   <br/>
+   |   |   |       +—CMakeExternals
+   <br/>
+   |   |   |       |   +—Build
+   <br/>
+   |   |   |       |   |   +—eigen
+   <br/>
+   |   |   |       |   |   +—ves-android
+   <br/>
+   |   |   |       |   |   +—vtk-host
+   <br/>
+   |   |   |       |   +—Download
+   <br/>
+   |   |   |       |   |   +—eigen
+   <br/>
+   |   |   |       |   |   +—ves-android
+   <br/>
+   |   |   |       |   |   +—vtk-android
+   <br/>
+   |   |   |       |   |   +—vtk-host
+   <br/>
+   |   |   |       |   +—Install
+   <br/>
+   |   |   |       |   |   +—eigen
+   <br/>
+   |   |   |       |   |   +—ves-android
+   <br/>
+   |   |   |       |   |   +—vtk-android
+   <br/>
+   |   |   |       |   |   +—vtk-host
+   <br/>
+   |   |   +—Kiwi
+   <br/>
+   |   |   |      configure.bat
+   <br/>
+   |   |   |      tools.bat
+   <br/>
+   |   |   |      compile.bat
+   <br/>
+   |   |   |      run.bat
+  </span>
+ </p>
+ <p>
+  After cloning the repository from
+  <span style="background-color: #c0c0c0;">
+   git://vtk.org/VES.git
+  </span>
+  you will get the above structure more or less. I omit some stuff to focus on the folders that I want. As far as I remember the
+  <span style="background-color: #c0c0c0;">
+   CMakeExternals
+  </span>
+  folder is created when you run the
+  <span style="background-color: #c0c0c0;">
+   configure.bat
+  </span>
+  script inside
+  <span style="background-color: #c0c0c0;">
+   Android\CMakeBuild
+  </span>
+  . So following the developer guide, you run the
+  <span style="background-color: #c0c0c0;">
+   configure.bat
+  </span>
+  . Let’s see briefly what this does:
+ </p>
+ <p>
+  <!--[if gte mso 9]><xml>
+ <o:OfficeDocumentSettings>
+  <o:AllowPNG/>
+ </o:OfficeDocumentSettings>
+</xml><![endif]-->
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #3f7f59;">
+   @
+  </span>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    echo off
+   </span>
+  </strong>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    rem
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #3f7f59;">
+   Set the NDK path here
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    set
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   ANDROID_NDK=c:/tools/android-ndk-r8
+  </span>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    rem
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #3f7f59;">
+   set ANDROID_TOOLCHAIN_NAME=arm-linux-androideabi-4.4.3
+  </span>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    set
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   CMAKE_DEFAULT_GENERATOR=
+  </span>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   "NMake Makefiles"
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    set
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   BUILD_TYPE=Release
+  </span>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    rem
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #3f7f59;">
+   set CMAKE_HOST_WIN32=1
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    set
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   CL=/MP
+  </span>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    set
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   build_dir=%CD%\build
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    set
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   source_dir=%CD%\..\..\..
+  </span>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    echo
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   Android NDK directory: %ANDROID_NDK%
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    echo
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   Build type: %BUILD_TYPE%
+  </span>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   cmake.exe -E make_directory
+  </span>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   "%build_dir%"
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    cd
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   "%build_dir%"
+  </span>
+  <br/>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   cmake.exe -G %CMAKE_DEFAULT_GENERATOR%
+   <span style="mso-spacerun: yes;">
+   </span>
+   -DCMAKE_BUILD_TYPE:STRING=%BUILD_TYPE% -DVES_ANDROID_SUPERBUILD:BOOL=TRUE
+  </span>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   "%source_dir%"
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    cd
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: black;">
+   ..
+  </span>
+ </p>
+ <p class="MsoNormal" style="margin-bottom: .0001pt; line-height: normal; tab-stops: 45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt;">
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    echo
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   Configuration done.
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    echo
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   To build VES, go to the build directory and type nmake.
+  </span>
+  <br/>
+  <strong>
+   <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #7f0055;">
+    echo
+   </span>
+  </strong>
+  <span style="font-size: 10.0pt; font-family: 'Courier New'; mso-fareast-font-family: 'Times New Roman'; color: #2a00ff;">
+   Don't forget to add tools and platforms directory of Android SDK to PATH env var.
+  </span>
+ </p>
+ <p>
+  Lets first look at the
+  <span style="background-color: #c0c0c0;">
+   CMAKE_DEFAULT_GENERATOR
+  </span>
+  and
+  <span style="background-color: #c0c0c0;">
+   BUILD_TYPE
+  </span>
+  part. This part is where you set the build type and the cmake generator. I have played with the cmake generator for 2 weeks to be able to create a portable eclipse project. I have tried "
+  <span style="background-color: #c0c0c0;">
+   Eclipse CDT4 – NMake Makefiles
+  </span>
+  " in Windows and "
+  <span style="background-color: #c0c0c0;">
+   Eclipse CDT4 – Unix Makefiles
+  </span>
+  " in Ubuntu. However, in the end I gave up and build the ves according to the developer guide and link the static libraries to ndk-build to be able to make the project portable. More on this later… You can also change the build type to be able to build the created libraries later on with a tool like gdb.
+ </p>
+ <p>
+  Through the end of the file calls to the
+  <span style="background-color: #c0c0c0;">
+   cmake.exe
+  </span>
+  are the real commands doing the job of creating the makefiles and stuff. This is basically running cmake to create appropriate folders and make files for the project to be used later while compiling the code. The superbuild variable is explained in more detail in the
+  <a href="http://www.vtk.org/Wiki/VES/Developers_Guide_(Windows)">
+   developer guide
+  </a>
+  of VES. As you can see the build folder is actually inside the project structure. I guess this has a special purpose since the
+  <a href="http://vimeo.com/68386768">
+   webinar
+  </a>
+  I shared in this article says something like that. In the webinar, you can see that the guy is actually creating a link to an outside folder but using the original build folder inside the project structure. I guess this has to do with some relative path issues. So this was another problem which stops me creating an eclipse project. Since eclipse gets confused by
+  <span style="background-color: #c0c0c0;">
+   in source builds
+  </span>
+  , it was impossible to directly import the created project from here and the
+  <span style="background-color: #c0c0c0;">
+   out-of-source build
+  </span>
+  was not working as I expected. Search google for "out of source build" for more detail on this subject.
+ </p>
+ <p>
+  After running
+  <span style="background-color: #c0c0c0;">
+   configure.bat
+  </span>
+  you go to the build folder which is just created and run
+  <span style="background-color: #c0c0c0;">
+   nmake
+  </span>
+  command. This is going to build the VES project and create .a files which are normally static library files but in the webinar the guy says these are actually archive files. Anyway I will call them static library files (so this is like .lib in windows and dynamic libraries (.so) are like .dll in windows). These libraries are inside folders named lib which are located inside
+  <span style="background-color: #c0c0c0;">
+   CMakeExternals\Install
+  </span>
+  separated in their corresponding folders. For example,
+  <span style="background-color: #c0c0c0;">
+   CMakeExternals\Install\vtk-android\lib
+  </span>
+  . After this process you normally go to Apps\Android\Kiwi folder and run the scripts there to create the Android project and link these libraries to your project together with KiwiNative.cpp.
+ </p>
+ <p>
+  My setup takes a follows a different path at this point. Since we want to work together on this project with my colleague and we do not want to put all the source files to SVN. In addition to this, we want to be free of the relative path stuff of the project.
+ </p>
+ <p>
+  Examining the makefile inside Kiwi application folder we found out that the real makefile it uses is called
+  <span style="background-color: #c0c0c0;">
+   build.make
+  </span>
+  which is located inside
+  <span style="background-color: #c0c0c0;">
+   \Kiwi\jni\CMakeFiles\KiwiNative.dir
+  </span>
+  and examining this file it can be seen that it creates a seperate .o from KiwiNative.cpp (which is our main jni file) and link all the other libraries which are created before to it to create the file library which is libKiwiNative.so. So trying follow the conventions inside this file we try to create a stand-alone android application project with
+  <span style="background-color: #c0c0c0;">
+   ndk-build
+  </span>
+  . On the road, we encountered really random looking errors related to OpenGL, function definitions and even the order of the libraries linked. Finally we came up with an Android.mk and Application.mk files. I will add the original files at the end of this article. However, there are two things that I want to emphasize.
+ </p>
+ <p>
+  The first one is make sure whether your project uses
+  <a href="https://en.wikipedia.org/wiki/Standard_Template_Library">
+   STL
+  </a>
+  or not (This is a general suggestions but in our case, VES, yes it uses STL). If it uses make sure you include that in your
+  <span style="background-color: #c0c0c0;">
+   Application.mk
+  </span>
+  :
+ </p>
+ <p>
+  APP_STL := gnustl_shared
+ </p>
+ <p>
+  The second thing is you should pay attention to the order of the linked libraries. Solving this problem took some time.. since the order looked arbitrary to us but then we used the order from the original build.make file and everything was resolved.
+ </p>
+ <p>
+  Beside this two points other stuff was straight forward we carried all the include folders from
+  <span style="background-color: #c0c0c0;">
+   Android\CMakeBuild\build\CMakeExternals\Install
+  </span>
+  into jni folder of our project. We created LOCAL_MODULEs for all the .a library files. For example:
+ </p>
+ <p>
+  —-
+ </p>
+ <p>
+  include $(CLEAR_VARS)
+  <br/>
+  LOCAL_MODULE := libvesShaders
+  <br/>
+  LOCAL_SRC_FILES = ves-android/lib/libvesShaders.a
+  <br/>
+  include $(PREBUILT_STATIC_LIBRARY)
+ </p>
+ <p>
+  —–
+ </p>
+ <p>
+  Then we included these local modules to our last LOCAL_MODULE which is a BUILD_SHARED_LIBRARY file. This module is as follows:
+ </p>
+ <p>
+  —–
+ </p>
+ <p>
+  include $(CLEAR_VARS)
+  <br/>
+  LOCAL_STATIC_LIBRARIES :=  libkiwi libvesShaders libves libvtkIOXML libvtkIOLegacy libvtkIOPLY libvtkIOGeometry libvtkFiltersModeling libvtkImagingCore libvtkRenderingFreeType libvtkRenderingCore libvtkIOImage libvtkDICOMParser libvtkmetaio libvtkpng libvtktiff libvtkjpeg libvtkFiltersSources libvtkFiltersGeometry libvtkIOXMLParser libvtkIOCore libvtkexpat libvtkFiltersExtraction libvtkFiltersGeneral libvtkFiltersCore libvtkCommonExecutionModel libvtkCommonComputationalGeometry libvtkCommonDataModel libvtkCommonMisc libvtkCommonTransforms libvtkCommonSystem libvtkCommonMath libvtkCommonCore libvtksys libvtkfreetype libvtkzlib
+  <br/>
+  LOCAL_C_INCLUDES := $(LOCAL_PATH)/vtk-android/include/ $(LOCAL_PATH)/ves-android/include/ $(LOCAL_PATH)/ves-android/include/ves/kiwi $(LOCAL_PATH)/ves-android/include/ves/ves $(LOCAL_PATH)/ves-android/include/ves/shaders
+  <br/>
+  LOCAL_MODULE    := KiwiNative
+  <br/>
+  LOCAL_SRC_FILES := KiwiNative.cpp
+  <br/>
+  <strong>
+   LOCAL_LDLIBS := -llog -lGLESv2
+   <br/>
+   OPENGLES_DEF  := -DUSE_OPENGL_ES_2_0
+   <br/>
+   LOCAL_CFLAGS := -Wno-write-strings -Wno-psabi $(OPENGLES_DEF)
+  </strong>
+  <br/>
+  include $(BUILD_SHARED_LIBRARY)
+ </p>
+ <p>
+  —–See the bold lines. Those lines are related to OpenGL (obviously) and derived from the
+  <span style="background-color: #c0c0c0;">
+   build.make
+  </span>
+  file that we found.
+ </p>
+ <p>
+  With all these configurations your project is ready to be built by ndk-build of Android. Have fun. I might have missed some stuff or make mistakes please inform me in such conditions. Because I wrote this article after some time passed.
+ </p>
+ <p>
+  Whole Android.mk and Application.mk files:
+  <a href="http://goo.gl/uyUPAF">
+   http://goo.gl/uyUPAF
+  </a>
+ </p>
+ <p>
+  I also thank my colleague
+  <a href="http://www.linkedin.com/in/davidestebanlopez">
+   David Lopez
+  </a>
+  for his precious contribution.
+ </p>
+ <p>
+  <!--[if gte mso 9]><xml>
+ <w:WordDocument>
+  <w:View>Normal</w:View>
+  <w:Zoom>0</w:Zoom>
+  <w:TrackMoves/>
+  <w:TrackFormatting/>
+  <w:PunctuationKerning/>
+  <w:ValidateAgainstSchemas/>
+  <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
+  <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
+  <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
+  <w:DoNotPromoteQF/>
+  <w:LidThemeOther>EN-US</w:LidThemeOther>
+  <w:LidThemeAsian>X-NONE</w:LidThemeAsian>
+  <w:LidThemeComplexScript>X-NONE</w:LidThemeComplexScript>
+  <w:Compatibility>
+   <w:BreakWrappedTables/>
+   <w:SnapToGridInCell/>
+   <w:WrapTextWithPunct/>
+   <w:UseAsianBreakRules/>
+   <w:DontGrowAutofit/>
+   <w:SplitPgBreakAndParaMark/>
+   <w:EnableOpenTypeKerning/>
+   <w:DontFlipMirrorIndents/>
+   <w:OverrideTableStyleHps/>
+  </w:Compatibility>
+  <m:mathPr>
+   <m:mathFont m:val="Cambria Math"/>
+   <m:brkBin m:val="before"/>
+   <m:brkBinSub m:val="&#45;-"/>
+   <m:smallFrac m:val="off"/>
+   <m:dispDef/>
+   <m:lMargin m:val="0"/>
+   <m:rMargin m:val="0"/>
+   <m:defJc m:val="centerGroup"/>
+   <m:wrapIndent m:val="1440"/>
+   <m:intLim m:val="subSup"/>
+   <m:naryLim m:val="undOvr"/>
+  </m:mathPr></w:WordDocument>
+</xml><![endif]-->
+  <!--[if gte mso 9]><xml>
+ <w:LatentStyles DefLockedState="false" DefUnhideWhenUsed="true"
+  DefSemiHidden="true" DefQFormat="false" DefPriority="99"
+  LatentStyleCount="267">
+  <w:LsdException Locked="false" Priority="0" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Normal"/>
+  <w:LsdException Locked="false" Priority="9" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="heading 1"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 2"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 3"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 4"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 5"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 6"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 7"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 8"/>
+  <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 9"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 1"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 2"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 3"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 4"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 5"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 6"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 7"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 8"/>
+  <w:LsdException Locked="false" Priority="39" Name="toc 9"/>
+  <w:LsdException Locked="false" Priority="35" QFormat="true" Name="caption"/>
+  <w:LsdException Locked="false" Priority="10" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Title"/>
+  <w:LsdException Locked="false" Priority="1" Name="Default Paragraph Font"/>
+  <w:LsdException Locked="false" Priority="11" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Subtitle"/>
+  <w:LsdException Locked="false" Priority="22" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Strong"/>
+  <w:LsdException Locked="false" Priority="20" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Emphasis"/>
+  <w:LsdException Locked="false" Priority="59" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Table Grid"/>
+  <w:LsdException Locked="false" UnhideWhenUsed="false" Name="Placeholder Text"/>
+  <w:LsdException Locked="false" Priority="1" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="No Spacing"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 1"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 1"/>
+  <w:LsdException Locked="false" UnhideWhenUsed="false" Name="Revision"/>
+  <w:LsdException Locked="false" Priority="34" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="List Paragraph"/>
+  <w:LsdException Locked="false" Priority="29" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Quote"/>
+  <w:LsdException Locked="false" Priority="30" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Intense Quote"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 1"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 1"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 1"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 1"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 1"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 1"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 1"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 2"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 2"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 2"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 2"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 2"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 2"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 2"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 2"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 3"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 3"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 3"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 3"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 3"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 3"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 3"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 3"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 4"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 4"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 4"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 4"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 4"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 4"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 4"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 4"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 5"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 5"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 5"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 5"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 5"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 5"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 5"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 5"/>
+  <w:LsdException Locked="false" Priority="60" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="61" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light List Accent 6"/>
+  <w:LsdException Locked="false" Priority="62" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Light Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="63" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="64" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Shading 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="65" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="66" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium List 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="67" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 1 Accent 6"/>
+  <w:LsdException Locked="false" Priority="68" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 2 Accent 6"/>
+  <w:LsdException Locked="false" Priority="69" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Medium Grid 3 Accent 6"/>
+  <w:LsdException Locked="false" Priority="70" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Dark List Accent 6"/>
+  <w:LsdException Locked="false" Priority="71" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Shading Accent 6"/>
+  <w:LsdException Locked="false" Priority="72" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful List Accent 6"/>
+  <w:LsdException Locked="false" Priority="73" SemiHidden="false"
+   UnhideWhenUsed="false" Name="Colorful Grid Accent 6"/>
+  <w:LsdException Locked="false" Priority="19" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Subtle Emphasis"/>
+  <w:LsdException Locked="false" Priority="21" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Intense Emphasis"/>
+  <w:LsdException Locked="false" Priority="31" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Subtle Reference"/>
+  <w:LsdException Locked="false" Priority="32" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Intense Reference"/>
+  <w:LsdException Locked="false" Priority="33" SemiHidden="false"
+   UnhideWhenUsed="false" QFormat="true" Name="Book Title"/>
+  <w:LsdException Locked="false" Priority="37" Name="Bibliography"/>
+  <w:LsdException Locked="false" Priority="39" QFormat="true" Name="TOC Heading"/>
+ </w:LatentStyles>
+</xml><![endif]-->
+  <!--[if gte mso 10]>
+
+
+<style>
+ /* Style Definitions */
+ table.MsoNormalTable
+	{mso-style-name:"Table Normal";
+	mso-tstyle-rowband-size:0;
+	mso-tstyle-colband-size:0;
+	mso-style-noshow:yes;
+	mso-style-priority:99;
+	mso-style-parent:"";
+	mso-padding-alt:0in 5.4pt 0in 5.4pt;
+	mso-para-margin-top:0in;
+	mso-para-margin-right:0in;
+	mso-para-margin-bottom:10.0pt;
+	mso-para-margin-left:0in;
+	line-height:115%;
+	mso-pagination:widow-orphan;
+	font-size:11.0pt;
+	font-family:"Calibri","sans-serif";
+	mso-ascii-font-family:Calibri;
+	mso-ascii-theme-font:minor-latin;
+	mso-hansi-font-family:Calibri;
+	mso-hansi-theme-font:minor-latin;
+	mso-bidi-font-family:"Times New Roman";
+	mso-bidi-theme-font:minor-bidi;}
+</style>
+
+
+<![endif]-->
+ </p>
+</div>

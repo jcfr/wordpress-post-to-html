@@ -1,0 +1,320 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  As a medical imaging modality, one of greatest strengths of ultrasound is its ability to inspect the body’s condition in real time. For decades, radiologists, physicians, and ultrasonographers have leveraged traditional two-dimensional (2D) brightness-mode (B-mode) ultrasound images to obtain real-time structural information about soft tissue planes. New opportunities to improve patient care come from imaging disease-specific tissue properties in three dimensions. In particular, opportunities exist in identifying clinically significant prostate cancer lesions by generating three-dimensional (3D) acoustic radiation force impulse (ARFI) images of prostate biopsy candidates [1]. ARFI imaging monitors the mechanical response of tissue to a high-intensity ultrasound-pushing pulse. The process results in an image that reflects local tissue viscoelasticity. Stiffer regions become associated with cancer, whereas less-stiff regions become associated with normal tissue or benign prostatic hyperplasia.
+ </p>
+ <p>
+  A 3D ARFI image visualizes structural relationships, enables comparison with images from other modalities like multi-parametric magnetic resonance imaging, and ensures the identification of focal lesions. Yet, new computational challenges arise with novel ultrasound imaging methods that deal with three dimensions. Advanced image formation methods like ARFI require more processing than methods like B-mode, and the additional image dimension adds to the computational complexity.
+ </p>
+ <p>
+  This article describes how the 3D medical image processing, parallel computing, and algorithmic architectures of the Insight Segmentation and Registration Toolkit (ITK) and the Visualization Toolkit (VTK) became integrated into a 3D Slicer extension for ultrasound scan conversion, called
+  <span style="font-family: courier new,courier;">
+   SlicerITKUltrasound
+  </span>
+  .
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17021" style="width: 436px">
+  <img alt="" class="size-full wp-image-17021" height="452" sizes="(max-width: 426px) 100vw, 426px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig1.png 426w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig1-283x300.png 283w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig1-220x233.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig1-250x265.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig1-355x377.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig1-90x95.png 90w" width="426"/>
+  <p class="wp-caption-text">
+   3D Slicer Extensions Manager installs the SlicerITKUltrasound extension.
+  </p>
+ </div>
+ <p>
+  The algorithmic foundation for the
+  <span style="font-family: courier new,courier;">
+   SlicerITKUltrasound
+  </span>
+  extension modules [2] is an ITK module, called
+  <span style="font-family: courier new,courier;">
+   ITKUltrasound
+  </span>
+  [3]. This module gets built during the extension build process to easily extend the implementation of ITK in 3D Slicer. As an ITK module,
+  <span style="font-family: courier new,courier;">
+   ITKUltrasound
+  </span>
+  can easily find use in other contexts outside of 3D Slicer.
+ </p>
+ <p>
+  Scan conversion resamples processed ultrasound data from its natural transducer sampling geometry onto a uniform grid for visualization and further analysis. Scan conversion is fundamental to all ultrasound imaging modalities, and it must be fast for real-time imaging. First, this article describes the transducer probe geometries that 3D Slicer supports along with their parameterizations. Next, the article highlights resampling algorithms (nine in total). Finally, it discusses the trade-offs and behavioral differences of the resampling algorithms and their implementations.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Geometries
+   </span>
+  </strong>
+ </p>
+ <p>
+  The shape of the transducer probe array determines the ultrasound sampling geometry. A curvilinear array, which is common to abdominal imaging, or a phased array, which is common to cardiac imaging, results in the iconic 2D ultrasound sector image, for example.
+ </p>
+ <p>
+  3D Slicer modules support three classes of probe geometries. These modules are as follows:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier new,courier;">
+    ScanConvertCurvilinearArray
+   </span>
+   ;
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    ScanConvertPhasedArray3D
+   </span>
+   ; and
+  </li>
+  <li>
+   <span style="font-family: courier new,courier;">
+    ScanConvertSliceSeries
+   </span>
+   .
+  </li>
+ </ul>
+ <p>
+  <span style="font-family: courier new,courier;">
+   ScanConvertCurvilinearArray
+  </span>
+  scan converts ultrasound probes that position elements along a circular arc. This type of probe is common in abdominal imaging. The angular separation between each lateral line, the physical distances between samples along a radial line, and the radius of the arc parameterizes the geometry.
+  <span style="font-family: courier new,courier;">
+   ScanConvertCurvilinearArray
+  </span>
+  scan converts additional datasets in the third dimension as equally spaced orthogonal slices.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17022" style="width: 436px">
+  <img alt="" class="size-full wp-image-17022" height="396" sizes="(max-width: 426px) 100vw, 426px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig2.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig2.png 426w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig2-300x279.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig2-220x205.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig2-250x232.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig2-355x330.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig2-90x84.png 90w" width="426"/>
+  <p class="wp-caption-text">
+   ScanConvertCurvilinearArray converts a curvilinear ultrasound probe.
+  </p>
+ </div>
+ <p>
+  <span style="font-family: courier new,courier;">
+   ScanConvertPhasedArray3D
+  </span>
+  scan converts ultrasound probes that position tightly packed elements on a small surface. This type of probe is common in cardiac imaging. When a wave front becomes electrically steered from the surface during the imaging process, it stimulates the transducer elements. The image that results contains a section of a sphere that centers on the probe. The angular separation between each lateral line in the azimuthal direction and the elevational direction, the physical distances between samples along a radial line, and the distance to the first radial sample parameterizes the geometry.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17023" style="width: 436px">
+  <img alt="" class="size-full wp-image-17023" height="396" sizes="(max-width: 426px) 100vw, 426px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig3.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig3.png 426w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig3-300x279.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig3-220x205.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig3-250x232.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig3-355x330.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig3-90x84.png 90w" width="426"/>
+  <p class="wp-caption-text">
+   ScanConvertPhasedArray3D converts a phased array ultrasound probe.
+  </p>
+ </div>
+ <p>
+  <span style="font-family: courier new,courier;">
+   ScanConvertSliceSeries
+  </span>
+  scan converts a set of adjacent, non-overlapping 2D slices. Each slice can have either a curvilinear array geometry or a linear array geometry. These geometries are common with mechanically swept 2D probes, where the distance and the orientation of the intermediate slices may or may not be uniform. In such cases, the geometries of the component slices determine the geometry of the volume.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17024" style="width: 436px">
+  <img alt="" class="size-full wp-image-17024" height="396" sizes="(max-width: 426px) 100vw, 426px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig4.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig4.png 426w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig4-300x279.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig4-220x205.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig4-250x232.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig4-355x330.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_dev_fig4-90x84.png 90w" width="426"/>
+  <p class="wp-caption-text">
+   ScanConvertSliceSeries scan converts a B-mode prostate volume from a mechanically rotated transrectal probe.
+  </p>
+ </div>
+ <p>
+  When a module scan converts a volume, the volume gets resampled onto an
+  <span style="font-family: courier new,courier;">
+   itk::Image geometry
+  </span>
+  . This geometry is rectilinear, and it potentially has anisotropic spacing, a physical offset (an origin), and an orientation. This geometry is also the natural geometry for ultrasound probes that position elements along a line, e.g., a linear array.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Resampling Methods
+   </strong>
+  </span>
+ </p>
+ <p>
+  There are three classes of resampling methods. One class, ITK based resampling methods, uses interpolation functions that operate on input samples in the neighborhood of the desired physical output point. The locations of neighborhood input samples pertain to the mapping from output index space to physical space and from physical space to input continuous index space.
+ </p>
+ <p>
+  The interpolation method sets the number of samples.
+  <span style="font-family: courier new,courier;">
+   ITKLinear
+  </span>
+  (the default method) applies trilinear interpolation.
+  <span style="font-family: courier new,courier;">
+   ITKNearestNeighbor
+  </span>
+  uses the value of the closest input point to determine the output value.
+  <span style="font-family: courier new,courier;">
+   ITKGaussian
+  </span>
+  performs multiplication with a finite-domain Gaussian kernel. Finally,
+  <span style="font-family: courier new,courier;">
+   ITKWindowedSinc
+  </span>
+  applies Sinc interpolation with a three-sample radius Lanczos window.
+ </p>
+ <p>
+  Another two classes operate on a representation of the input as a
+  <span style="font-family: courier new,courier;">
+   vtkStructuredGrid
+  </span>
+  data structure. Locator methods that utilize cell topology determine input points. One of these classes,
+  <span style="font-family: courier new,courier;">
+   VTKProbeFilter
+  </span>
+  , contains a method that produces an output point, which derives from a weighted combination of points in the surrounding cell.
+ </p>
+ <p>
+  The other class stems from the new VTK point interpolation framework [4]. While the framework can use a fixed number of nearby points, its implementation for this article considers all the points that fall within a fixed physical radius of an output point. An output point derives from a weighted combination of input points, which the kernel type determines. Methods in the class include
+  <span style="font-family: courier new,courier;">
+   VTKVoronoiKernel
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   VTKLinearKernel
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   VTKShepardKernel
+  </span>
+  , and
+  <span style="font-family: courier new,courier;">
+   VTKGaussianKernel
+  </span>
+  .
+  <span style="font-family: courier new,courier;">
+   VTKVoronoiKernel
+  </span>
+  uses nearest-neighbor-like interpolation;
+  <span style="font-family: courier new,courier;">
+   VTKLinearKernel
+  </span>
+  employs linear averaging;
+  <span style="font-family: courier new,courier;">
+   VTKShepardKernel
+  </span>
+  implements 1 / r^2 weighting; and
+  <span style="font-family: courier new,courier;">
+   VTKGaussianKernel
+  </span>
+  utilizes Gaussian weighting.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Discussion
+   </span>
+  </strong>
+ </p>
+ <p>
+  Modules in the
+  <span style="font-family: courier new,courier;">
+   SlicerITKUltrasound
+  </span>
+  extension currently enable scan conversion of commonly encountered 2D and 3D ultrasound probe geometries. The extension applies not only to B-mode imaging but to ARFI, ultrasound spectroscopy, and other imaging modes. The performant parallelism in ITK and VTK enable high-throughput computing on emerging many-core computing architectures.
+ </p>
+ <p>
+  A number of different resampling methods exists. These methods present trade-offs in speed, interpolation errors, and interpolation characteristics. The default resampling method,
+  <span style="font-family: courier new,courier;">
+   ITKLinear
+  </span>
+  , offers a good combination of speed and smoothly varying output. Alternatively,
+  <span style="font-family: courier new,courier;">
+   ITKWindowedSinc
+  </span>
+  provides the most accurate interpolation method. The violation of the rectilinear input assumption in ITK based methods, however, results in some interpolation errors.
+ </p>
+ <p>
+  Certain cases, such as the interpolation of segmentation labels, call for the retention of input values.
+  <span style="font-family: courier new,courier;">
+   ITKNearestNeighbor
+  </span>
+  or
+  <span style="font-family: courier new,courier;">
+   VTKVoronoiKernel
+  </span>
+  is appropriate in these cases. Moreover, with the application of
+  <span style="font-family: courier new,courier;">
+   VTKGaussianKernel
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   ITKGaussian
+  </span>
+  methods, it becomes possible to simultaneously smooth the input and perform interpolation. The physical radius-based interpolation domain of VTK point interpolation methods ensures that consistent spatial content determines an output point. A physical radius-based domain only works well when the spacing of input points is roughly uniform throughout the volume. Otherwise, a computationally taxing number of points in the interpolation domain may result, or the interpolation domain may contain no points at all.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Acknowledgement
+   </strong>
+  </span>
+ </p>
+ <p>
+  Research reported in this publication was supported by the National Institute Of Biomedical Imaging and Bioengineering and the National Institute of General Medical Sciences of the National Institutes of Health under award number R01EB021396 and by the National Cancer Institute of the National Institutes of Health under award number R41CA196565. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    References
+   </strong>
+  </span>
+ </p>
+ <p>
+  [1] Palmeri, Mark, Tyler Glass, Rajan Gupta, Matt McCormick, Alison Brown, Thomas Polascik, Stephen Rosenzweig, Andrew Buck, and Kathy Nightingale. In 2016 IEEE International Ultrasonics Symposium (IUS). Proceedings of IUS, France, Tours. Institute of Electrical and Electronics Engineers, 2016.
+  <a href="http://dx.doi.org/10.1109/ULTSYM.2016.7728618">
+   http://dx.doi.org/10.1109/ULTSYM.2016.7728618
+  </a>
+  .
+ </p>
+ <p>
+  [2] “SlicerITKUltrasound.”
+  <a href="https://kitwaremedical.github.io/SlicerITKUltrasoundDoc">
+   https://kitwaremedical.github.io/SlicerITKUltrasoundDoc
+  </a>
+  .
+ </p>
+ <p>
+  [3] KitwareMedical/ITKUltrasound. October 18, 2016.
+  <a href="https://github.com/KitwareMedical/ITKUltrasound">
+   https://github.com/KitwareMedical/ITKUltrasound
+  </a>
+  .
+ </p>
+ <p>
+  [4] Schroeder, Will. “Point and Smoothed-Particle Hydrodynamics (SPH) Interpolation in VTK” Kitware blog, August 13, 2016.
+  <a href="https://blog.kitware.com/point-and-smoothed-particle-hydrodynamics-sph-interpolation-in-vtk">
+   https://blog.kitware.com/point-and-smoothed-particle-hydrodynamics-sph-interpolation-in-vtk
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17017 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/matt_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/matt_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/matt_headshot-90x113.png 90w" width="100"/>
+   Matt McCormick
+  </strong>
+  , a technical expert at Kitware, is a major contributor to and the current maintainer of ITK. His general interests include image processing and emphasize scientific reproducibility.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17018 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/schroeder_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/schroeder_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/schroeder_headshot-90x113.png 90w" width="100"/>
+   Will Schroeder
+  </strong>
+  is president and CEO of Kitware. He identifies technology and business opportunities, and he obtains the necessary support for Kitware to meet these opportunities. Schroeder also provides technical leadership for large open-source projects such as ITK and VTK.
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17019 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/palmeri_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/palmeri_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/palmeri_headshot-90x113.png 90w" width="100"/>
+   Mark Palmeri
+  </strong>
+  is an associate professor of the practice in biomedical engineering at Duke University. His research interests include acoustic radiation force shear wave speed (SWS), ultrasonic imaging, finite element analysis of soft tissue response to acoustic radiation force excitation, medical image processing, and medical instrumentation design.
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17020 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/aylward_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/aylward_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/aylward_headshot-90x113.png 90w" width="100"/>
+   Stephen Aylward
+  </strong>
+  is the senior director of operations and the founder of the Kitware office in North Carolina. He helps direct medical research activities at the company. In general, Aylward’s research focuses on vascular image analysis, computer-aided diagnosis, and intra-operative registration of ultrasound images with pre-operative images. He also works to develop ITK and other open-source toolkits.
+ </p>
+</div>

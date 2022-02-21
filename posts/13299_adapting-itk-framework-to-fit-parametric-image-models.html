@@ -1,0 +1,273 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Fitting models of image pixel values to images is a task central to certain image analysis applications. For example, in fluorescence microscopy, light from an in-focus point source diffracts to an intensity pattern that approximately matches a 2D Gaussian function. Using this observation, methods have been developed for determining the positions of individual fluorescent molecules by fitting a 2D Gaussian function to the image [1][2][3]. The mean (center) of the fitted Gaussian is taken to be the location of the molecule. Localization accuracy of as low as 1.5 nanometers has been reported using this method [3].
+ </p>
+ <p>
+  Despite having mature implementations of the necessary algorithmic foundations, the Insight Toolkit (ITK) does not currently have a mechanism to enable the fitting of image pixel value models to images. This document describes a set of classes that enable such fitting.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Parametric Models of Image Pixel Values
+    </span>
+   </strong>
+  </span>
+  <br/>
+  An image pixel value pattern can be modeled as a function
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    <em>
+     F
+    </em>
+    (x; u)
+   </span>
+  </span>
+  where
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    x
+   </span>
+  </span>
+  is a spatial position and
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    u
+   </span>
+  </span>
+  is a set of function parameters that change the pattern. The general term “pixel value” is used because the classes proposed here impose no restriction on the types of data associated with pixels, e.g. scalar intensity values or vector values. The goal in fitting the function
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    <em>
+     F
+    </em>
+    (x;u)
+   </span>
+  </span>
+  to an input image
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    <em>
+     I
+    </em>
+    (x)
+   </span>
+  </span>
+  is to find the parameter vector
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    u
+   </span>
+  </span>
+  that minimizes a cost function defining how well the pixel values from the function match the pixel values of the input image. This is largely the same goal as in image registration. However, in registration, the parameter vector
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    u
+   </span>
+  </span>
+  is an argument to a spatial transformation
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     T
+    </em>
+    (x;u)
+   </span>
+  </span>
+  such that the transformed input image
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     I
+    </em>
+    <sub>
+     1
+    </sub>
+    (
+    <em>
+     T
+    </em>
+    (x;u))
+   </span>
+  </span>
+  closely matches another input image
+  <span style="font-family: andale mono,times;">
+   <span style="font-size: small;">
+    <em>
+     I
+    </em>
+    <sub>
+     2
+    </sub>
+    (x)
+   </span>
+  </span>
+  .
+ </p>
+ <p>
+  An example of a pixel value profile often used in image analysis is the Gaussian function. For the case of a normalized k-dimensional Gaussian function whose major axes are aligned with the Cartesian axes,
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     F
+    </em>
+    (x;u)
+   </span>
+  </span>
+  has the form
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="40" src="https://blog.kitware.com/source/files/4_325856366_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+  where
+  <em>
+   <span style="font-size: small;">
+    <span style="font-family: andale mono,times;">
+     s
+    </span>
+   </span>
+  </em>
+  is a scaling factor,
+  <em>
+   <span style="font-size: small;">
+    <span style="font-family: andale mono,times;">
+     µ
+    </span>
+   </span>
+  </em>
+  is the mean (center) vector, and
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    ∑
+   </span>
+  </span>
+  is a diagonal matrix whose
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     i
+    </em>
+    -th
+   </span>
+  </span>
+  diagonal element is the standard deviation
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    σ
+    <sub>
+     <em>
+      i
+     </em>
+    </sub>
+   </span>
+  </span>
+  of the Gaussian function along the
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     i
+    </em>
+    -th
+   </span>
+  </span>
+  dimension. For this function, the parameter vector
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     u
+    </em>
+   </span>
+  </span>
+  is equal to
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    {
+    <em>
+     s, σ
+     <sub>
+      i
+     </sub>
+     , …, σ
+     <sub>
+      k
+     </sub>
+     , µ
+     <sub>
+      1
+     </sub>
+     ,…, µ
+     <sub>
+      k
+     </sub>
+    </em>
+    }
+   </span>
+  </span>
+  . In ITK, the class itk::GaussianImageSource generates images whose intensities are defined by this function when its Normalized flag is set to 1.
+ </p>
+ <p>
+  Certain ITK image filters may also be considered parametric models of image pixel values. For these filters, the function is of the form
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     F
+    </em>
+    (x;u,
+    <em>
+     I
+    </em>
+    (x))
+   </span>
+  </span>
+  where
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     u
+    </em>
+   </span>
+  </span>
+  is a parameter vector as before and
+  <span style="font-size: small;">
+   <span style="font-family: andale mono,times;">
+    <em>
+     I(x)
+    </em>
+   </span>
+  </span>
+  is the image input for the filter. In some applications it may be desirable to optimize the filter parameters
+  <span style="font-family: andale mono,times;">
+   <em>
+    <span style="font-size: small;">
+     u
+    </span>
+   </em>
+  </span>
+  . For example, the itk::MultiplyByConstantImageFilter might be used to find an optimal intensity scaling factor for an image with respect to a particular objective function.
+ </p>
+ <p>
+  While ITK has parametric image sources, no unified interface for setting their parameters exists. This kind of interface, analogous to the interface currently found in subclasses of  itk::Transform, would enable application of the optimization routines in ITK to fitting image intensity models. We propose a new subclass of itk::ImageSource, called itk::ParametricImageSource, to provide a suitable interface. This class defines three methods:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      virtual void
+      <br/>
+      SetParameters(const ParametersType&amp; p) {};
+     </span>
+     virtual ParametersType GetParameters() const
+     <br/>
+     {
+     <br/>
+     return ParametersType(0);
+     <br/>
+     }
+    </td>
+   </tr>
+  </tbody>
+ </table>
+</div>

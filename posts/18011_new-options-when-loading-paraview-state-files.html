@@ -1,0 +1,262 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  When a ParaView state file is saved, it saves the absolute paths to the data files that ParaView has loaded. This has made sharing state files annoying since the person loading the state file has to tell ParaView where to look for each data file. Since sharing state files is something many people want to do, one of the most requested features for ParaView is to be able to load data from a path relative to the state file rather than an absolute path. We have added some new features to loading state files that will make sharing state files much easier.
+ </p>
+ <p>
+  When you load a state file, ParaView will now give broader options of where to look for the files as shown in this screenshot:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18014" style="width: 585px">
+  <img alt="Load State Options dialog with data location dropdown" class="wp-image-18014 size-full" height="406" sizes="(max-width: 575px) 100vw, 575px" src="https://blog.kitware.com/wp-content/uploads/2017/05/stateload.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/stateload.png 575w, https://blog.kitware.com/wp-content/uploads/2017/05/stateload-300x212.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/stateload-220x155.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/stateload-250x177.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/stateload-355x251.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/stateload-90x64.png 90w" width="575"/>
+  <p class="wp-caption-text">
+   The new ‘Load State Options’ dialog in ParaView showing the locations to search for data files dropdown options.
+  </p>
+ </div>
+ <p>
+  <strong>
+   Use File Names From State
+  </strong>
+  just uses the file locations specified in the state file and errors if they are not found.  This is useful if you are using a state file written out on the same computer.
+ </p>
+ <p>
+  <strong>
+   Search files under specified directory
+  </strong>
+  looks for the data files in a specified directory.  ParaView will parse out the filename of each file and look in the given directory to see if that filename exists.  If the file exists it will be used, otherwise it will try the path in the state file.  Since a common use case is sharing state files along with their data, the default directory used by this option is the location of the state file.  Here is what the dialog looks like when using this option:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18042" style="width: 585px">
+  <img alt="Load State Options with search under directory option" class="wp-image-18042 size-full" height="406" sizes="(max-width: 575px) 100vw, 575px" src="https://blog.kitware.com/wp-content/uploads/2017/05/load-state-look-in-directory.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/load-state-look-in-directory.png 575w, https://blog.kitware.com/wp-content/uploads/2017/05/load-state-look-in-directory-300x212.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/load-state-look-in-directory-220x155.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/load-state-look-in-directory-250x177.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/load-state-look-in-directory-355x251.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/load-state-look-in-directory-90x64.png 90w" width="575"/>
+  <p class="wp-caption-text">
+   The Load State Options dialog with the Search files under specified directory option selected
+  </p>
+ </div>
+ <p>
+  The
+  <strong>
+   Choose File Names
+  </strong>
+  option is the old default: manually specifying where each data file is located.  This is still useful for running a pipeline on a different dataset than the one it was built with although we expect the other two to be more commonly used.  This option has been improved with the ability to specify environment variables as a part of the filename as shown here:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18036" style="width: 585px">
+  <img alt="Load data relative to environment variables" class="wp-image-18036 size-full" height="406" sizes="(max-width: 575px) 100vw, 575px" src="https://blog.kitware.com/wp-content/uploads/2017/05/home-relative-state-file.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/home-relative-state-file.png 575w, https://blog.kitware.com/wp-content/uploads/2017/05/home-relative-state-file-300x212.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/home-relative-state-file-220x155.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/home-relative-state-file-250x177.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/home-relative-state-file-355x251.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/home-relative-state-file-90x64.png 90w" width="575"/>
+  <p class="wp-caption-text">
+   The ParaView Load State Options dialog showing finding data with environment variables in the path
+  </p>
+ </div>
+ <p>
+  Unlike the old load state file mechanism these options can also be specified from the Python API.  Use the python trace to find the options needed for a given state file.  Here is an example of loading state in a python script that loads a state and uses the
+  <strong>
+   Search files under specified directory
+  </strong>
+  option.  This was created by using Python Trace while loading the state file used to create the above screenshots, so you can compare the options passed to LoadState to the options in the screenshots above.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41dabb75a32466964904" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+# load state
+LoadState('/home/shawn/data/pvsm/exampleStateFile.pvsm',
+    LoadStateDataFileOptions='Search files under specified directory',
+    DataDirectory='/home/shawn/data/pvsm',
+    SMALL_PtCu_NanoParticletifFileNames=['/home/shawn/data/tem/SMALL_PtCu_NanoParticle.tif'],
+    ringeFileName=['/home/shawn/data/pvsm/ring.e'],
+    sFilePattern='%s',
+    ringeFilePrefix='/home/shawn/data/pvsm/ring.e',
+    InvalidresultXMLFileName='Invalid result')</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41dabb75a32466964904-9">
+        9
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-1">
+        <span class="crayon-c">
+         # load state
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-2">
+        <span class="crayon-e">
+         LoadState
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         '/home/shawn/data/pvsm/exampleStateFile.pvsm'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         LoadStateDataFileOptions
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'Search files under specified directory'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         DataDirectory
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         '/home/shawn/data/pvsm'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         SMALL_PtCu_NanoParticletifFileNames
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         '/home/shawn/data/tem/SMALL_PtCu_NanoParticle.tif'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         ringeFileName
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         '/home/shawn/data/pvsm/ring.e'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sFilePattern
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         '%s'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         ringeFilePrefix
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         '/home/shawn/data/pvsm/ring.e'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41dabb75a32466964904-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         InvalidresultXMLFileName
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'Invalid result'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0021 seconds] -->
+ <p>
+ </p>
+ <p>
+  These changes are merged into ParaView master and are available in the ParaView 5.4-RC1 binaries which can be obtained
+  <a href="http://www.paraview.org/download/">
+   here
+  </a>
+  .
+ </p>
+</div>

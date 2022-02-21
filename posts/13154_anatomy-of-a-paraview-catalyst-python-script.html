@@ -1,0 +1,609 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Introduction
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  ParaView Catalyst has yielded some amazing results. Such results include iso-surfacing and generating images with 256K Message Passing Interface (MPI) ranks on Mira at Argonne National Laboratory, as well as computing particle paths and outputting iso-surfaced extracts at 42K cores using Adaptable Input/Output System (ADIOS). The wide variety of outputs that have been obtained with Catalyst can sometimes get lost with significant runs such as these. For example, Catalyst can capture data extracts and/or images of slices, streamlines, internal boundary surfaces, and a whole slew of derived quantities.
+ </p>
+ <p>
+  One of the key features of Catalyst is the ability to use Python
+  <em>
+   in situ
+  </em>
+  for specifying the analysis and visualization pipelines. Python is an amazing tool, as it provides flexibility while also simplifying the workflow. The decision to use Python was well thought-out during the initial design of ParaView’s
+  <em>
+   in situ
+  </em>
+  capabilities. Even though Python was not widely regarded as a “proper” high-performance computing (HPC) language, performance comparisons between pure C++ specified pipelines and Python-specified pipelines showed negligible performance differences. Basically, the performance penalty for using Python instead of C++ was less than a second for thousands of simulation time steps.
+ </p>
+ <p>
+  While the performance penalty of using Python is negligible, the flexibility it offers Catalyst users is a major feature. Catalyst users can tweak the desired output from a Python script and run a simulation without doing any recompiling. Inserting additional logic is simple as well.
+ </p>
+ <p>
+  Although the ParaView graphical user interface’s (GUI’s) Catalyst script generator is very powerful and can capture a wide variety of general Catalyst outputs, there will always be complex outputs that cannot be easily captured in the GUI. Examples of modifying Catalyst Python scripts to get desired, non-trivial outputs include the following:
+ </p>
+ <ul>
+  <li>
+   obtaining stereo-generated images from a Catalyst instrumented simulation code run
+  </li>
+  <li>
+   moving a slice plane to examine the flow over a rotating helicopter rotor blade
+  </li>
+ </ul>
+ <p>
+  Before getting into the details of a Catalyst Python script, we need to provide a bit of background on how Catalyst operates. A key point is that Catalyst will not output information at every time step. Accordingly, a two-step process occurs. The first step is to check if any of the Catalyst pipelines need to compute information at that point in the simulation run. This is done through the
+  <em>
+   RequestDataDescription()
+  </em>
+  method in the Python script. If none of the pipelines have work to do, then control is returned to the simulation code with only a negligible amount of work done.
+ </p>
+ <p>
+  On the other hand, if one or more of the Catalyst pipelines need to execute, then (and only then) will the full set of VTK objects be created, which is used to represent the simulation’s grids and fields. After that, the
+  <code>
+   DoCoProcessing()
+  </code>
+  method in the Python script is called.
+  <code>
+   RequestDataDescription()
+  </code>
+  and
+  <code>
+   DoCoProcessing()
+  </code>
+  are the only two required methods in a Catalyst Python script. Both of them have a single argument, which is a
+  <code>
+   vtkCPDataDescription
+  </code>
+  object.
+ </p>
+ <p>
+  We will start dissecting the details of a Catalyst script with one generated from ParaView 4.3.1. It is a very simple pipeline where the data is loaded from a representative data set. Next, a slice filter is used, and finally, a writer is specified to output every 10th time step into a file, called
+  <code>
+   slice_%t.pvtp
+  </code>
+  . Note that the
+  <code>
+   %t
+  </code>
+  will be replaced by the time step.
+ </p>
+ <p>
+  The generated Python code looks like the following, except with comments, which have been removed for brevity:
+ </p>
+ <p>
+  <code>
+   from paraview.simple import *
+   <br/>
+   from paraview import coprocessing
+  </code>
+ </p>
+ <p>
+  <code>
+   def CreateCoProcessor():
+   <br/>
+   def _CreatePipeline(coprocessor, datadescription):
+   <br/>
+   class Pipeline:
+   <br/>
+   paraview.simple._DisableFirstRenderCameraReset()
+   <br/>
+   grid = \
+   <br/>
+   coprocessor.CreateProducer(datadescription, \
+   <br/>
+   'input')
+  </code>
+ </p>
+ <p>
+  <code>
+   slice1 = Slice(Input=grid)
+   <br/>
+   slice1.SliceType = 'Plane'
+   <br/>
+   slice1.SliceOffsetValues = [0.0]
+  </code>
+ </p>
+ <p>
+  <code>
+   parallelPolyDataWriter1 = \
+   <br/>
+   servermanager.writers.XMLPPolyDataWriter( \
+  </code>
+ </p>
+ <p>
+  <code>
+   Input=slice1)
+  </code>
+ </p>
+ <p>
+  <code>
+   coprocessor.RegisterWriter( \
+   <br/>
+   parallelPolyDataWriter1, \
+  </code>
+ </p>
+ <p>
+  <code>
+   filename='slice_%t.pvtp', freq=10)
+  </code>
+ </p>
+ <p>
+  <code>
+   return Pipeline()
+  </code>
+ </p>
+ <p>
+  <code>
+   class CoProcessor(coprocessing.CoProcessor):
+   <br/>
+   def CreatePipeline(self, datadescription):
+   <br/>
+   self.Pipeline = _CreatePipeline(self, \
+   <br/>
+   datadescription)
+  </code>
+ </p>
+ <p>
+  <code>
+   coprocessor = CoProcessor()
+   <br/>
+   freqs = {'input': [10]}
+   <br/>
+   coprocessor.SetUpdateFrequencies(freqs)
+   <br/>
+   return coprocessor
+  </code>
+ </p>
+ <p>
+  <code>
+   coprocessor = CreateCoProcessor()
+   <br/>
+   coprocessor.EnableLiveVisualization(False, 1)
+  </code>
+ </p>
+ <p>
+  <code>
+   def RequestDataDescription(datadescription):
+   <br/>
+   global coprocessor
+   <br/>
+   if datadescription.GetForceOutput() == True:
+   <br/>
+   for i in range( \
+   <br/>
+   datadescription.GetNumberOfInputDescriptions()):
+   <br/>
+   datadescription.GetInputDescription(i).\
+   <br/>
+   AllFieldsOn()
+   <br/>
+   datadescription.GetInputDescription(i).\
+   <br/>
+   GenerateMeshOn()
+   <br/>
+   return
+  </code>
+ </p>
+ <p>
+  <code>
+   coprocessor.LoadRequestedData(datadescription)
+  </code>
+ </p>
+ <p>
+  <code>
+   def DoCoProcessing(datadescription):
+   <br/>
+   global coprocessor
+  </code>
+ </p>
+ <p>
+  <code>
+   coprocessor.UpdateProducers(datadescription)
+   <br/>
+   coprocessor.WriteData(datadescription);
+   <br/>
+   coprocessor.WriteImages(datadescription, \
+   <br/>
+   rescale_lookuptable=False)
+   <br/>
+   coprocessor.DoLiveVisualization( \
+   <br/>
+   datadescription, "localhost", 22222)
+  </code>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     RequestDataDescription
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The assumption made when constructing a Catalyst Python script is that it will have a set of outputs that is needed at specified time-step intervals. This works well for many simulation codes.
+ </p>
+ <p>
+  The portions of the above Python script that take care of this are as follows:
+ </p>
+ <p>
+  <code>
+   coprocessor.RegisterWriter( \
+   <br/>
+   parallelPolyDataWriter1, \
+   <br/>
+   filename='slice_%t.pvtp', freq=10)
+   <br/>
+   …
+   <br/>
+   freqs = {'input': [10]}
+   <br/>
+   coprocessor.SetUpdateFrequencies(freqs)
+   <br/>
+   …
+   <br/>
+   def RequestDataDescription(datadescription):
+   <br/>
+   global coprocessor
+   <br/>
+   if datadescription.GetForceOutput() == True:
+   <br/>
+   for i in range(datadescription.\
+   <br/>
+   GetNumberOfInputDescriptions()):
+   <br/>
+   datadescription.GetInputDescription(i).\
+   <br/>
+   AllFieldsOn()
+   <br/>
+   datadescription.GetInputDescription(i).\
+   <br/>
+   GenerateMeshOn()
+   <br/>
+   return
+  </code>
+ </p>
+ <p>
+  <code>
+   coprocessor.LoadRequestedData(datadescription)
+  </code>
+ </p>
+ <p>
+  Here, the designated 10 output frequency is specified twice. The first specification occurs when registering the writer so that the script knows it needs to output
+  <code>
+   slice_%t.pvtp
+  </code>
+  every 10th time step. The second specification is in the
+  <code>
+   freqs
+  </code>
+  dictionary, which is used in the
+  <code>
+   RequestDataDescription()
+  </code>
+  method to specify whether or not this pipeline needs to perform any computation.
+ </p>
+ <p>
+  Additionally,
+  <code>
+   GetForceOutput()
+  </code>
+  is used in situations where the simulation code knows something important is happening and can force the pipeline to output the slice data, regardless of the time step. Typically, this is done at the beginning or end of a simulation run.
+ </p>
+ <p>
+  For some simulations, however, this is not ideal. For example, in a rotorcraft simulation run, it is difficult to apply appropriate initial conditions. Therefore, the first portion of the simulation is computed only to reach a reasonable starting point for analysis. In this case, the above code snippet can be modified to ignore outputting anything from Catalyst for the first 1,000 time steps, unless the output is forced.
+ </p>
+ <p>
+  This looks like the following:
+ </p>
+ <p>
+  <code>
+   def RequestDataDescription(datadescription):
+   <br/>
+   global coprocessor
+   <br/>
+   if datadescription.GetForceOutput() == True:
+   <br/>
+   for i in range(datadescription.\
+   <br/>
+   GetNumberOfInputDescriptions()):
+   <br/>
+   datadescription.GetInputDescription(i).\
+   <br/>
+   AllFieldsOn()
+   <br/>
+   datadescription.GetInputDescription(i).\
+   <br/>
+   GenerateMeshOn()
+   <br/>
+   return
+  </code>
+ </p>
+ <p>
+  <code>
+   if datadescription.GetTimeStep() &lt; 1000:
+   <br/>
+   return
+  </code>
+ </p>
+ <p>
+  <code>
+   coprocessor.LoadRequestedData(datadescription)
+  </code>
+ </p>
+ <p>
+  For simulation codes that have drastically varying time-step lengths, the time-step value is likely not appropriate for outputting information from Catalyst. In such cases, it may be more beneficial to use the simulation time to create the logic for when a pipeline should execute. This information is available through the
+  <code>
+   datadescription
+  </code>
+  object’s
+  <code>
+   GetTime()
+  </code>
+  method.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     DoCoProcessing
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  In the Python script shown above, the Catalyst pipeline is created when the script is imported. The
+  <code>
+   DoCoProcessing()
+  </code>
+  method updates the pipelines at requested points in the simulation. To non-experienced Python developers, this part of the code can be slightly confusing, so we will go into greater detail.
+ </p>
+ <p>
+  The pipeline begins with the
+  <code>
+   grid = coprocessor.CreateProducer(datadescription, 'input')
+  </code>
+  line, which corresponds to the reader in the ParaView GUI’s pipeline. The line may seem overly complex, but for some simulations, there can be multiple inputs, so this is used to disambiguate them. For example, in climate simulations, the pipeline’s source may be desired in either its true geometry (i.e., an oblate spheroid) or in a projection, depending on the desired Catalyst computation. With the source of the pipeline created, the slice filter’s properties are set in the exact same way as in ParaView’s Python interface.
+ </p>
+ <p>
+  The following part of the pipeline does this:
+ </p>
+ <p>
+  <code>
+   slice1 = Slice(Input=grid)
+   <br/>
+   slice1.SliceType = 'Plane'
+   <br/>
+   slice1.SliceOffsetValues = [0.0]
+  </code>
+ </p>
+ <p>
+  We can make the pipeline more complex either through the GUI or by modifying the code, but we will not go into that here. For users interested in learning more about advanced pipelines, we suggest reading
+  <em>
+   ParaView Catalyst User’s Guide Version 2
+  </em>
+  [1] and the online ParaView Python application programming interface (API) documentation [2].
+ </p>
+ <p>
+  The next lines in the code create the writer and specify the desired output file name and frequency:
+ </p>
+ <p>
+  <code>
+   parallelPolyDataWriter1 = \
+   <br/>
+   servermanager.writers.XMLPPolyDataWriter( \
+   <br/>
+   Input=slice1)
+   <br/>
+   coprocessor.RegisterWriter( \
+   <br/>
+   parallelPolyDataWriter1, \
+   <br/>
+   filename='slice_%t.pvtp', freq=10)
+  </code>
+ </p>
+ <p>
+  As noted earlier, this pipeline is created when the Python script is imported and then executed, as needed, during the simulation run. For the rotorcraft simulation previously mentioned, it would be nice to be able to modify the location of the slice plane during the simulation run. To accomplish this, we simply need to modify the
+  <code>
+   slice1
+  </code>
+  object’s properties in the
+  <code>
+   DoCoProcessing()
+  </code>
+  method. Assuming we have methods defined that obtain the slice’s normal and origin (
+  <code>
+   getslicenormal() and getsliceorigin()
+  </code>
+  , respectively), we can modify the
+  <code>
+   DoCoProcessing()
+  </code>
+  method to update that information while the simulation code is running.
+ </p>
+ <p>
+  <code>
+   def DoCoProcessing(datadescription):
+   <br/>
+   global coprocessor
+   <br/>
+   coprocessor.UpdateProducers(datadescription)
+   <br/>
+   coprocessor.Pipeline.slice1.SliceType.Origin = \
+   <br/>
+   getsliceorigin(datadescription)
+   <br/>
+   coprocessor.Pipeline.slice1.SliceType.Normal = \
+   <br/>
+   getslicenormal(datadescription)
+   <br/>
+   coprocessor.WriteData(datadescription);
+   <br/>
+   coprocessor.WriteImages(datadescription, \
+   <br/>
+   rescale_lookuptable=False)
+   <br/>
+   coprocessor.DoLiveVisualization( \
+   <br/>
+   datadescription, "localhost", 22222)
+  </code>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Results
+    </strong>
+   </span>
+  </span>
+  <br/>
+  A Catalyst Python script very similar to what is shown above was used with the Computational Research and Engineering for Acquisition Tools and Environments – Air Vehicles (CREATE-AV™) Helios [3] rotorcraft simulation code to output the flow field over a cross-section of one of the rotating blades. The images on the following page are examples created from the moving slice plane. Note that while the blade stays in the middle of the image, the axis widget at the bottom-left corner of the image is rotating, delineating slice rotation with the rotor blade.
+ </p>
+ <p>
+  To see additional example images, please watch the video  “Helicopter Rotor Flowfield,” which is available on Kitware’s Vimeo page (
+  <a href="https://vimeo.com/126419999">
+   https://vimeo.com/126419999
+  </a>
+  ).
+ </p>
+ <p>
+  <a href="/source/files/134_468740284.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_468740284.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  <a href="/source/files/134_1783914362.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1783914362.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  <a href="/source/files/134_1194218327.png" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1194218327.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The above images show the slice-plane output from a CREATE-AV™ Helios simulation run.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Conclusions
+    </strong>
+   </span>
+  </span>
+  <br/>
+  While the ParaView GUI’s Catalyst script generator can capture complex pipelines, it would be impossible to capture all desired Catalyst output behavior through the GUI. Even if this was attempted, it would make the GUI too complex. Instead, Catalyst relies on the flexibility of Python to provide specialized output that is not easily captured in the GUI.
+ </p>
+ <p>
+  In this article, we demonstrated how the Catalyst output can be customized for a rotorcraft simulation code with a couple of lines of Python. The two additions to the script allowed skipping wasteful output during the simulation startup steps and modifying the slice plane configuration to follow the rotation of the helicopter blade.
+ </p>
+ <p>
+  In a similar manner, data scientists can customize Catalyst scripts to easily capture important outputs that would
+  <br/>
+  otherwise be overly expensive to obtain. The net result is a more flexible
+  <em>
+   in situ
+  </em>
+  visualization analysis tool that speeds up the analysis workflow and can be implemented to efficiently use HPC resources.
+ </p>
+ <p>
+  For additional information on Catalyst and its capabilities, including a webinar and the user’s guide, please visit
+  <a href="http://www.paraview.org/in-situ/">
+   http://www.paraview.org/in-situ/
+  </a>
+  .
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Acknowledgements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Material presented in this article is a product of the CREATE-AV™ Element of the CREATE Program sponsored by the U.S. Department of Defense HPC Modernization Program Office.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [1] Bauer, A., Geveci, B., Schroeder, W. ParaView Catalyst User’s Guide Version 2,
+  <a href="http://www.paraview.org/files/catalyst/docs/ParaViewCatalystUsersGuide_v2.pdf">
+   http://www.paraview.org/files/catalyst/docs/ParaViewCatalystUsersGuide_v2.pdf
+  </a>
+  .
+  <br/>
+  [2] ParaView Python API,
+  <a href="http://www.paraview.org/ParaView3/Doc/Nightly/www/py-doc">
+   http://www.paraview.org/ParaView3/Doc/Nightly/www/py-doc
+  </a>
+  .
+  <br/>
+  [3] Wissink, A.M., V. Sankaran, B. Jayaraman, A. Datta, J. Sitaraman, M. Potsdam, S. Kamkar, D. Mavriplis, Z. Yang, R. Jain, J. Lim, R. Strawn, “Capability Enhancements in Version 3 of the Helios High-Fidelity Rotorcraft Simulation Code,” AIAA-2012-0713, AIAA 50th Aerospace Sciences Meeting, January 2012, Nashville TN.
+ </p>
+ <p>
+  <a href="/source/files/4_1212042784.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1212042784.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Andrew Bauer
+  </strong>
+  is a research and development engineer on the Scientific Computing team at Kitware. He primarily works on enabling tools and technologies for HPC simulations.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_885327624.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_885327624.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Benjamin Jimenez
+  </strong>
+  has several research interests, including external vehicle aerodynamics using computational fluid dynamics, as well as rotorcraft aerodynamics and structural dynamics (CFD+CSD) coupling.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_447936566.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_447936566.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Rajneesh Singh
+  </strong>
+  leads a team of engineers and scientists in the Vehicle Technology Directorate (VTD) of the U.S. Army Research Laboratory (ARL) at Aberdeen Proving Ground in Maryland.
+ </p>
+</div>

@@ -1,0 +1,245 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400">
+   Pseudo-coloring of surfaces and volumes is one of ParaView’s primary methods of displaying data. ParaView’s color legend provides an important link between color and data values, and is a critical component of many visualizations. Over the years, ParaView’s color legend features have expanded to cover numerous usage scenarios, including annotating specific values with text, showing the color assigned to NaN values, showing categorical colors, and controlling different elements of the color legend such as font size and style.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The color legend’s versatility unfortunately came with a somewhat complex implementation. The previous implementation made it challenging to debug when problems arose and difficult to augment when new features were needed. For ParaView 5.4, we have added a new color legend implementation that resolves a number of existing bugs and paves the way to make adding features easier in the future.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The new color legend has some key differences from its older counterpart.
+  </span>
+ </p>
+ <h2>
+  <b>
+   Nicer automatic labels
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   One of the complaints with the previous color legend involved the numbers chosen for labels. These numbers were chosen by subdividing the numeric range assigned to the color legend into evenly spaced intervals. Not infrequently, seemingly odd choices of scalar values that required a large number of decimal places would be chosen for labels. In the new color legend we use the same algorithm used by ParaView’s 2D charts to compute “nice” label values that have a more compact representation based on multiples of 2, 5 or 10.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18077" style="width: 276px">
+  <img alt="" class="wp-image-18077 size-full" height="255" sizes="(max-width: 266px) 100vw, 266px" src="https://blog.kitware.com/wp-content/uploads/2017/05/NicerLabels.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/NicerLabels.png 266w, https://blog.kitware.com/wp-content/uploads/2017/05/NicerLabels-220x211.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/NicerLabels-250x240.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/NicerLabels-90x86.png 90w, https://blog.kitware.com/wp-content/uploads/2017/05/NicerLabels-32x32.png 32w" width="266"/>
+  <p class="wp-caption-text">
+   The old color legend (left) had labeled values spaced evenly within the numeric range of the scalar bar, but this could lead to label values that were not necessarily human-relatable and requiring potentially numerous decimal digits. The new color legend (right) has labeled values that require fewer decimal digits. Intermediate tick marks between labels did not aid in interpreting color values, so they have been removed.
+  </p>
+ </div>
+ <p>
+  You will also notice that the title placement has changed for vertically oriented color legends. Instead of having a horizontal orientation that can potentially use up a lot of horizontal and vertical space, the title is rotated to be vertically aligned with the length of the color legend.
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Another key difference with labels in the new color legend is that the number of labels is determined automatically by how many nice numbers fit within the span of the long dimension of the legend. In the prior implementation, one could specify a maximum number of labels, but this property was really just a suggestion that did not always work out in a satisfactory way. Note that if you are not satisfied with the automatic labels in the new color legend, you can exercise total control of the labeled values with the feature described in the next section.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18079" style="width: 388px">
+  <img alt="" class="size-full wp-image-18079" height="432" sizes="(max-width: 378px) 100vw, 378px" src="https://blog.kitware.com/wp-content/uploads/2017/05/ChangingLabels.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/ChangingLabels.png 378w, https://blog.kitware.com/wp-content/uploads/2017/05/ChangingLabels-263x300.png 263w, https://blog.kitware.com/wp-content/uploads/2017/05/ChangingLabels-220x251.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/ChangingLabels-250x286.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/ChangingLabels-355x406.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/ChangingLabels-90x103.png 90w" width="378"/>
+  <p class="wp-caption-text">
+   The number of labeled values in the new color legend is determined by how many “nice” labels fit within the span of the legend.
+  </p>
+ </div>
+ <h2>
+  <b>
+   Label with specific values
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   A new feature in the color legend enables one to specify the exact labels displayed by the color legend. When enabled, the automatically computed label values will be replaced with the requested labels. This gives total control over the label values that are displayed.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18081" style="width: 124px">
+  <img alt="" class="size-full wp-image-18081" height="168" sizes="(max-width: 114px) 100vw, 114px" src="https://blog.kitware.com/wp-content/uploads/2017/05/CustomLabels.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/CustomLabels.png 114w, https://blog.kitware.com/wp-content/uploads/2017/05/CustomLabels-90x133.png 90w" width="114"/>
+  <p class="wp-caption-text">
+   Arbitrary labels can be specified in the new color legend, giving complete control over the number and placement of label values.
+  </p>
+ </div>
+ <h2>
+  <b>
+   Out-of-range colors are now displayed
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   The
+   <strong>
+    Above Range
+   </strong>
+   and
+   <strong>
+    Below Range
+   </strong>
+   colors can be assigned to all values that fall either above or below the numeric range assigned to the color legend. Colors for these values were not displayed in the color legend in the previous version. They are presented in the new version as color swatches at either end of the color bar. The NaN color swatch remains available in the new color legend.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18083" style="width: 302px">
+  <img alt="" class="size-full wp-image-18083" height="96" sizes="(max-width: 292px) 100vw, 292px" src="https://blog.kitware.com/wp-content/uploads/2017/05/OutOfRangeColors.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/OutOfRangeColors.png 292w, https://blog.kitware.com/wp-content/uploads/2017/05/OutOfRangeColors-220x72.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/OutOfRangeColors-250x82.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/OutOfRangeColors-90x30.png 90w" width="292"/>
+  <p class="wp-caption-text">
+   The new color legend shows
+   <strong>
+    Above Range
+   </strong>
+   and
+   <strong>
+    Below Range
+   </strong>
+   colors when they are enabled.
+  </p>
+ </div>
+ <h2>
+  <b>
+   Improved annotation layout
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   The new color legend continues to support annotations that are useful for labeling special values with arbitrary text. There were certain configurations where the annotation text was laid out in unexpected ways in the old color legend; the new legend improves on the layout.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18085" style="width: 494px">
+  <img alt="" class="size-full wp-image-18085" height="176" sizes="(max-width: 484px) 100vw, 484px" src="https://blog.kitware.com/wp-content/uploads/2017/05/ImprovedAnnotations.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/ImprovedAnnotations.png 484w, https://blog.kitware.com/wp-content/uploads/2017/05/ImprovedAnnotations-300x109.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/ImprovedAnnotations-220x80.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/ImprovedAnnotations-250x91.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/ImprovedAnnotations-355x129.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/ImprovedAnnotations-90x33.png 90w" width="484"/>
+  <p class="wp-caption-text">
+   The new annotation layout algorithm keeps annotations closer to the values to which they are associated.
+  </p>
+ </div>
+ <h2>
+  <b>
+   More precise font control
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   In the previous color legend, the displayed font size was indirectly related to the specified font size. The size of the color legend affected the scaling of the requested font size which often lead to a disconnect between the font size that was requested and the font size that was displayed on the screen. The new color legend respects the requested font size regardless of the size of the color legend.
+  </span>
+ </p>
+ <h2>
+  <b>
+   More precise color bar thickness control
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Like font size, the thickness of the color bar (the smaller dimension) was controlled by an aspect ratio that related the length and thickness of the scalar bar. The thickness would change size if the scalar bar length was changed. In the new color legend, the color bar thickness is specified in terms of points, much like how font sizes are specified. Some examples below show the relation between scalar bar thickness and font size.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18089" style="width: 452px">
+  <img alt="" class="size-full wp-image-18089" height="204" sizes="(max-width: 442px) 100vw, 442px" src="https://blog.kitware.com/wp-content/uploads/2017/05/ScalarBarThickness.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/ScalarBarThickness.png 442w, https://blog.kitware.com/wp-content/uploads/2017/05/ScalarBarThickness-300x138.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/ScalarBarThickness-220x102.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/ScalarBarThickness-250x115.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/ScalarBarThickness-355x164.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/ScalarBarThickness-90x42.png 90w" width="442"/>
+  <p class="wp-caption-text">
+   Like font size, the color bar thickness in the new color legend is specified in points. Left: 16 point font and color bar thickness of 16 points. Right top: 12 point font size and color bar. Right bottom: 10 point font size and color bar.
+  </p>
+ </div>
+ <h2>
+  <b>
+   Setting color legend position
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   While the new color legend supports interactive dragging to position it in any location on the screen, a new
+  </span>
+  <b>
+   Window Location
+  </b>
+  <span style="font-weight: 400">
+   property lets you specify one of six predefined window locations:
+  </span>
+  <b>
+   Lower Left Corner
+  </b>
+  <span style="font-weight: 400">
+   ,
+  </span>
+  <b>
+   Lower Right Corner
+  </b>
+  <span style="font-weight: 400">
+   ,
+  </span>
+  <b>
+   Lower Center
+  </b>
+  <span style="font-weight: 400">
+   ,
+  </span>
+  <b>
+   Upper Left Corner
+  </b>
+  <span style="font-weight: 400">
+   ,
+  </span>
+  <b>
+   Upper Right Corner
+  </b>
+  <span style="font-weight: 400">
+   , and
+  </span>
+  <b>
+   Upper Center
+  </b>
+  <span style="font-weight: 400">
+   . When one of these window locations is chosen, the color legend will stay anchored to it such that all parts of the color legend are guaranteed to be visible. A seventh option,
+  </span>
+  <b>
+   Any Location
+  </b>
+  <span style="font-weight: 400">
+   , enables the color legend to be dragged to any position on the screen. This option is automatically set when interaction with the color legend occurs.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18087" style="width: 627px">
+  <img alt="" class="size-full wp-image-18087" height="549" src="https://blog.kitware.com/wp-content/uploads/2017/05/ColorLegendPlacement.gif" width="617"/>
+  <p class="wp-caption-text">
+   The new color legend can be locked to different locations in the view.
+  </p>
+ </div>
+ <h2>
+  <b>
+   Backwards compatibility
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Though the presentation of the new color legend has changed, most of the existing color legend properties have been preserved. Two exceptions are:
+  </span>
+ </p>
+ <ol>
+  <li>
+   <b>
+    AspectRatio
+   </b>
+   <span style="font-weight: 400">
+    – controls the thickness of the color bar
+   </span>
+  </li>
+  <li>
+   <b>
+    Point2
+   </b>
+   <span style="font-weight: 400">
+    – which controls the length of the color legend
+   </span>
+  </li>
+ </ol>
+ <p>
+  <span style="font-weight: 400">
+   Backwards compatibility handling for Python scripts written in earlier versions of ParaView will ensure that these properties continue to work as expected in ParaView 5.4.
+  </span>
+ </p>
+ <h2>
+  <strong>
+   Conclusion
+  </strong>
+ </h2>
+ <p>
+  We hope you enjoy using the new color legend coming to ParaView 5.4.0. Please let us know if you have any problems using it and how we might improve backwards compatibility with existing ParaView state files and Python scripts.
+ </p>
+ <h2>
+ </h2>
+</div>

@@ -1,0 +1,183 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="/source/files/4_684949085.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_684949085.jpg" style="width: 146px; float: left;"/>
+  </a>
+ </p>
+ <p>
+  Developing real-time systems at Autonomous Solution, Inc. (ASI)  requires a lot of testing. The correctness of the systems' functionality ensures the safety of everyone around our programmed roboticized vehicle. Some of the real-time software systems we develop include controllers, perception systems, simulators, and support tools. We want to ensure that such systems work as intended on embedded platforms, as well as on desktop applications in simulation. Our code must follow rigorous safety standards, while keeping up with our rapidly evolving code base. This means integrating our systems with many tools. Development tools such as CMake are used to achieve our goals.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     General Usages
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  We are always improving our build process to make it easier to develop in a shared code base and to run the source code through more tests and analyses. Our previous build system involved pulling in individual files and compiling them per project, per build configuration. Currently, we have a unified code base across projects that are organized into libraries. In addition, we run unit tests, gather static analysis metrics, and generate doxygen.
+  <br/>
+  We use CMake to handle different build configurations with one set of scripts that defines how to generate these configurations. Then, we use CTest to execute and produce results on both unit and integration tests.
+ </p>
+ <p>
+  <a href="/source/files/4_821460220.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_821460220.jpg" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Table 1: Different build configurations.
+  </em>
+ </p>
+ <p>
+  We have a few common build configurations, as seen in Table 1. CMake manages switching between all of them. It is convenient to be able to support our current target configurations and to allow for more in the future. For example, we can upgrade or downgrade a particular IDE version, as well as switch to completely new IDEs like CLion.
+ </p>
+ <p>
+  It also helps to have a tool that handles determining which compiler version to build, as compilers may support upgrading a build configuration, but they generally do not support downgrading a build configuration. If a library has been built with an older compiler, downgrading may be necessary. For example, Visual Studio has many versions. Some developers use MSVC 11 2012, while others use MSVC 12 2013. Although it is standardized on the build server, developers can decide which compiler to use locally.
+ </p>
+ <p>
+  Another nice feature is internal package management. There are few, if any, package management applications for C or C++ that are cross-platform. CMake’s ExternalProject feature works adequately for this. We use it to download necessary files at certain revisions.
+ </p>
+ <p>
+  Installed third-party tools are also easy to integrate with CMake’s find_package utility. We use it to integrate our code with installed tools like doxygen and installed libraries like boost. CMake stays up-to-date with the current version of the tool or the library, and it verifies minimum versions are met. In addition, if we want to incorporate a custom tool that is installed locally instead of version controlled, this function can be extended. We are still deciding what tools and libraries to version control and what tools to install locally, but CMake facilitates both.
+ </p>
+ <p>
+  <a href="/source/files/4_808972171.png" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_808972171.png" style="width: 550px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: Our integration server using Team City.
+  </em>
+ </p>
+ <p>
+  Continuous integration is important to ASI, because it gives developers timely feedback on the code checked into our version control systems. Our unit tests integrate with CTest. CMake and CTest work together on any build server. We use Team City for our build server. A glimpse of what the server results look like can be seen in Figure 1. Integration merely involves calling either of the tools with the same parameters across projects. This standardization simplifies our build configuration. In addition, we can perform the same scripts locally. As a result, build server agent scripts and capabilities can be developed without the server.
+ </p>
+ <p>
+  <code>
+   file(GLOB_RECURSE ALL_SOURCES *.cpp *.hpp *.c *.h
+   <br/>
+   *.cc *.ld *.bsp *.int)
+   <br/>
+   if (GHSMULTI)
+   <br/>
+   string(REGEX REPLACE "[^;]+/Win32/[^;]+($|;)"
+   <br/>
+   "" ALL_SOURCES "${ALL_SOURCES}")
+   <br/>
+   elseif (WIN32)
+   <br/>
+   string(REGEX REPLACE "[^;]+/Ghs/[^;]+($|;)"
+   <br/>
+   "" ALL_SOURCES "${ALL_SOURCES}")
+   <br/>
+   endif ()
+   <br/>
+   string(REGEX REPLACE "[^;]+/UnitTests/[^;]+($|;)"
+   <br/>
+   "" TARGET_SOURCES "${ALL_SOURCES}")
+  </code>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Listing 1: A Short snippet of a CMake script for pulling all the source files in a directory while eliminating sources in certain directory names.
+  </em>
+ </p>
+ <p>
+  Dynamic build configurations work well for rapidly growing libraries that follow standardized structures. For example, CMake allows for globbing all the files in a directory and discarding certain filenames or directories. This feature works for us because we have directories that contain specific names for operating system (OS) and system-dependent files.
+ </p>
+ <p>
+  Our unit tests work the same way. We couple our unit tests with our production code because they depend on each other. CMake uses a script to filter out the unit tests based on the folder name, and it allows us to find a class’ corresponding unit test and mock. An example using dynamic configuration can be found in Listing 1.
+  <br/>
+  We also have scripts to organize our IDE’s source tree. These scripts automatically replicate the folder structure from the file system to the IDE. Unifying file hierarchy and IDE structure creates one cohesive structure across IDEs. In figure 2, the MSVC solution explorer and folder hierarchy can be seen.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     Using CMake to Promote a Scalable Internal Architecture
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Writing reusable code is important. Unfortunately, packaging it in a portable way is not part of any C or C++ standard. Most tools force certain configurations and are not
+  <br/>
+  cross-platform.
+ </p>
+ <p>
+  CMake is cross-platform. It has a simple executable and library structure, easing the process of including other source or prebuilt libraries in a new target. Once developers start building libraries, they know how to scalably distribute their code. The source code is coupled with a minimal build configuration file, which aids portability and comprehension.
+ </p>
+ <p>
+  CMake automatically generates debug and release configuration. Therefore, manually setting compiler flags is unnecessary. These automatic configurations save time from remembering compiler-specific flags. It is still possible, however, to pass them into the new target.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     Why CMake, in Particular?
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  We did not have tools for managing all our tool chains for cross compilation. The above features could be implemented with other applications, but we wanted to take advantage of particular IDEs, in addition to cross compilation. For this reason, we chose to add the Green Hills generator to the CMake executable. This way, CMake could become our tool chain manager, as well as our IDE manager.
+ </p>
+ <p>
+  With this new feature, we can take advantage of the strengths of Visual Studio, eclipse, and Green Hills MULTI. Visual Studio and eclipse are great for editing the source code, running unit tests, and testing application-level logic. Meanwhile, Green Hills MULTI is good at remotely debugging compiled ARM code. This debugging can be used when the processor is put into a hardware-in-the loop (HIL) environment or in the intended environment. Testing on the intended build configuration exercises the application-level implementation, the low-level implementation’s logic, the OS API calls, and the GPIO API calls. It also tests the OS and the hardware.
+ </p>
+ <p>
+  <a href="/source/files/4_485227132.png" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_485227132.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: Matching IDE and folder structures.
+  </em>
+ </p>
+ <p>
+  Both the application-layer logic and the embedded platform are important. Decoupling the two via cross compilation greatly simplifies problems in embedded development. It also eliminates the need for special hardware when developing application-layer logic. But, this decoupling would be useless without a tool that enables us to easily switch between build configurations.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     Conclusions
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  It is nice to have tools that complement each other, yet, are modular enough to provide value alone and to be switched out for tools from other vendors. In addition, the tools can be made to fit unique development patterns, either by scripting or by editing source code. The open-source aspects allow these tools to keep up with the ever-quickening pace of technology.
+ </p>
+ <p>
+  <span style="font-size:14px;">
+   <span style="color: rgb(0, 0, 128);">
+    <strong>
+     Acknowledgements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Thanks to Max Barfuss for encouraging smarter development, to Dennis Young for critiquing the build process, and to Mike McNees for helping to build the process by leading both unit testing and build-server integration at ASI.
+ </p>
+ <p>
+  <a href="/source/files/4_1289860792.jpg" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1289860792.jpg" style="width: 100px; float: left; padding-right: 5px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Geoffrey Viola
+  </strong>
+  is a software engineer at Autonomous Solutions, Inc. He manages the embedded guild, a weekly in-house training session. His work includes building simulators to test existing real-time systems in HIL and Windows environments, as well as developing GNSS-denied solutions.
+ </p>
+ <p>
+ </p>
+</div>

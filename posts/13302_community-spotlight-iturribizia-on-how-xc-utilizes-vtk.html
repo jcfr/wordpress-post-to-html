@@ -1,0 +1,281 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  XC is a program designed at our company, Iturribizia [1], to solve structural analysis problems utilizing a finite element method. The program can solve various types of problems, from simple linear analysis to complex nonlinear simulations. It has a library of finite elements which can be used to modeling various geometries and multiple materials for use in various areas of structural analysis.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     MOTIVATION
+    </strong>
+   </span>
+  </span>
+  <br/>
+  Someone said that, when the French climber Lionel Terray was asked about his reason to climb a mountain, he simply said “because it was there”. Something similar happened with the development of this program. I began the study of the finite element method after studying the analytical solutions to elastic problems (so limited) and I became greatly interested in their use in structural problems. This, coupled with my love for computer science, made me decide to develop a finite element program that would be useful to calculate structures and could be modified and expanded in any way the user wanted.
+ </p>
+ <p>
+  First I wrote a Pascal version of the program which only worked with bar-type elements. Then I wrote a C++ version “from scratch” that was never able to solve any nontrivial problem. Finally, I discovered the possibilities offered by the calculation core of Opensees and decided to modify it to be suitable for an “industrial environment” (as opposed to academic use).
+ </p>
+ <p>
+  To achieve this objective, several significant modifications to the original code were required. Algorithms for generating finite element mesh were incorporated, allowing the modeler to create structured grids from the description of geometry by means of points, lines, surfaces and solids. Graphics were generated using the VTK library (we give more details on this later.) A new macro language was developed to make it possible to obtain the results produced by the calculation without having to extract them from predefined listings. This provides the program with the ability to interpret a sentence like “get the ratio between the vertical displacement of the node closest to the center of the beam and the total span of the beam”. Utilities for the construction and calculation of design load combinations prescribed by the building codes (EHE, ACI 318, EAE, Eurocodes, etc.) were implemented to facilitate the verification of design requirements. The ability to activate and deactivate elements was introduced to enable the analysis of structures built in phases, geotechnical problems, and the strengthening of existing structures. Macros were written to verify the structure and its elements according to the criteria prescribed by building codes (e.g. axial and bending capacity, shear reinforcement). The code was changed to link with “standard” linear algebra libraries (e.g. BLAS, Arpack, LAPACK, SuperLU), eliminating the need to include in the program “ad-hoc” versions of these libraries. Finally, the material models were modified to support prescribed strains, making it possible to solve problems involving thermal and rheological actions.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     DESIGN GUIDELINES
+    </strong>
+   </span>
+  </span>
+  <br/>
+  With the experience obtained from previous development works we arrived at the following conclusions: test, test carefully and test again; do not reinvent the wheel do not waste time in developing an elegant GUI; and while building codes change, physical laws do not.
+ </p>
+ <p>
+  <strong>
+   Testing
+  </strong>
+  <br/>
+  For each functional element of the program a test should be written to verify the correctness of the code. Also after each code modification it must be verified that every one of the tests still execute successfully. Once an error is detected and corrected we must write a test to verify that the error will not happen again.
+ </p>
+ <p>
+  <strong>
+   Reinventing the Wheel
+  </strong>
+  <br/>
+  Rather than starting from scratch every time you need to introduce something to your code, seek out open source libraries. We’ve learned to use open source libraries (such as VTK) as much as possible. Make sure that these libraries are easily accessible via the Internet.
+ </p>
+ <p>
+  <strong>
+   GUI Development
+  </strong>
+  <br/>
+  Don’t waste time developing an elegant GUI. Graphical user interfaces make the users believe that they know how to use the program. These types of interfaces make possible to take a trial and error approach which, in our view, may be appropriate to handle a word processor in which the result is visible, but not so much for a computer program whose management requires a thorough review of the input data and design assumptions. On the other hand the use of an interpreted language provides much higher flexibility. Consider a line segment definition that may involve two points, a point and a vector, a point, a length and an angle or the intersection of two planes. This flexibility is very difficult to achieve with a graphical user interface.
+ </p>
+ <p>
+  <strong>
+   The Laws of Physics
+  </strong>
+  <br/>
+  While building codes are subject to change, physical laws remain constant. In structural engineering we still use Newton mechanics to solve mechanical problems. The algorithms that solve these types of equations (equilibrium, kinematic, etc.) should be written in C++ as these algorithms, by nature, are unlikely to change.
+ </p>
+ <p>
+  On the other hand, building codes are periodically renewed due to advances in understanding the behavior of materials and the greater demands of society regarding the level of quality required for its infrastructures. Consequently, and since there is no need to hide the code to the user, we use procedures written as scripts (that are easy to modify) to implement the verification of design requirements from building codes.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     FEATURES
+    </strong>
+   </span>
+  </span>
+  <br/>
+  This section covers the program’s features that make it particularly suitable for use in structural design applications.
+ </p>
+ <p>
+  <strong>
+   Tools for reporting
+  </strong>
+  <br/>
+  The program must have utilities that make it easy to generate reports, both numerical and graphical, which are ready to be included in structural design reports. The basis of this report generation system is the use of the LaTeX document preparation system.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" src="https://blog.kitware.com/source/files/3_2098126335_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: Steel material model
+  </em>
+ </p>
+ <p>
+  Three procedures are used for graphic generation. VTK is used to generate bi- or three-dimensional graphic information for the values presented by a scalar or vector field in the finite element mesh. Gnuplot [2] is used to generate graphs of functions or numerical data, such as that in Figure 1. The plotutils library is used to generate Postscript graphics.
+ </p>
+ <p>
+  <strong>
+   Tools for calculating multiple design load combinations
+  </strong>
+  <br/>
+  The program should facilitate both the linear and non-linear calculation of multiple load combinations. Modern building codes require knowledge of a structure’s response to a large number of combinations (from a few hundred in simple building structures to more than a thousand in structures with moving, thermal and seismic loads). Checks are needed for each of these combinations depending on whether the structure is made of steel, concrete, or wood and special parts (pins, anchor bolts).
+ </p>
+ <p>
+  When the calculation is linear, the response to the load combination may be obtained as the sum of responses to each load. On the contrary, when the analysis must be non-linear it’s necessary to find a solution for each of the combinations using any intermediate results already obtained.
+ </p>
+ <p>
+  <strong>
+   Tools for performing design checks
+  </strong>
+  <br/>
+  The design of a structure in accordance with the requirements of building codes is often based on the application of various criteria. In terms of stability it is necessary to check the balance of the structure and safety from buckling phenomena. A material’s resistance needs to be tested to determine the maximum strains and stresses that the material can withstand. A structure’s stiffness needs to be tested to determine its maximum allowable displacement (limits on beam deflection, collapse). These quantities, in general, can be approximated from the displacement of closest node in the model. A structure’s dynamics is tested in terms of its conditions of comfort and to ensure that its natural frequency values vary enough from its excitation frequency. Lastly, the fatigue strength of the structure is determined based on the structure’s capacity to withstand cyclic loading.
+ </p>
+ <p>
+  <strong>
+   Mesh generation tools
+  </strong>
+  <br/>
+  The task of creating a finite element mesh that properly models a civil engineering structure (a building, dam, bridge) is one of the most time-consuming because the geometry of its elements rarely supports analytical representation. Moreover, the presence of holes and voids in the structures themselves and other structural reinforcements make the model even more complex. In some structures it is necessary to model pre-stressed tendons embedded in concrete or other similar items.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     GRAPHICAL OUTPUT
+    </strong>
+   </span>
+  </span>
+  <br/>
+  To give the program the ability to plot the results from analysis we take into consideration the following possibilities:
+ </p>
+ <ul>
+  <li>
+   Programming the graphical output interface directly using OpenGL, present in almost any recent computer.
+  </li>
+  <li>
+   Using OpenDX, an open-source library based on IBM Open Visualization Data Explorer.
+  </li>
+  <li>
+   Using Kitware’s VTK library.
+  </li>
+ </ul>
+ <p>
+  Besides the problem of deciding which interface to use, there was the need to determine how the program would generate graphics. There were two options: develop a set of pre-defined graphics with adjustable appearance parameters that could be used to display displacements, stresses, strains, loads, etc., or design a command language which would be a means through which users could define the graphical output.
+ </p>
+ <p>
+  The first approach is commonly used in some matrix structural analysis computer programs and other programs oriented to specific tasks such as slope stability analysis or solving plane elasticity problems. The main disadvantage of this solution is that it’s very difficult to apply to situations that were not previously considered by the programmer.
+ </p>
+ <p style="text-align: center;">
+  The second solution is used in the majority of the general purpose finite element codes (ANSYS, Abacus). Its fundamental difficulty is the design of a command language that is flexible enough and easy to use. During analysis of this solution we studied other program manuals (ANSYS, Abacus, Solvia, Calculix Graphix) to determine the features needed for the command language.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" src="https://blog.kitware.com/source/files/3_940724200_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: View of a cone generated with the script from Table 1
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+  After studying both solutions we decided that the first was almost unworkable if we wanted the program to be able to treat multiple types of problems (e.g. analysis of buildings, bridges, reservoirs).
+ </p>
+ <p>
+  The second was more appropriate to deal with the problem since it provides the users with the tools they need to display results and, in some way, transfer the task to them. Once the solution was chosen, we had to design a command language powerful enough to generate graphics allowing the use of all options (transparency, lighting, textures) that modern computer graphics offer. Here the potential of VTK came into play.
+ </p>
+ <p>
+  The VTK library is written in C++ (the same language used for the remainder of the program), making it quite easy to call it from the rest of the code. The availability of some script languages (Tcl, Java and Python) in VTK made us realize that the command language design was already done (the VTK API itself) and all we had to do was move it to our own script language used by the rest of the program. Proceeding in this manner, we enabled the use of VTK for any purpose the user desires as opposed to just making the code available for finite element model representations. Figure 2 (which will be recognizable to all those familiarized with the examples supplied with the VTK package) shows the results of the macro shown in Table 1. A more complex example can be seen in Figure 3.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" src="https://blog.kitware.com/source/files/3_81100966_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3: Shell finite element model of a bridge deck
+  </em>
+ </p>
+ <table border="0" style="background-color: #d2d2d0; height: 22px; width: 650px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      \vtk
+      <br/>
+      {
+      <br/>
+      \define[“vtkConeSource”,”cone”]
+      <br/>
+      { \altura{3.0} \radio{1.0} \resol{10} }
+      <br/>
+      \define[“vtkPolyDataMapper”,”coneMapper”]
+      <br/>
+      { \set_input{“cone”} }
+      <br/>
+      \define[“vtkActor”,”coneActor”]
+      <br/>
+      { \set_mapper{“coneMapper”} }
+      <br/>
+      \define[“vtkRenderer”,”ren1″]
+      <br/>
+      {
+      <br/>
+      \add_actor{“coneActor”}
+      <br/>
+      \set_background{0.1,0.2,0.4}
+      <br/>
+      }
+      <br/>
+      \define[“vtkRenderWindow”,”renWin”]
+      <br/>
+      { \add_renderer{“ren1”} \set_size{1024,768} }
+      <br/>
+      \define[“vtkRenderWindowInteractor”,”iren”]
+      <br/>
+      { \set_render_window{“renWin”} }
+      <br/>
+      \define[“vtkInteractorStyleTrackballCamera”,
+      <br/>
+      “style”]
+      <br/>
+      {}
+      <br/>
+      \iren{\set_interactor_style{“style”}}
+      <br/>
+      \iren{\initialize{} \start{}}
+      <br/>
+      }
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p style="text-align: center;">
+  <em>
+   Table 1: Script to display the cone on figure 2
+  </em>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     ACKNOWLEDGEMENTS
+    </strong>
+   </span>
+  </span>
+  <br/>
+  Many thanks to all the people who contribute to open source, without their effort this work would not have been possible. Thanks to Professor Filip C. Filippou and Frank Mackenna from the Department of Civil and Environmental Engineering at the University of California, Berkeley for their email correspondence. Thank you to my family for their patience as I worked on the development of this software package. And thank you to my friends Raul Hernandez and Tomas Sanz for their encouragement.
+  <br/>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     REFERENCES
+    </strong>
+   </span>
+  </span>
+  <br/>
+  [1] Iturribizia may be downloaded here: http://www.iturribizia.com/descarga software.html.
+  <br/>
+  [2] http://www.gnuplot.info
+  <br/>
+  <strong>
+   <br/>
+  </strong>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" src="https://blog.kitware.com/source/files/3_1950174453_png" style="float: left; border: 0pt none;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Luis C. Pérez Tato was born in Madrid (Spain) in 1965. Studied civil engineering at the “Universidad Politécnica de Madrid”. His work has been related to computer programming since 1988 and to structural analysis since 1992. Has developed programs in the fields of structural analysis, geographic information systems an dam instrumentation.
+ </p>
+</div>

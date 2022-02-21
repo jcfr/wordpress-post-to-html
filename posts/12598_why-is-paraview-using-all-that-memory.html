@@ -1,0 +1,356 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ParaView is not a small project. It includes over 3 million lines of C and C++ code and 250,000 lines of Python with a smattering of other languages such as FORTRAN, Tcl, and Java (accoring to the wonderful
+  <a href="http://www.dwheeler.com/sloccount/">
+   <code>
+    sloccount
+   </code>
+  </a>
+  tool) in its build, and the build has more than 18,000 things to do when Python bindings are enabled. When loading it up to use for handling data on a super computer, its memory footprint seem to be gargantuan.
+ </p>
+ <p>
+  In a CoProcessing module, just loading up ParaView shoots your virtual memory space up by 500MB. But what is actually taking up all of this memory when the build artifacts only take up a total of 150MB? To find out, we need to dig into how a kernel (specifically, Linux here) does its memory accounting.
+ </p>
+ <p>
+  First, I'll go over the methods used to find out memory usage and what is using it. On Linux, there is a filesystem called procfs mounted at the
+  <code>
+   /proc
+  </code>
+  directory. This filesystem is implemented with a little bit of kernel knowledge and magic to allow you to introspect what is going on in a process. Here, the two files which are important to us are the
+  <code>
+   status
+  </code>
+  and
+  <code>
+   maps
+  </code>
+  files. The
+  <code>
+   status
+  </code>
+  file contains things like memory usage, historical memory usage, signal masks, capabilities, and more. The
+  <code>
+   maps
+  </code>
+  file contains a list of all of the memory regions mapped to a process, their permissions, and what file they come from. Information on other files may be found in the
+  <a href="http://man.cx/proc">
+   <code>
+    proc(5)
+   </code>
+   manpage
+  </a>
+  . To find out how much memory ParaView is causing a process to consume, I used a small CoProcessing module and modified it to initialize ParaView and then print out its accounting information from
+  <code>
+   /proc/self/status
+  </code>
+  and
+  <code>
+   /proc/self/maps
+  </code>
+  .
+ </p>
+ <p>
+  First, looking at the
+  <code>
+   status
+  </code>
+  file, we see something like (trimmed for brevity):
+ </p>
+ <div style="background:#eee;border:1px solid #ccc;padding:5px 10px;">
+  <code>
+   % cat /proc/self/status | head -n 7
+   <br/>
+   Name:   cat
+   <br/>
+   State:  R (running)
+   <br/>
+   Tgid:   16128
+   <br/>
+   Ngid:   0
+   <br/>
+   Pid:    16128
+   <br/>
+   PPid:   15490
+   <br/>
+   TracerPid:      0
+  </code>
+ </div>
+ <p>
+  This file is where we can get statistics on our process directly from the kernel such as its name, whether it is waiting on I/O, sleeping, or running, permission information, signal masks, memory usage, and more. The field we are interested in here is
+  <code>
+   VmPeak
+  </code>
+  which is the value you usually see in top under
+  <code>
+   VIRT
+  </code>
+  and always seems so high. This value is the most memory that the process ever had mapped for it over its lifetime. For the example here, I get:
+ </p>
+ <div style="background:#eee;border:1px solid #ccc;padding:5px 10px;">
+  <code>
+   VmPeak:   107916 kB
+  </code>
+ </div>
+ <p>
+  Now, you may as "Really? 100MB for
+  <code>
+   cat
+  </code>
+  ?". It may seem like a lot, but we can see where it comes from using the
+  <code>
+   maps
+  </code>
+  file. Let's see where it's all going:
+ </p>
+ <div style="background:#eee;border:1px solid #ccc;padding:5px 10px;">
+  <code>
+   % cat /proc/self/maps | awk -f range2size.awk
+  </code>
+  <sup>
+   1
+  </sup>
+  <br/>
+  <code>
+   49152 r-xp 00000000 08:13 787901 /usr/bin/cat
+   <br/>
+   4096 r--p 0000b000 08:13 787901 /usr/bin/cat
+   <br/>
+   4096 rw-p 0000c000 08:13 787901 /usr/bin/cat
+   <br/>
+   135168 rw-p 00000000 00:00 0 [heap]
+   <br/>
+   106074112 r--p 00000000 08:13 804951 /usr/lib/locale/locale-archive
+   <br/>
+   1785856 r-xp 00000000 08:13 787887 /usr/lib64/libc-2.18.so
+   <br/>
+   2097152 ---p 001b4000 08:13 787887 /usr/lib64/libc-2.18.so
+   <br/>
+   16384 r--p 001b4000 08:13 787887 /usr/lib64/libc-2.18.so
+   <br/>
+   8192 rw-p 001b8000 08:13 787887 /usr/lib64/libc-2.18.so
+   <br/>
+   20480 rw-p 00000000 00:00 0
+   <br/>
+   131072 r-xp 00000000 08:13 786485 /usr/lib64/ld-2.18.so
+   <br/>
+   12288 rw-p 00000000 00:00 0
+   <br/>
+   4096 rw-p 00000000 00:00 0
+   <br/>
+   4096 r--p 0001f000 08:13 786485 /usr/lib64/ld-2.18.so
+   <br/>
+   4096 rw-p 00020000 08:13 786485 /usr/lib64/ld-2.18.so
+   <br/>
+   4096 rw-p 00000000 00:00 0
+   <br/>
+   139264 rw-p 00000000 00:00 0 [stack]
+   <br/>
+   8192 r-xp 00000000 00:00 0 [vdso]
+   <br/>
+   4096 r-xp 00000000 00:00 0 [vsyscall]
+  </code>
+ </div>
+ <p>
+  We can see here that the vast majority is that
+  <code>
+   /usr/lib/locale/locale-archive
+  </code>
+  file (which we can avoid; see below). After that, it's mostly the C library and the linker which are unavoidable for the most part. Other things to take note of are the special
+  <code>
+   [heap]
+  </code>
+  ,
+  <code>
+   [stack]
+  </code>
+  ,
+  <code>
+   [vdso]
+  </code>
+  , and
+  <code>
+   [vsyscall]
+  </code>
+  sections. The first two should be fairly obvious, but the other two are created by the kernel and those are the pages where the code which actually talks to the kernel lives. The other field which interests us is the second one which is the permission bits for that section of memory. The "
+  <code>
+   r-xp
+  </code>
+  ", "
+  <code>
+   rw-p
+  </code>
+  ", and "
+  <code>
+   r--p
+  </code>
+  " pages are fairly standard (executable code, writeable memory, and read-only data memory). The oddball one is that one "
+  <code>
+   ---p
+  </code>
+  " sections which is pretty large (two megabytes). This memory is used to help catch buffer overflows from trampling over the code and to assist in aligning memory to ease sharing across processes and are created by the binutils toolchain to separate the code section (
+  <code>
+   r-xp
+  </code>
+  ) from the writeable data section (
+  <code>
+   rw-p
+  </code>
+  ) in shared libraries. On a 64 bit x86 machine, each library uses 2MB for this buffer which seems like a lot until you realize that the memory is never actually realized in silicon (since any use causes a segfault) and 64 bit machines have access to at least
+  <a href="https://en.wikipedia.org/wiki/X86-64#Architectural_features">
+   256TB of virtual memory
+  </a>
+  to play with (and can be extended to the full 16EB if the need ever arises). On 32 bit machines, this is gap is instead 4 KB since the address space is at a much higher premium.
+ </p>
+ <p>
+  Now that we have some tools at our disposal to try and figure out where our memory is going, let's look at ParaView itself.
+ </p>
+ <p>
+  The data here was gathered using a CoProcessing module which loaded up ParaView, dumped the information from the status and maps files, then quit. This gives us a good idea of how much memory using ParaView is costing us without getting any datasets thrown into the mix.
+ </p>
+ <p>
+  Doing this, the maps data was massaged using the following bit of shell code:
+ </p>
+ <div style="background:#eee;border:1px solid #ccc;padding:5px 10px;">
+  <code>
+   awk '{ split($1, range, "-"); $1 = strtonum("0x" range[2]) - strtonum("0x" range[1]); total[$2] += $1 } END { for (perm in total) { print perm ": " total[perm] } }' &lt; maps | sort -k1
+  </code>
+ </div>
+ <p>
+  This code uses awk to compute the size of the memory range from the first field then accounts that size to the total amount of memory for a given set of permission bits. At the end, it prints out the total amount of memory for each set of permissions and then sorts it. Doing this for a build gives us output like:
+ </p>
+ <div style="background:#eee;border:1px solid #ccc;padding:5px 10px;">
+  <code>
+   ---p: 79581184
+   <br/>
+   r--p: 106364928
+   <br/>
+   r-xp: 12341248
+   <br/>
+   rw-p: 15507456
+  </code>
+ </div>
+ <p>
+  From this, we can see that almost 80MB of that buffer memory, 106 MB of read-only memory, 12 MB of executable code, and 15 MB of writeable memory (this is where static
+  <code>
+   std::string
+  </code>
+  variables since they dynamically allocate their memory). The executable code size isn't going to change much (there's
+  <code>
+   -Os
+  </code>
+  which optimizes for size, but you usually pay for it in performance where
+  <a href="https://en.wikipedia.org/wiki/Loop_unrolling">
+   loop unrolling
+  </a>
+  really boosts performance). The read-only memory has that pesky
+  <code>
+   locale-archive
+  </code>
+  sitting in there inflating our numbers:
+ </p>
+ <div style="background:#eee;border:1px solid #ccc;padding:5px 10px;">
+  <code>
+   7fdd518fc000-7fdd57e25000 r--p 00000000 08:13 804951                     /usr/lib/locale/locale-archive
+  </code>
+ </div>
+ <p>
+  It turns out that this is loaded up only when Python is used. Using other tools to find out why it's loaded
+  <sup>
+   2
+  </sup>
+  , we find that its purpose is to aid the C library when working in different locales (specifically, non-C). It can be skipped by running ParaView with the environment variable
+  <code>
+   LC_ALL
+  </code>
+  set to "
+  <code>
+   C
+  </code>
+  ". Doing this gives us the following for the
+  <code>
+   r--p
+  </code>
+  sections:
+ </p>
+ <div style="background:#eee;border:1px solid #ccc;padding:5px 10px;">
+  <code>
+   r--p:
+  </code>
+  290816
+ </div>
+ <p>
+  Much better. Next on the list is the amount of memory being mapped for those 2MB empty sections. The only way to actually remove them is by patching the linker to either make the sections smaller (which requires patching your toolchain) or to make fewer libraries. The former is out of scope for most users, but the latter could be done by making libraries such as vtkFilters rather than vtkFiltersCore, vtkFiltersGeometry, and so on. However, the easiest way is to use Catalyst builds to just reduce the amount of code and libraries in a build to begin with. By using Catalyst builds, ParaView can be made to use only 40% (the Extras edition which contains data writers) to 50% (for Rendering-Base) of a full build's
+  <code>
+   VIRT
+  </code>
+  memory footprint.
+ </p>
+ <p>
+  Here is a graph of memory usage when using various build types (shared and static), Catalyst editions (Extras, Rendering-Base, and a full build). All experiments were run with
+  <code>
+   LC_ALL=C
+  </code>
+  to keep the non-Python experiments comparable. Each source tree was built without Python, with Python (
+  <code>
+   +python
+  </code>
+  ), and with Python and Unified Bindings enabled (
+  <code>
+   +python+ub
+  </code>
+  ). The Python-enabled builds also have experiments showing usage when Python code was actually used rather than just being built-in for the CoProcessing pipeline or not (experiments with an asterisk):
+ </p>
+ <p>
+  <a href="/blog/files/77_1107450647.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.77_1107450647.png" style="width: 691px; height: 777px;"/>
+  </a>
+ </p>
+ <p>
+  As the graph shows, the Catalyst builds are much smaller than the full builds and get the largest memory usage gains. One thing to note is that if MPI is used, a static build will incur the the amount shown here per process. For shared builds, any memory under the "
+  <code>
+   buf
+  </code>
+  ", "
+  <code>
+   data
+  </code>
+  ", and "
+  <code>
+   code
+  </code>
+  " sections of the detailed graph (attached, but now shown) should be shareable between processes, so each process after the first only costs the amount of "
+  <code>
+   write
+  </code>
+  " memory for the experiment. Also, if Python is used in the experiment, enabling unified bindings makes the build smaller by removing the need for around four thousand targets to build (for a full ParaView build) to wrap all of the VTK classes a second time. The result is that there is less code at the expense of some more "
+  <code>
+   write
+  </code>
+  " memory (9 MB of code removed for 7 MB or write memory).
+ </p>
+ <p>
+  <sup>
+   1
+  </sup>
+  The
+  <code>
+   range2size.awk
+  </code>
+  file converts the byte ranges into byte sizes to see the sizes more easily.
+ </p>
+ <p>
+  <sup>
+   2
+  </sup>
+  The
+  <code>
+   ltrace
+  </code>
+  and
+  <code>
+   strace
+  </code>
+  tools for those interested, but their use is outside the scope of this article.
+ </p>
+</div>

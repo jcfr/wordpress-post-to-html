@@ -1,0 +1,93 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  I wrote about
+  <a href="https://blog.kitware.com/code-review-topic-branches-and-vtk/">
+   Code Review, Topic Branches and VTK
+  </a>
+  in the April issue of the Source last year. Since then, our
+  <a href="http://review.source.kitware.com/#/q/entity:topic%20status:open,n,z">
+   Gerrit review server
+  </a>
+  has seen over 2,000 topic submissions for review. I haven’t crunched the numbers, but have dealt with many corner cases and issues along the way. Many topics have been one commit long, and we have had some absolutely enormous topics representing many months of works too. There have also been several that are somewhere in the middle, even with multiple authors. The high-level view of the software process around Gerrit code review is shown below, and remains largely unchanged since we added it.
+ </p>
+ <p>
+  <center>
+   <a href="/blog/files/7_1362083907.png" rel="noopener" target="_blank">
+    <img alt="Kitware Gerrit Software Process" src="https://blog.kitware.com/blog/files/Small.7_1362083907.png" width="60%"/>
+   </a>
+  </center>
+  <strong>
+   The Good Ol’ Days
+  </strong>
+ </p>
+ <p>
+  Now seems like a good time to take stock of what has worked and what has not worked so well, and offer some words of advice. First, let’s consider the motivation behind using topic branches. In the good old days of CVS (you remember CVS don’t you), we would work away on a fix, feature, or rewrite and test it out locally. Once we thought it was ready we would commit it; it seems strange to me to think of it, but by commit I mean we would type cvs commit and add a message that would be immediately pushed to the tip of trunk after we pressed enter. We tried to commit before noon so we could watch the continuous dashboard submissions and fix anything that went wrong. If someone else had committed something we would curse under our breath, do a cvs up, and resolve any conflicts that occurred.
+ </p>
+ <p>
+  <strong>
+   Topic Branches
+  </strong>
+ </p>
+ <p>
+  Nowadays, I will work on several topic branches at any given time – often switching between them, occasionally rebasing them, and saving my progress as I go. If it is a simple topic I normally work along, and every time I want to save my progress, I will use ‘git add file/i/altered’ and ‘git commit –amend’ to add any new changes to the existing (and often only) commit in a topic. For larger topics, once I feel that an atomic set of changes implement a given feature or fix, I will add a commit with an appropriate description. I especially work to separate features from bug fixes and style changes as each is quite different. In general I will try to keep these things in separate topics, but sometimes it makes sense to combine them.
+ </p>
+ <p>
+  We have had several debates on the list about this, but after reviewing many topics I also avoid committing the minutia of my development, such as the wild goose chase I went on when trying to add a new feature or the class I added and later renamed. I will often squash these away into a single commit, or amend the commit as I go. The primary reasoning for this is that I want someone to review my commits, and I don’t expect them to follow every wrong turn I took. As a secondary reason, I am thinking about the poor guy trying to figure out why a line was added in a year or two (probably me) – I would like to give my future self a nice, succinct high-level overview of what I thought I was doing rather than picking through several messages. I also try to format a very short first line with a clue as to the purpose (like an email subject) and then a more detailed body formatted as paragraphs if that is required.
+ </p>
+ <p>
+  We provide quite a few macros to make things simpler. Once I think my topic is ready for review, I will use ‘git prepush’ to check I am pushing what I thought I was, and then ‘git gerrit-push’ to push the topic to the review server for review. I will often then quickly click through the commits and look at the diffs to see if it shows anything I had missed before adding some reviewers. I usually try to choose reviewers who I know work on that code (git log with paths often helps here), and I will examine the output from any automated checks (the robots) and the CDash@Home builds. This has allowed me to become amazingly lazy, often only building quite large changes on Linux and then relying on the CDash@Home builds to point out any cross-platform issues that I may have missed. I am not a fan of very large topics, especially if I see no logical justification in the context of code review or later code excavation expeditions.
+ </p>
+ <p>
+  <strong>
+   Code Reviews
+  </strong>
+ </p>
+ <p>
+  When performing a code review, I have to admit to being a little undecided on the best course of action. Initially I went for the Gerrit default of editing commits, but now I tend to favor appending commits to a topic. If a reviewer points out something trivial, I will often just edit the commit; if it is something less trivial, I will append a commit. If the topic is small, or it is the final commit I usually just edit it, but with larger topics I almost always append a commit to avoid any need to review all of the commits again.
+ </p>
+ <p>
+  When reviewing changes where there are lots of issues, I will also sometimes just make the changes in a follow up commit, and push that straight to the topic. My motivation for this is that it takes about the same amount of time as asking, and the developer who submitted the code can see what I changed (and point out if I broke anything). If I am less certain, or it is just one or two things, I generally make inline comments and try to sum up any thoughts in the review (or just point them to inline comments). I really like the ability to make collaborative topics where we can fix up one another’s commits, and have learned quite a lot in some code reviews (and avoided merging subtle bugs in some cases too).
+ </p>
+ <p>
+  <strong>
+   What Doesn’t Work
+  </strong>
+ </p>
+ <p>
+  We have found that long-lived topics never really work. If you have more than 10 commits in a topic, or more than a few thousand lines of changes, it is usually near impossible for a mere human to review your changes. You can still benefit from automated checks and the CDash@Home builds, but the code review aspect tends to be superficial at best. We have found a much better model, even if the branch can’t land right away in master, is to push a topic and block it using the “Do not submit” option in code review at the topic level (or marking a commit in the topic as WIP at the start of the first line of the commit message).
+ </p>
+ <p>
+  You can then have others review your code as you go and see automatic check results and CDash@Home builds as you go. This means that mistakes in coding style, memory allocation, API, etc. can all be spotted earlier (saving time later in correcting more mistakes as they pile up), and your code will likely be reviewed. Topics also present the possibility of reviewing both individual commits, where you can express if something is good or bad, as well as the overall topic. Commits can be dropped from topics entirely if they are deemed unsuitable for example.
+ </p>
+ <p>
+  Sometimes topics can languish and be forgotten and a quick email to the development list with a link to the topic can certainly help here. The notifications and active topics also need some work in Gerrit, so it is possible that people will miss the requests for review. Without a green CDash@Home build on all platforms it is also very difficult to know if a topic introduces regressions, and going forward, getting to and keeping a green dashboard must be a priority for any project wishing to use topic reviews in conjunction with CDash@Home. There are also times when reviews are ignored by the submitter, or they choose not to act on them.
+ </p>
+ <p>
+  <strong>
+   Conflicts
+  </strong>
+ </p>
+ <p>
+  As with any project, there can occasionally be conflict… Try to keep reviews technical, and explain why something shouldn’t be done in a particular way. Also, try not to take reviews personally, as we all have the goal of producing valid code with a consistent API and style. There are also merge conflicts once you try to submit a topic – these are much easier to handle in Gerrit now as it features great merge commit review! Simply check out the tip of the topic, do a ‘git fetch origin’ and then a ‘git merge origin/master’, and resolve any conflicts and then ‘git gerrit-push’. The reviewer can then see the conflicts along with how you chose to resolve them, and approve that commit. This also has the enormous advantage of retaining all previously reviewed commits with no ambiguity over whether they are the same as what was reviewed.
+ </p>
+ <p>
+  <strong>
+   Conclusions
+  </strong>
+ </p>
+ <p>
+  We know that there are still some rough edges, and Gerrit could certainly do with some improvements to its interface, but I think that Gerrit has had a positive impact on development in the projects I have used it on. It allows me to develop code I think will work, have it tested before it is merged, and get one or two more sets of eyes on the code. I have witnessed some nasty errors that would have been hard to track down later get spotted, although things certainly still slip through from time to time. Hooking up CDash@Home to Gerrit could certainly help us stick to that dream of green, and is something I have been speaking to the CDash developers about. We are also looking at the best way to maintain topic support in Gerrit, after some problems upstreaming the feature.
+ </p>
+ <p>
+  These are my thoughts after using Gerrit in the
+  <a href="http://www.vtk.org/">
+   VTK
+  </a>
+  and
+  <a href="http://openchemistry.org/">
+   Open Chemistry
+  </a>
+  projects as both a code submitter and reviewer. I would welcome your feedback. We have been tracking feedback since introducing this feature in VTK, and have a list of improvements (if we ever find the time to work on them) to the process. We want to ensure that it is kept as light as possible, and I try to remind reviewers that while we want them to review code, it does not have to take hours and we can still fix things that slip by with follow up commits. A lot of work has gone into improving our process, and we continue to think about how things could be made better.
+ </p>
+</div>

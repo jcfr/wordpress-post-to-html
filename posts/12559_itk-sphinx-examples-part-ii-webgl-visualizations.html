@@ -1,0 +1,1592 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h2 style="font-style: italic;">
+  Introduction
+ </h2>
+ <p>
+  <span style="font-family: Arial, sans-serif; font-size: 12px; line-height: 16.799999237060547px; text-align: justify; background-color: #fafafa;">
+   This is the second in a series of articles that describes how Sphinx has been extended to create a powerful example documentation system, the
+  </span>
+  <a href="http://itk.org/ITKExamples/" style="padding: 0px; margin: 0px; text-decoration: none; font-family: Arial, sans-serif; font-size: 12px; line-height: 16.799999237060547px; text-align: justify; background-color: #fafafa;">
+   ITK Sphinx Examples
+  </a>
+  <span style="font-family: Arial, sans-serif; font-size: 12px; line-height: 16.799999237060547px; text-align: justify; background-color: #fafafa;">
+   .
+  </span>
+ </p>
+ <p>
+  For previous posts, see
+ </p>
+ <p style="text-align: center;">
+  <a href="https://blog.kitware.com/itk-sphinx-examples-part-i-credits-via-gitstats/">
+   Part I: Credits via GitStats
+  </a>
+ </p>
+ <p>
+  <a href="http://en.wikipedia.org/wiki/WebGL">
+   WebGL
+  </a>
+  is quickly becoming a standard for 3D, GPU-accelerated, pluginless, browser-based visualizations. In this post, we will describe how WebGL visualizations were added to the
+  <a href="http://itk.org/ITKExamples">
+   ITK Sphinx Examples
+  </a>
+  .
+ </p>
+ <h2 style="font-style: italic;">
+  Generation
+ </h2>
+ <p>
+  The
+  <a href="http://itk.org">
+   Insight Toolkit (ITK)
+  </a>
+  is intended for analysis instead of visualization, so we generate the visualizations with other tools whose purpose is visualization, like the
+  <a href="http://vtk.org/">
+   Visualization Toolkit (VTK)
+  </a>
+  or
+  <a href="http://www.paraview.org/">
+   ParaView
+  </a>
+  . Using the VTKWeb capabilities available in VTK 6.1, a PolyData visualization can be generated with
+  <a href="http://itk.org/gitweb?p=ITKExamples.git;a=blob;f=Utilities/Visualization/VTKPolyData.py;h=22c6728e507adb4d331510c671553c5212fcc661;hb=HEAD">
+   a simple Python script
+  </a>
+  . Or, a WebGL visualization can be generated with Paraview by clicking
+  <em>
+   File -&gt; Export Scene -&gt; WEBGL files
+  </em>
+  .
+ </p>
+ <p>
+  The resulting HTML file with embedded data is easiest to archive. The file is self-contained and only requires a static web server to serve interactive 3D files. Since the visualization is self contained, including data, it can be relatively large, so we use the
+  <a href="https://blog.kitware.com/cmake-externaldata-using-large-files-with-distributed-version-control/">
+   CMake ExternalData system
+  </a>
+  to store a content link in the Git repository.
+ </p>
+ <h2 style="font-style: italic;">
+  Browser Support Check
+ </h2>
+ <p>
+  Since not all hardware or browsers support WebGL yet, we want the website to fallback gracefully when these features are not available and send an informative message to the reader. We wrote a
+  <a href="http://itk.org/gitweb?p=ITKExamples.git;a=blob;f=Formatting/itk/static/webgl.js;h=be1bef94fb0827fce7c923b6e86640d8b4f558b7;hb=HEAD">
+   little Javascript
+  </a>
+  that will detect when WebGL is not supported by the current browser or by current video drivers.  It will then modify and expose a helpful note in the
+  <a href="http://itk.org/gitweb?p=ITKExamples.git;a=blob;f=Formatting/templates/layout.html;h=f46cacd6eb8097afb9eb8213808a934a2457ebcf;hb=HEAD#l4">
+   Sphinx layout template
+  </a>
+  when not available.
+ </p>
+ <h2 style="font-style: italic;">
+  Embedding
+ </h2>
+ <p>
+  To embed the content, we use an
+  <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe">
+   <em>
+    iframe
+   </em>
+  </a>
+  HTML element with the
+  <a href="http://docutils.sourceforge.net/docs/ref/rst/directives.html#id65">
+   <em>
+    raw:: html
+   </em>
+  </a>
+  reStructuredText directive.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7ecd1653323072620" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&lt;span class="p"&gt;..&lt;/span&gt; &lt;span class="n"&gt;raw&lt;/span&gt;&lt;span class="o"&gt;::&lt;/span&gt; &lt;span class="n"&gt;html&lt;/span&gt;
+
+  &lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;div&lt;/span&gt; &lt;span class="n"&gt;class&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;"figure"&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;iframe&lt;/span&gt; &lt;span class="n"&gt;src&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;"InputMesh.html"&lt;/span&gt; &lt;span class="n"&gt;width&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;"200"&lt;/span&gt; &lt;span class="n"&gt;height&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;"225"&lt;/span&gt; &lt;span class="n"&gt;seamless&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&amp;lt;/&lt;/span&gt;&lt;span class="n"&gt;iframe&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;p&lt;/span&gt; &lt;span class="n"&gt;class&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;"caption"&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;&lt;span class="n"&gt;Interactive&lt;/span&gt; &lt;span class="n"&gt;input&lt;/span&gt; &lt;span class="n"&gt;mesh&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;/&lt;/span&gt;&lt;span class="n"&gt;p&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
+  &lt;span class="o"&gt;&amp;lt;/&lt;/span&gt;&lt;span class="n"&gt;div&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7ecd1653323072620-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ecd1653323072620-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ecd1653323072620-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ecd1653323072620-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ecd1653323072620-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ecd1653323072620-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7ecd1653323072620-1">
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "p"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         raw
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         html
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ecd1653323072620-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ecd1653323072620-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         div
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;=
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "s"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-s">
+         "figure"
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ecd1653323072620-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         iframe
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         src
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;=
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "s"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-s">
+         "InputMesh.html"
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         width
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;=
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "s"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-s">
+         "200"
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         height
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;=
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "s"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-s">
+         "225"
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         seamless
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         iframe
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ecd1653323072620-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         p
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;=
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "s"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-s">
+         "caption"
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         Interactive
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         input
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         mesh
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         p
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ecd1653323072620-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "n"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-v">
+         div
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         span
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "o"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         span
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0019 seconds] -->
+ <p>
+  <a href="http://itk.org/ITKExamples/src/Filtering/FastMarching/ComputeGeodesicDistanceOnMesh/Documentation.html">
+   An example visualization iframe
+  </a>
+  (may not work in all browsers):
+ </p>
+ <p>
+  <iframe height="225" seamless="" src="http://itk.org/ITKExamples/src/Filtering/FastMarching/ComputeGeodesicDistanceOnMesh/ComputeGeodesicDistanceOnMeshOutput.html" width="200">
+  </iframe>
+ </p>
+ <p>
+  <span class="o">
+   Enjoy ITKExamples!
+  </span>
+ </p>
+</div>

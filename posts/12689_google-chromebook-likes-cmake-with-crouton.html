@@ -1,0 +1,331 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p style="text-align: center;">
+  The
+  <a href="http://www.google.com/intl/en/chrome/devices/samsung-chromebook.html#specs">
+   Samsung Series 3 Google Chromebook
+  </a>
+ </p>
+ <p>
+  <img alt="" class="respond" height="194" src="http://www.google.com/intl/en/chrome/assets/common/images/devices/samsung-chromebook/hero.png" style="display: block; margin-left: auto; margin-right: auto;" width="573"/>
+  A small and light device for $250 with a powerful
+  <a href="http://www.samsung.com/global/business/semiconductor/product/application/detail?productId=7668">
+   ARM processor
+  </a>
+  .
+ </p>
+ <p>
+  In
+  <a href="https://blog.kitware.com/google-chromebook-likes-crouton/">
+   our previous post
+  </a>
+  we installed Linux on it using the
+  <a href="https://github.com/dnschneid/crouton">
+   Crouton
+  </a>
+  distribution.
+ </p>
+ <p>
+  Here we start crafting our building environment on it, and of course, we start with building
+  <a href="http://cmake.org/">
+   CMake
+  </a>
+  .
+ </p>
+ <p>
+ </p>
+ <hr/>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Preparing the Build Environment
+  </strong>
+ </p>
+ <p>
+  As usual, with any Linux distribution, we want to start with installing a compiler and the build tool-chain.
+ </p>
+ <p>
+  Since
+  <a href="https://github.com/dnschneid/crouton">
+   Crouton
+  </a>
+  is a Debian-based distribution, we can simply use the typical installation command:
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier; background-color: #ccffff;">
+   sudo apt-get install build-essential
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/6_1969157381.jpg" rel="noopener" target="_blank">
+   <img alt="" height="298" src="https://blog.kitware.com/blog/files/Small.6_1969157381.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="398"/>
+  </a>
+ </p>
+ <p>
+  <a href="/blog/files/6_1525905449.jpg" rel="noopener" target="_blank">
+   <img alt="" height="297" src="https://blog.kitware.com/blog/files/Small.6_1525905449.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="397"/>
+  </a>
+ </p>
+ <p>
+  <a href="/blog/files/6_1969157381.jpg" rel="noopener" target="_blank">
+   <img alt="" height="298" src="https://blog.kitware.com/blog/files/Small.6_1969157381.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="398"/>
+  </a>
+ </p>
+ <p>
+  In order to build
+  <a href="https://blog.kitware.com/raspberry-pi-likes-open-source/">
+   ccmake
+  </a>
+  (the Curses GUI) we need the
+  <strong>
+   ncurses
+  </strong>
+  library as well:
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier; background-color: #ccffff;">
+   sudo apt-get install libncurses-dev
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/6_2006134136.jpg" rel="noopener" target="_blank">
+   <img alt="" height="297" src="https://blog.kitware.com/blog/files/Small.6_2006134136.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="397"/>
+  </a>
+  and to get the source code of CMake we go ahead and install Git
+  <br/>
+  (we could have use the
+  <a href="http://cmake.org/cmake/resources/software.html">
+   tar.gz downloads
+  </a>
+  as well, but
+  <a href="http://git-scm.com/">
+   git
+  </a>
+  is more fun…):
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier; background-color: #ccffff;">
+   sudo apt-get install git
+   <br/>
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/6_803686342.jpg" rel="noopener" target="_blank">
+   <img alt="" height="296" src="https://blog.kitware.com/blog/files/Small.6_803686342.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="394"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Let’s Build !
+   <br/>
+  </strong>
+ </p>
+ <p>
+  We can then proceed to create directories and clone the CMake Git repository
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier; background-color: #ccffff;">
+   mkdir ~/src
+   <br/>
+   cd ~/src
+   <br/>
+   git clone git://cmake.org/cmake.git
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/6_1012097899.jpg" rel="noopener" target="_blank">
+   <img alt="" height="287" src="https://blog.kitware.com/blog/files/Small.6_1012097899.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="383"/>
+  </a>
+ </p>
+ <p>
+  and stick to a release branch by using the checkout command
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier; background-color: #ccffff;">
+   git checkout v2.8.11
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/6_573912047.jpg" rel="noopener" target="_blank">
+   <img alt="" height="291" src="https://blog.kitware.com/blog/files/Small.6_573912047.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="388"/>
+  </a>
+ </p>
+ <p>
+  go into a binary directory to build cmake and start by configuring it
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier; background-color: #ccffff;">
+   mkdir ~/bin/cmake
+   <br/>
+   cd ~/bin/cmake
+   <br/>
+   ~/src/cmake/configure  –prefix=/home/ibanez/local
+  </span>
+ </p>
+ <table border="0" style="margin-left: auto; margin-right: auto;">
+  <tbody>
+   <tr>
+    <td>
+     <a href="/blog/files/6_1837725994.jpg" rel="noopener" target="_blank">
+      <img alt="" height="217" src="https://blog.kitware.com/blog/files/Small.6_1837725994.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="290"/>
+     </a>
+    </td>
+    <td>
+     <a href="/blog/files/6_775281512.jpg" rel="noopener" target="_blank">
+      <img alt="" height="214" src="https://blog.kitware.com/blog/files/Small.6_775281512.jpg" width="287"/>
+     </a>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p style="text-align: center;">
+  once the configuration step finishes, we are ready to type “make”
+ </p>
+ <table border="0" style="margin-left: auto; margin-right: auto;">
+  <tbody>
+   <tr>
+    <td>
+     <a href="/blog/files/6_1102962397.jpg" rel="noopener" target="_blank">
+      <img alt="" height="210" src="https://blog.kitware.com/blog/files/Small.6_1102962397.jpg" width="282"/>
+     </a>
+    </td>
+    <td>
+     <a href="/blog/files/6_693106680.jpg" rel="noopener" target="_blank">
+      <img alt="" height="212" src="https://blog.kitware.com/blog/files/Small.6_693106680.jpg" width="283"/>
+     </a>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p style="text-align: center;">
+  Seven minutes and twenty seconds later we have a build of CMake.
+ </p>
+ <p style="text-align: center;">
+  This illustrates the difference in computational power between this model of Chromebook
+  <br/>
+  and the beloved
+  <a href="https://blog.kitware.com/raspberry-pi-likes-open-source/">
+   Raspberry Pi
+  </a>
+  , where CMake would build in 57 minutes.
+ </p>
+ <p>
+  <p>
+   <strong>
+    Let’s Test It !
+   </strong>
+  </p>
+  <p>
+   Since there is
+   <a href="https://blog.kitware.com/if-an-experiment-fails-in-a-forest-does-anyone-hear/">
+    no replacement for the direct inspection of an experiment
+   </a>
+   , we check the results in the binary directory, and then we proceed to prepare an Experimental build for the
+   <a href="http://open.cdash.org/index.php?project=CMake">
+    CMake Dashboard
+   </a>
+   .
+  </p>
+  <table border="0" style="margin-left: auto; margin-right: auto;">
+   <tbody>
+    <tr>
+     <td>
+      <a href="/blog/files/6_1462075067.jpg" rel="noopener" target="_blank">
+       <img alt="" height="219" src="https://blog.kitware.com/blog/files/Small.6_1462075067.jpg" width="292"/>
+      </a>
+     </td>
+     <td>
+      <a href="/blog/files/6_1583360574.jpg" rel="noopener" target="_blank">
+       <img alt="" height="220" src="https://blog.kitware.com/blog/files/Small.6_1583360574.jpg" width="292"/>
+      </a>
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <p style="text-align: center;">
+   The first step is to set the SITE variable so that the build is recognizable in the
+   <a href="http://open.cdash.org/index.php?project=CMake">
+    Dashboard
+   </a>
+   .
+  </p>
+  <p>
+   We verify the assumption that the
+   <a href="http://www.samsung.com/global/business/semiconductor/minisite/Exynos/products5dual.html">
+    Exynos 5 processor
+   </a>
+   has two cores, with the command:
+  </p>
+  <p style="text-align: center;">
+   <span style="font-family: courier new,courier; background-color: #ccffff;">
+    cat  /proc/cpuinfo
+   </span>
+  </p>
+  <p>
+   <a href="/blog/files/6_1208237535.jpg" rel="noopener" target="_blank">
+    <img alt="" height="231" src="https://blog.kitware.com/blog/files/Small.6_1208237535.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="309"/>
+   </a>
+  </p>
+  <p>
+   Then we launch the typical command:
+  </p>
+  <p style="text-align: center;">
+   <span style="font-family: courier new,courier; background-color: #ccffff;">
+    time make Experimental
+   </span>
+  </p>
+  <table border="0" style="margin-left: auto; margin-right: auto;">
+   <tbody>
+    <tr>
+     <td>
+      <a href="/blog/files/6_622535006.jpg" rel="noopener" target="_blank">
+       <img alt="" height="204" src="https://blog.kitware.com/blog/files/Small.6_622535006.jpg" width="273"/>
+      </a>
+     </td>
+     <td>
+      <a href="/blog/files/6_424016620.jpg" rel="noopener" target="_blank">
+       <img alt="" height="207" src="https://blog.kitware.com/blog/files/Small.6_424016620.jpg" width="276"/>
+      </a>
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <p>
+   and twenty minutes later we have
+   <a href="http://open.cdash.org/index.php?project=CMake&amp;filtercount=1&amp;showfilters=1&amp;field1=site/string&amp;compare1=63&amp;value1=chromebook">
+    our Experimental build submitted to the Dashboard
+   </a>
+   :
+  </p>
+  <table border="0" style="margin-left: auto; margin-right: auto;">
+   <tbody>
+    <tr>
+     <td>
+      <a href="/blog/files/6_1030670566.jpg" rel="noopener" target="_blank">
+       <img alt="" height="206" src="https://blog.kitware.com/blog/files/Small.6_1030670566.jpg" width="276"/>
+      </a>
+     </td>
+     <td>
+      <a href="/blog/files/6_341426131.jpg" rel="noopener" target="_blank">
+       <img alt="" height="208" src="https://blog.kitware.com/blog/files/Small.6_341426131.jpg" width="278"/>
+      </a>
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <p>
+   With overall good news, the system built with no errors, no warnings and only one
+   <a href="http://open.cdash.org/testDetails.php?test=195991310&amp;build=2944720">
+    test (TryCompile for a gcc compiler flag) is failing
+   </a>
+   in the build.
+  </p>
+  <p>
+   We are now ready to continue exploring the capabilities of this Chromebook model.
+  </p>
+  <p>
+   Let’s see if we can find some more Open Source goodness to build on it…
+  </p>
+ </p>
+</div>

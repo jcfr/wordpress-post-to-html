@@ -1,0 +1,460 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Next in the series of cross-compiling
+  <a href="http://itk.org">
+   ITK
+  </a>
+  with
+  <a href="http://cmake.org">
+   CMake
+  </a>
+  and
+  <a href="http://docker.io">
+   Docker
+  </a>
+  , we target Android’s version of Linux for
+  <a href="https://en.wikipedia.org/wiki/ARM_architecture">
+   ARM
+  </a>
+  processors.  This follows articles on using Docker to help us cross-compile for
+ </p>
+ <ul>
+  <li>
+   <a href="https://blog.kitware.com/easy-cross-compiler-toolchain-access-with-docker-and-cmake/">
+    <span style="line-height: 1.6em;">
+     Windows (32 and 64bit)
+    </span>
+   </a>
+  </li>
+  <li>
+   <a href="https://blog.kitware.com/cross-compiling-for-the-raspberry-pi-evolved/">
+    <span style="line-height: 1.6em;">
+     Raspberry Pi (Linux-ARMv6)
+    </span>
+   </a>
+  </li>
+  <li>
+   <a href="https://blog.kitware.com/cross-compiling-for-the-power8-with-docker/">
+    <span style="line-height: 1.6em;">
+     POWER8 (PowerPC-64-le)
+    </span>
+   </a>
+  </li>
+ </ul>
+ <p>
+  <span style="line-height: 1.6em;">
+   ​ITK on Android puts advanced image analysis capabilities in physician’s pockets, and it brings new image processing possibilities to low-cost, portable ultrasound systems.
+  </span>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   ​
+   <img alt="" src="http://www.itk.org/Doxygen43/html/itkLogo.jpg" style="width: 250px; height: 160px;"/>
+   <img alt="" src="http://www.debianart.org/cchost/people/ElsukaloARTZ/ElsukaloARTZ_-_Android.jpg" style="width: 300px; height: 169px;"/>
+  </span>
+ </p>
+ <p>
+  As
+  <a href="https://blog.kitware.com/cross-compiling-for-the-power8-with-docker/">
+   previously noted
+  </a>
+  , there are three steps when cross-compiling with Docker and CMake.
+ </p>
+ <h2>
+  1) Get the cross-compiling toolchain
+ </h2>
+ <p style="line-height: 20.7999992370605px;">
+  Obtaining the toolchain with Docker is easy — just download it with
+  <em>
+   docker pull
+  </em>
+  :
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e23c1da40455756940" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker pull thewtex/cross-compiler-android-arm</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e23c1da40455756940-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e23c1da40455756940-1">
+        docker pull thewtex/cross-compiler-android-arm
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h2>
+  2) Start up a container, mounting the source and build tree
+ </h2>
+ <p style="line-height: 20.7999992370605px;">
+  If there is a source tree and build tree, e.g.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e23c1da49053743965" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd ~/src
+git clone http://itk.org/ITK.git
+mkdir -p ~/bin/ITK-build</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e23c1da49053743965-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da49053743965-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da49053743965-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e23c1da49053743965-1">
+        cd ~/src
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da49053743965-2">
+        git clone http://itk.org/ITK.git
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da49053743965-3">
+        mkdir -p ~/bin/ITK-build
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p style="line-height: 20.7999992370605px;">
+  Then mount these directories as Docker
+  <a href="http://docs.docker.com/userguide/dockervolumes/#data-volumes">
+   volumes
+  </a>
+  when the
+  <a href="http://docs.docker.com/terms/container/">
+   container
+  </a>
+  is started:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e23c1da4c466812942" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker run --rm -it \
+  -v ~/src/ITK:/usr/src/ITK:ro \
+  -v ~/bin/ITK-build:/usr/src/ITK-build:rw \
+  thewtex/cross-compiler-android-arm</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4c466812942-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4c466812942-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4c466812942-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4c466812942-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e23c1da4c466812942-1">
+        docker run --rm -it \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4c466812942-2">
+        -v ~/src/ITK:/usr/src/ITK:ro \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4c466812942-3">
+        -v ~/bin/ITK-build:/usr/src/ITK-build:rw \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4c466812942-4">
+        thewtex/cross-compiler-android-arm
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <h2>
+  <span style="line-height: 1.6em;">
+   3) Point CMake to the CMAKE_TOOLCHAIN_FILE
+  </span>
+ </h2>
+ <p style="line-height: 20.7999992370605px;">
+  Inside the container, the environmental variable
+  <em>
+   CMAKE_TOOLCHAIN_FILE
+  </em>
+  has been
+  <a href="https://github.com/thewtex/cross-compilers/blob/master/android-arm/Dockerfile#L29">
+   configured
+  </a>
+  to point to the toolchain file CMake uses to
+  <a href="http://www.cmake.org/cmake/help/git-master/manual/cmake-toolchains.7.html">
+   inform itself about the build environment
+  </a>
+  .  Pass this file to CMake during configuration.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e23c1da4e963629716" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd /usr/src/ITK-build
+cmake -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+  -G Ninja \
+  -DBUILD_EXAMPLES=OFF \
+  -DITK_DYNAMIC_LOADING=OFF \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DCMAKE_EXE_LINKER_FLAGS=-static \
+  ../ITK</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e23c1da4e963629716-8">
+        8
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-1">
+        cd /usr/src/ITK-build
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-2">
+        cmake -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-3">
+        -G Ninja \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-4">
+        -DBUILD_EXAMPLES=OFF \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-5">
+        -DITK_DYNAMIC_LOADING=OFF \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-6">
+        -DBUILD_SHARED_LIBS=OFF \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-7">
+        -DCMAKE_EXE_LINKER_FLAGS=-static \
+       </div>
+       <div class="crayon-line" id="crayon-5c41e23c1da4e963629716-8">
+        ../ITK
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  The
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e23c1da50274772045" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    -G Ninja
+   </span>
+  </span>
+  <em>
+  </em>
+  flag tells CMake to use our favorite generator, the
+  <a href="https://martine.github.io/ninja/">
+   Ninja
+  </a>
+  generator, which is fast and
+  <a href="https://blog.kitware.com/cmake-building-with-all-your-cores/">
+   does parallel builds automatically
+  </a>
+  .
+ </p>
+ <p>
+  The
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e23c1da53958045566" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    -DBUILD_EXAMPLES=OFF
+   </span>
+  </span>
+  <em>
+  </em>
+  flag disables building the examples.
+ </p>
+ <p>
+  The options for
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e23c1da54968199103" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    ITK_DYNAMIC_LOADING
+   </span>
+  </span>
+  <em>
+   ,
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e23c1da56095803168" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     BUILD_SHARED_LIBS
+    </span>
+   </span>
+  </em>
+  , and
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e23c1da58017288618" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    CMAKE_EXE_LINKER_FLAGS
+   </span>
+  </span>
+  <a href="https://blog.kitware.com/creating-static-executables-on-linux/">
+   generate static executables
+  </a>
+  . Unlike when cross-compiling for the Raspberry Pi, which is a vanilla Linux target, static executables are used with Android to make it easier to build and test on the host Linux environment. Android ships with its own fancy-pants dynamic loader,
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e23c1da5a590060157" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    /system/bin/linker
+   </span>
+  </span>
+  , which is not present in the toolchain or compatible with a non-Android kernel.
+ </p>
+ <p>
+  Since the
+  <a href="http://wiki.qemu.org/download/qemu-doc.html#QEMU-User-space-emulator">
+   qemu-user emulator
+  </a>
+  has limited multi-threading abilities, run the tests in single-threaded mode:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e23c1da5c348002400" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e23c1da5c348002400-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e23c1da5c348002400-1">
+        export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p style="line-height: 20.7999992370605px;">
+  And start the
+  <a href="https://open.cdash.org/index.php?project=Insight">
+   Experimental dashboard build
+  </a>
+  !
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e23c1da5e121405027" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+ctest -D Experimental -j$(nproc)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e23c1da5e121405027-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e23c1da5e121405027-1">
+        ctest -D Experimental -j$(nproc)
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  Enjoy ITK!
+ </p>
+</div>

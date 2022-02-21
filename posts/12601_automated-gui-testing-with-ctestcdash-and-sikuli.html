@@ -1,0 +1,461 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Testing sofware with Graphcical user interfaces (GUIs) can be more challenging than testing command line software. This is because GUIs require a mouse or other human interface system to drive them. Tesing a GUI involves being able to record human interactions and play them back later. There are a variety of tools available for GUI testing, but many are constrained to a particular platform, GUI toolkit or development language. There are also many commercial GUI testing tools. In this blog we will look at an open source solution for GUI testing called
+  <a href="http://sikuli.org/" style="line-height: 2em;">
+   Sikuli
+  </a>
+  . In particular we will look at how it can be driven from
+  <a href="http://www.cmake.org">
+   CTest
+  </a>
+  and used to populate a
+  <a href="http://www.cdash.org">
+   CDash
+  </a>
+  dashboard. The example project we will present is testing a
+  <a href="https://github.com/OSEHRA/VistA">
+   Vista
+  </a>
+  GUI written in Delphi for
+  <a href="http://www.osehra.org">
+   OSEHRA
+  </a>
+  .
+ </p>
+ <p>
+  <span style="font-size:large">
+   About Sikuli
+  </span>
+ </p>
+ <p>
+  Sikuli is an open source cross-platform project released under the
+  <a href="http://opensource.org/licenses/mit-license.php" target="_blank">
+   MIT License
+  </a>
+  , that started as a project in the "User Interface Design Group" at MIT. It is a cross-platform GUI testing/automation tool that uses
+  <a href="http://opencv.org/" style="line-height: 2em;">
+   OpenCV
+  </a>
+  to search the computer's screen for anchor images and
+  <a href="http://www.jython.org/" style="line-height: 2em;">
+   Jython
+  </a>
+  to control the mouse and keyboard to interact with what it finds.  This allows greater freedom when testing as you can interact with any GUI that can be seen on a computer screen.
+ </p>
+ <p>
+  For a more detailed look at the workings of Sikuli look at the
+  <a href="http://doc.sikuli.org/devs/system-design.html" target="_blank">
+   design documentation
+  </a>
+  .
+ </p>
+ <p>
+  Sikuli's source code is available on Github:
+ </p>
+ <p>
+  IDE:
+  <a href="https://github.com/RaiMan/SikuliX-IDE">
+   https://github.com/RaiMan/SikuliX-IDE
+  </a>
+ </p>
+ <p>
+  API:
+  <a href="https://github.com/RaiMan/SikuliX-API">
+   https://github.com/RaiMan/SikuliX-API
+  </a>
+ </p>
+ <p>
+  A typical Sikuli "script" is a folder with ".sikuli" in the name create by the Sikuli IDE .  The folder usually contains a few common pieces:
+ </p>
+ <ul>
+  <li>
+   a Python file containing commands, used when running the script
+  </li>
+  <li>
+   An HTML file that mirrors the Python file, used for display in the IDE
+  </li>
+  <li>
+   A series of PNG files which are used as arguments for commands used in the OpenCV searching.
+  </li>
+ </ul>
+ <p>
+  The Sikuli website has many
+  <a href="http://www.sikuli.org/videos.html">
+   demonstration videos
+  </a>
+  with example scripts created with the IDE.
+ </p>
+ <p>
+  The screenshot below is the
+  <a href="https://github.com/OSEHRA/VistA/blob/master/Testing/Functional/Sikuli/FunctionalTesting.sikuli/FunctionalTesting.py.in" target="_blank">
+   OSEHRA Sikuli script
+  </a>
+  in the Sikuli IDE.  It shows the the commands that will be run, dragDrop or doubleClick, and then the image arguments which go with those commands.  The wait_click is a user-created function to reduce the number of commands needed.  The function does what the name describes: it waits for each image to appear on screen before clicking on it.
+ </p>
+ <p>
+  <img alt="" src="https://lh6.googleusercontent.com/RTfQP_NGSzt7Qq_UdSlrJyoXwnH6_1CvafD_88DG2zEwWnpq1lD5ZQUVMSOTN5Zh0x3S_8clyz17T-p8Q9ZGT8VVyzPoEyULx7pIJSJR2orASAZW3OLe4rRzRg" style="height:276px; width:624px"/>
+ </p>
+ <p>
+  To see Sikuli in action watch this video:
+ </p>
+ <p>
+  The video shows the two run modes options that are available from the IDE. The “slow-motion” mode of Sikuli flashes those red circles around the mouse to denote that a matching object is found on the screen.  The slow motion mode is excellent for initial object finding, but quickly becomes a hassle when using right-click.  The circle overlay acts as a new window which would close a right-click menu, removing the found object and stopping the script.  At 0:30 into the video, the video transitions to show the regular speed actions of Sikuli.
+ </p>
+ <p>
+  These steps utilize the
+  <a href="https://launchpad.net/sikuli/sikulix/x1.0-rc3">
+   x1.0-rc3
+  </a>
+  version of Sikuli.
+ </p>
+ <h3>
+  The downsides to Sikuli
+ </h3>
+ <p>
+  <span style="line-height: 1.6em;">
+   The use of screen captures as the input for finding components can lead to some trouble.  Differences in the window styling on different platforms or changing the resolution of a monitor can lead to objects not being found.  Sikuli's keyboard and mouse control during a test run require that the computer not be in use when tests are running. This is good for dedicated test machines and nightly test runs. However, for testing during development, it can be disruptive to the development process not allowing the developer to multi-task during the test runs.
+  </span>
+ </p>
+ <p>
+  <span style="font-size:large">
+   Sikuli integration with CTest/CDash
+  </span>
+ </p>
+ <p>
+  To integrate Sikuli with CTest for automated testing, we will utilize Sikuli's
+  <a href="http://doc.sikuli.org/faq/010-command-line.html" target="_blank">
+   command line signature
+  </a>
+  to run scripts.   We will demonstrate the integration of a Sikuli test into a project, with the code needed in the CMakeLists.txt and in the Python file of the Sikuli test.  It will cover a few major points:
+ </p>
+ <ul>
+  <li>
+   Necessary steps in a CMakeLists.txt file
+  </li>
+  <li>
+   Code  in Sikuli's Python file
+  </li>
+  <li>
+   Running and reviewing tests
+  </li>
+ </ul>
+ <p>
+  The following blocks show the required code.
+ </p>
+ <p>
+  Key:
+ </p>
+ <table border="1" cellpadding="1" cellspacing="1" style="width: 500px; background-color: rgb(156, 247, 251);">
+  <tbody>
+   <tr>
+    <td>
+     Commands found in CMakeList.txt
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <table border="1" cellpadding="1" cellspacing="1" style="width: 500px; background-color: rgb(156, 247, 0);">
+  <tbody>
+   <tr>
+    <td>
+     Command found in Sikuli Python script
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <table border="1" cellpadding="1" cellspacing="1" style="width: 500px; background-color: rgb(0, 160, 251);">
+  <tbody>
+   <tr>
+    <td>
+     Capture of Command LIne
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <div>
+ </div>
+ <div>
+  <span style="font-size:medium">
+   In CMakeLists.txt
+  </span>
+ </div>
+ <p>
+  First, use a find_program command to locate the sikuli-ide file to run and, if necessary, find the path to any executables that going to be tested.
+ </p>
+ <table border="0" style="background-color:#9cf7fb;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-size:x-small">
+      find_program(SIKULI_EXECUTABLE sikuli-IDE.bat sikuli-IDE.sh DOC "Path to the sikuli-IDE file" HINTS "C:/Program Files/Sikuli X/" "C:/Program Files (x86)/Sikuli X/" "/usr/local/")
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Next, configure the Python and HTML files to account for local paths to executables or other platform specific information:
+ </p>
+ <table border="0" style="background-color:#9cf7fb">
+  <tbody>
+   <tr>
+    <td>
+     configure_file("${sikuli}/${sikuli_name}.py.in" ${CMAKE_CURRENT_BINARY_DIR}/Sikuli/${sikuli_name}.sikuli/${sikuli_name}.py")
+     <br/>
+     configure_file("${sikuli}/${sikuli_name}.html.in" ${CMAKE_CURRENT_BINARY_DIR}/Sikuli/${sikuli_name}.sikuli/${sikuli_name}.html")
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The test command is simple to craft and will use two arguments from Sikuli's command line signature
+ </p>
+ <ul>
+  <li>
+   -s
+   <ul>
+    <li>
+     redirects error messages to stderr instead of a pop-up window
+    </li>
+   </ul>
+  </li>
+  <li>
+   -r &lt;path_to_folder&gt;.sikuli
+   <ul>
+    <li>
+     Run a Sikuli script. The path that is passed should be to the .sikuli folder that contains the Python file.
+    </li>
+   </ul>
+  </li>
+ </ul>
+ <p>
+  The OSEHRA Test command, which passes the path to the folder that contains the configured file as the value of the '-r' argument, looks as follows:
+ </p>
+ <table border="0" style="background-color:#9cf7fb">
+  <tbody>
+   <tr>
+    <td>
+     add_test(FT_${sikuli_name} Sikuli "${SIKULI_EXECUTABLE}" -s -r "${CMAKE_CURRENT_BINARY_DIR}/Sikuli/${sikuli_name}.sikuli")
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  By default, Sikuli does not return 0 for pass and non zero for failure as CTest expects. This requires the user to explicitly return 0 for passing and non zero on failure in the python script.  Alternatively, you can print passing and failing messages from the script and use the CTest PASS_REGULAR_EXPRESSION property to determine passing and failing states.
+ </p>
+ <table border="0" style="background-color:#9cf7fb">
+  <tbody>
+   <tr>
+    <td>
+     set_tests_properties(FT_${sikuli_name}Sikuli PROPERTIES PASS_REGULAR_EXPRESSION "Script Completed")
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  <span style="font-size:medium">
+   In the Sikuli Python file
+  </span>
+ </p>
+ <p>
+  An example of the Python file to be configured would look something like the following screenshot, taken from the OSEHRA testing files.  Here we can see the configuration ability is used to enter the path to a local executable and set up the connection arguments that it requires.
+ </p>
+ <table border="1" cellpadding="1" cellspacing="1" style="background-color: rgb(156, 247, 0);">
+  <tbody>
+   <tr>
+    <td>
+     <div class="line" id="LC13" style="box-sizing: border-box; padding-left: 10px;">
+      import sys
+     </div>
+     <div class="line" id="LC14" style="box-sizing: border-box; padding-left: 10px;">
+      addImagePath("${sikuli}")
+     </div>
+     <div class="line" id="LC15" style="box-sizing: border-box; padding-left: 10px;">
+      wait(30)
+     </div>
+     <div class="line" id="LC16" style="box-sizing: border-box; padding-left: 10px;">
+      if exists("1326480962420.png"):
+     </div>
+     <div class="line" id="LC17" style="box-sizing: border-box; padding-left: 10px;">
+      doubleClick("1326480962420.png")
+     </div>
+     <div class="line" id="LC18" style="box-sizing: border-box; padding-left: 10px;">
+      else:
+     </div>
+     <div class="line" id="LC19" style="box-sizing: border-box; padding-left: 10px;">
+      openApp(r'${VITALS_MANAGER_EXECUTABLE} /port=${VISTA_TCP_PORT} /server=${VISTA_TCP_HOST} /ccow=disable')
+     </div>
+     <div class="line" id="LC20" style="box-sizing: border-box; padding-left: 10px;">
+      wait_type("AccessCcndc.png","fakedoc1")
+     </div>
+     <div class="line" id="LC21" style="box-sizing: border-box; padding-left: 10px;">
+      wait_type("VerifyCcndc.png","1Doc!@#$")
+     </div>
+     <div class="line" id="LC22" style="box-sizing: border-box; padding-left: 10px;">
+      wait_click("1320870115117.png")
+     </div>
+     <div class="line" id="LC23" style="box-sizing: border-box; padding-left: 10px;">
+      wait(Pattern("Templates1Va.png").targetOffset(0,-14),10)
+     </div>
+     <div class="line" id="LC24" style="box-sizing: border-box; padding-left: 10px;">
+      wait_click(Pattern("Templates1Va.png").targetOffset(0,-14))
+     </div>
+     <div class="line" style="box-sizing: border-box; padding-left: 10px;">
+      …
+     </div>
+     <div>
+     </div>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  There is one important command to be used in the scenarios where the test file will need to be configured.  If the test file is configured and placed in a different location from the original file, it is recommended that you utilize an addImagePath command to specify the folder location of the source, which can be found on the second line of the above code fragment.  This command adds the supplied path to the set of paths that are used to find the images used in the file's commands.
+ </p>
+ <p>
+  To ensure that the test's result is captured correctly, the Sikuli script can either print a message to be matched by CTests  PASS_REGULAR_EXPRESSION test property that is set in the CMakeLists.txt file:
+ </p>
+ <table border="0" style="line-height: 1.6em; background-color: rgb(156, 247, 0);">
+  <tbody>
+   <tr>
+    <td>
+     <p>
+      # type("Exit")
+     </p>
+     <p>
+      print "Script Completed"
+     </p>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  <span style="line-height: 1.6em;">
+   Or, an explicit return value can be returned:
+  </span>
+ </p>
+ <table border="0" style="background-color:#9cf700;">
+  <tbody>
+   <tr>
+    <td>
+     <p>
+      import sys
+     </p>
+     <p>
+      sys.exit(0)
+     </p>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  <span style="font-size:large">
+   Running the test &amp; examining results
+  </span>
+ </p>
+ <p>
+  After the CMake configure, generate, and build, the test can now be run like any other CTest test:
+ </p>
+ <table border="0" style="background-color:#00a0fb;">
+  <tbody>
+   <tr>
+    <td>
+     <p>
+      $ ctest -R FT_FunctionalTestingSikuli -V
+      <br/>
+      UpdateCTestConfiguration from :C:/Users/joe.snyder/Work/OSEHRA/VistA-build/DartConfiguration.tcl
+      <br/>
+      Parse Config file:C:/Users/joe.snyder/Work/OSEHRA/VistA-build/DartConfiguration.tcl
+      <br/>
+      Add coverage exclude regular expressions.
+      <br/>
+      UpdateCTestConfiguration from :C:/Users/joe.snyder/Work/OSEHRA/VistA-build/DartConfiguration.tcl
+      <br/>
+      Parse Config file:C:/Users/joe.snyder/Work/OSEHRA/VistA-build/DartConfiguration.tcl
+      <br/>
+      Test project C:/Users/joe.snyder/Work/OSEHRA/VistA-build
+      <br/>
+      Constructing a list of tests
+      <br/>
+      Done constructing a list of tests
+      <br/>
+      Checking test dependency graph…
+      <br/>
+      Checking test dependency graph end
+      <br/>
+      test 150
+      <br/>
+      Start 150: FT_FunctionalTestingSikuli
+     </p>
+     <p>
+      150: Test command: "C:\Program Files (x86)\Sikuli X\Sikuli-IDE.bat" "-s" "-r" "C:/Users/joe.snyder/Work/OSEHRA/VistA-build/Testing/Functional/Sikuli/FunctionalTesting.sikuli"
+      <br/>
+      150: Test timeout computed to be: 1500
+      <br/>
+      150: [info] Sikuli vision engine loaded.
+      <br/>
+      150: [info] Windows utilities loaded.
+      <br/>
+      150: [info] VDictProxy loaded.
+      <br/>
+      150: [log] App.open C:/Program Files (x86)/Vista/Vitals/VitalsManager.exe /port=9210 /server=127.0.0.1 /ccow=disable(9352)
+      <br/>
+      150: [log] CLICK on (964,616)
+      <br/>
+      150: [log] TYPE "fakedoc1"
+      <br/>
+      150: [log] CLICK on (966,656)
+      <br/>
+      150: [log] TYPE "1Doc!@#$"
+      <br/>
+      150: [log] CLICK on (1126,617)
+      <br/>
+      150: [log] CLICK on (720,226)
+      <br/>
+      150: [log] CLICK on (747,247)
+     </p>
+     <p>
+      &lt;snip&gt;
+     </p>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Sikuli does an excellent job of logging the actions that it performs through the stdout pipe.   The type strings are captured in the log and the click functions log the screen coordinates where the click was performed.  The logging is also captured well in the Dashboard Testing display:
+ </p>
+ <p>
+  A
+  <a href="http://code.osehra.org/CDash/testDetails.php?test=787042&amp;build=8784">
+   successful
+  </a>
+  test as displayed in CDash:
+ </p>
+ <p>
+  <img alt="" src="https://lh6.googleusercontent.com/IuqoUgkwv1tcdXB8e2vFM4nWXZQts9ZXJ_HzkMed0t5863HKlJZE9I3ADva7ePBBlpgnYSMhX1N9a9lOOWVgkKgmTtqq12JA3oUTowwFoCCcnzRF7zI57JkLAg" style="height:497px; width:317px"/>
+ </p>
+ <p>
+  A
+  <a href="http://code.osehra.org/CDash/testDetails.php?test=870438&amp;build=8725">
+   failed
+  </a>
+  run:
+ </p>
+ <p>
+  <img alt="" src="https://lh4.googleusercontent.com/RCx3kzoSvlW40QpizbfP9TtW2JArz_H_NzGdMzKv_7UGTm_MbW0H-nIJs1VbHAOU918TONpbeIIbDRMNdNFLnUTLj65jdBUuh3K93A0T93hOw7jd83lR4PqYFA" style="height:360px; width:505px"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  <span style="font-size:large">
+   Conclusion
+  </span>
+ </p>
+ <p>
+  Sikuli is a very powerful open-source tool that allows testing on any GUI that can be seen on a user's screen by searching the screen for a section that maches a supplied screenshot.  It integrates well into a CMake/CTest environment due to its command line capabilities. Sikuli records the actions that it performs by keeping screen coordinates of clicks and the strings that are being sent to a type function during the course of a run.  This logging displays the output of the test both on the command line and in the Dashboard's output display.  Sikuli isn't without it shortcomings. For example, screen resolution changes can cause it to fail. In addition, the anchor images of the components will also need need to be more carefully maintained when dealing with changing the GUI components and updating the tests. Sikuli's
+  <span style="line-height: 1.6em;">
+   control over the mouse and keyboard can prove disruptive when testing while attempting to do other work, but for overnight submissions or dedicated test machines this is not a problem.
+  </span>
+ </p>
+</div>

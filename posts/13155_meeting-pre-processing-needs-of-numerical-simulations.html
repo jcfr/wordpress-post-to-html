@@ -1,0 +1,324 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The implementation of numerical simulations has led to several benefits for the scientific community, including cost and time savings, improved product performance, and new product design and manufacturing. With high-performance computing (HPC), the potential benefits are significantly greater [1]. For years, the Visualization Toolkit (VTK) and ParaView development teams have been dedicated to providing state-of-the-art techniques that can be used to post-process results from HPC simulations, both visually and analytically. Visualization and analysis are only part of the simulation workflow, however, as depicted below.
+ </p>
+ <p>
+  <a href="/source/files/4_490440455.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_490440455.jpg" style="width: 500px; margin-left: 75px; margin-right: 75px;"/>
+  </a>
+ </p>
+ <p>
+  The workflow begins with defining the appropriate shape and topology of the geometric domain. This involves combining various domain descriptions including computer-aided design (CAD) models, discrete geometry, and spatially-sampled data such as Light Detection and Ranging (LiDAR) data and computerized tomography (CT) data.
+ </p>
+ <p>
+  The next step is to define the simulation by specifying material properties and initial boundary conditions on the geometric domain. Any information tied to the specific numerical solver also needs to be specified. For example, it may be necessary to define the type of numerical pre-conditioner that will be used, along with the type of solver, the start time, the number of time steps, and the desired accuracy.
+ </p>
+ <p>
+  Typically, the geometric domain is discretized into a set of geometrically simpler shapes (such as triangles, quadrilaterals, tetrahedra, and hexahedra) through mesh generation to support the underlying numerical formulation. The simulation information is then transferred from the geometric model to the resulting mesh. Together, the information and the mesh define the input to the simulation. The simulation is run, and the results are analyzed and visualized. Based on these results, the geometric model can be changed to meet a desired target.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     CMB Framework
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  In 2008, Kitware received funding from the U.S. Army Engineer Research and Development Center (ERDC) to build a set of tools to support hydrological simulation workflows. As part of this effort, Kitware created Computational Model Builder (CMB). CMB is a framework that enables various toolkits and modeling systems to be used to form an end-to-end solution for supporting simulation life cycles.
+ </p>
+ <p>
+  Unlike other frameworks that provide similar functionality, CMB integrates with external packages such as simulation codes, geometric modeling kernels, and mesh-generation tools. This approach supports complex workflows using the many powerful simulation tools developed throughout the industry. For example, CMB interfaces with the analysis by exporting model, mesh, and attribute information into a format supported by the simulator. CMB is also highly customizable. Not only can CMB be tailored through its plugin architecture, but parts of CMB’s graphical user interface (GUI) can be tailored through an XML-based file description, and parts of CMB that are accessible through Python can be customized through Python scripting.
+ </p>
+ <p>
+  CMB leverages several open-source toolkits and frameworks such as VTK, ParaView, MoleQueue [2], and Qt. Since 2007, CMB has been expanded to support a wide variety of simulation domains, including nuclear energy. As part of the CMB effort, two toolkits that address key requirements of the simulation life cycle have also been developed. One is Remote Meshing/modeling Utilities (ReMUs) [3], which provides access to meshing technology and remote modeling systems.
+ </p>
+ <p>
+  <a href="/source/files/4_2137922637.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_2137922637.jpg" style="width: 500px; margin-left: 75px; margin-right: 75px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The above image shows a mesh of a nuclear reactor generated using ReMUs and applying tools in MeshKit, which is developed by Argonne National Laboratory.
+  </em>
+ </p>
+ <p>
+  The other is Simulation Modeling Toolkit (SMTK) [4], which provides access to geometric and topological modeling functionality and represents necessary simulation attribute information. CMB, ReMUs, and SMTK are being developed by Kitware under a BSD license.
+ </p>
+ <p>
+  <a href="/source/files/4_429471669.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_429471669.jpg" style="width: 500px; margin-left: 75px; margin-right: 75px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The above contains examples of complex Open CASCADE models displayed using SMTK.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     CMB Modelbuilder
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  One of the first applications to be released based on CMB is ModelBuilder. ModelBuilder allows users to load in geometric models, view their topologies, and access modeling operations supported by the underlying native modeling system through SMTK’s model interface. This flexible interface is available for a variety of modeling kernels, including the following:
+ </p>
+ <ul>
+  <li>
+   parametric kernels – volumes, faces, and edges have well-defined parametric coordinates that are good at representing curved models
+  </li>
+  <li>
+   discrete kernels – volumes, faces, and edges are each discretized into a piecewise collection of primitive cells that may have internal parameterizations but do not guarantee a parameterization at the model-entity level
+  </li>
+ </ul>
+ <p>
+  ModelBuilder can display a model’s boundary representation (BRep), and users can control display properties associated with elements within the BRep. ModelBuilder currently supports these types of modeling sessions:
+ </p>
+ <ul>
+  <li>
+   Common Geometry Module (CGM) – a code library that grants access to parametric CAD models (both Open CASCADE and ACIS models, provided you have access to the ACIS kernel software)
+  </li>
+  <li>
+   Discrete Model – a discrete model representation developed at Kitware
+  </li>
+  <li>
+   Exodus – a specific discrete model representation based on the Exodus file format
+  </li>
+ </ul>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Supporting Simulation Information
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  ModelBuilder provides access to SMTK’s simulation attribute management system and allows users to describe the various types of information that need to be defined for each simulation, as well as how that information needs to be associated with part of the geometric model. In both ModelBuilder and SMTK, this information is represented by a set of attribute objects.
+ </p>
+ <p>
+  An attribute object consists of a collection of item objects (strings, integers, doubles, files, etc.) that can model complex, hierarchical data structures. The attribute sub-system provides validity checking based on an item object’s constraints. Attribute objects can be associated with the appropriate model entities in an SMTK model and retrieved when writing out the appropriate input decks for a specific simulation system. Attribute objects can also be used to represent information related to a specific solver, such as pre-conditioners and time steps.
+ </p>
+ <p>
+  The structure of the simulation information can be easily defined in an XML file using a simple text editor. When this attribute “template” file is loaded into ModelBuilder, the application automatically generates a GUI based on the defined requirements. The GUI-generation process can be extended by creating custom views, which are incorporated using CMB’s plugin architecture.
+ </p>
+ <p>
+  <a href="/source/files/4_5652384.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_5652384.jpg" style="width: 500px; margin-left: 75px; margin-right: 75px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The above is an attribute template file and resulting GUI.
+  </em>
+ </p>
+ <p>
+  It is important to note that the same mechanism used to model simulation information in CMB is used to present and specify modeling operations such as Booleans (intersections, unions, and differences) and edge/face splits and merges. For example, an initial discrete model may have a single model face representing the Chesapeake Bay area. This area is shown in the image below. In order to properly model the geometric domain, the areas that form both Chesapeake and Delaware bays need to be separated from the offshore area and the channel that joins the bays in the north. Describing a face-splitting operation using an attribute object to indicate the face to be split can do this. In the image, face splitting is demonstrated by the different colors: Chesapeake Bay is green, Delaware Bay is orange, and the offshore area is blue.
+ </p>
+ <p>
+  <a href="/source/files/4_1825195575.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1825195575.jpg" style="width: 500px; margin-left: 75px; margin-right: 75px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The above image illustrates the creation of a discrete model from Digital Elevation Model (DEM) data of the Chesapeake Bay. The DEM data is courtesy of ERDC.
+  </em>
+ </p>
+ <p>
+  In the case of a meshing operation, information describing the mesh sizing field and the types of mesh elements to be generated can also be represented by attribute objects.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Python Exporting
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  When a user creates an attribute template, he or she also defines a Python script file. The script generates simulation input files from attribute, model, and mesh resources stored in ModelBuilder. When the simulation description is complete, the user can invoke the associated script via ModelBuilder’s interface and generate the simulation’s files. Any missing information detected by the exportation process is relayed back to the user so that it can be addressed.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Simulation Example
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  In the following image, ModelBuilder is used to define a computational fluid dynamics (CFD) simulation of the flow around a pin in a nuclear reactor. The simulation is performed with Hydra, an extensible multiphysics code. The example shows the pin, along with a spacer grid that forces coolant mixing to occur around the pin. The model is colored to depict the various model faces that make up the geometric domain. The image also displays one of the attribute-driven GUI panels, which is defined by an attribute template file designed for Hydra.
+ </p>
+ <p>
+  <a href="/source/files/4_1011192048.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1011192048.jpg" style="width: 500px; margin-left: 75px; margin-right: 75px;"/>
+  </a>
+ </p>
+ <p>
+  The next image shows the simulation results visualized in ParaView, based on the input files generated by ModelBuilder.
+ </p>
+ <p>
+  <a href="/source/files/4_1778476642.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1778476642.jpg" style="width: 500px; margin-left: 75px; margin-right: 75px;"/>
+  </a>
+ </p>
+ <p>
+  For more information on CMB, please visit
+  <a href="http://www.computationalmodelbuilder.org">
+   http://www.computationalmodelbuilder.org
+  </a>
+  .
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Acknowledgements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  This material is based upon work supported by the Department of Energy under Award Number DE-SC0007615.
+ </p>
+ <p>
+  This report was prepared as an account of work sponsored by an agency of the United States Government. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights. Reference herein to any specific commercial product, process, or service by trade name, trademark, manufacturer, or otherwise does not necessarily constitute or imply its endorsement, recommendation, or favoring by the United States Government or any agency thereof. The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [1] Liu, X. Estimation, optimization, and value of information in groundwater remediation (Doctoral dissertation). Retrieved from SearchWorks catalog. (9238441)
+  <br/>
+  [2]
+  <a href="http://www.openchemistry.org/projects/molequeue">
+   http://www.openchemistry.org/projects/molequeue
+  </a>
+  <br/>
+  [3]
+  <a href="http://www.computationalmodelbuilder.org/remus">
+   http://www.computationalmodelbuilder.org/remus
+  </a>
+  <br/>
+  [4]
+  <a href="http://www.computationalmodelbuilder.org/smtk">
+   http://www.computationalmodelbuilder.org/smtk
+  </a>
+ </p>
+ <p>
+  <a href="/source/files/4_820021978.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_820021978.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Bob O’Bara
+  </strong>
+  is an Assistant Director of Scientific Computing at Kitware. His main areas of interest include geometric modeling, model and mesh visualization, mesh generation, and general scientific
+  <br/>
+  visualization techniques.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_324549205.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_324549205.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   David Thompson
+  </strong>
+  is a research and development engineer at Kitware. His interests include conceptual design, solid modeling, computational simulation and visualization, and mechatronics.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_2055669853.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_2055669853.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Andrew Bauer
+  </strong>
+  is a research and development engineer on the Scientific Computing team at Kitware. He primarily works on enabling tools and technologies for HPC simulations.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_4020941.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_4020941.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+  <strong>
+   Yumin Yuan
+  </strong>
+  is a research and development engineer on the Scientific Computing team at Kitware. He is the main software architect of the suite of CMB applications that regard geometric modeling, meshing, pre- and post-simulation analysis, and visualization.
+  <br/>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_2084395812.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_2084395812.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+  <strong>
+   John Tourtellott
+  </strong>
+  is a research and development engineer at Kitware. His areas of focus include software tools for scientific computing, digital map visualization, and user interface design.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_247857335.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_247857335.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Robert Maynard
+  </strong>
+  is a research and development engineer at Kitware. He is an active contributor to VTK and CMB. His interests include HPC using accelerators, message brokers, and build systems.
+ </p>
+</div>

@@ -1,0 +1,37 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Using the current leading edge supercomputers, it’s not uncommon to generate terabytes of data or more from a single simulation run. For time dependent simulations this can result in several gigabytes of data per time step along with thousands or more time steps that are saved out. Of course this is usually just raw data that still has to be post-processed to gain insight into the problem being simulated. While supercomputers and many visualization clusters can post-process this size of data, doing so quickly while using the system’s resources efficiently is another matter.
+ </p>
+ <p>
+  One common way of dealing with the data is to partition the data with respect to its spatial geometry or topology and then iterate over all of the time steps. As the number of processes thrown at the computation increases, efficiency goes down due to less work per process and more inter-process communication and/or file IO contention (e.g. many processes trying to access data simultaneously).
+ </p>
+ <p>
+  Another common way of dealing with the data is to partition the data with respect to time steps. In this case, each process takes a subset of the entire set of time steps and is responsible for computing information with respect to those time steps. This works well if the data for a single time step fits in the memory available to a single process. Oftentimes though it doesn’t fit and to compensate for this, only some of the cores on the supercomputer nodes are used to provide more memory per process. This does have the advantage though that there is no inter-process communication. Also, file IO contention is reduced since not all of the processes are in sync with regard to IO operations.
+ </p>
+ <p>
+  Both of these methods have their advantages and disadvantages. By combining them we hope to be able to use supercomputer resources most efficiently. To this end, we have developed spatio-temporal tools that can be used with ParaView to analyze and visualize this type of data. We do make the assumption that each time step can be processed independently of the others. An example of this is shown in the image below.
+ </p>
+ <p>
+  <img alt="Spatio-temporal pipeline" height="207" src="http://paraview.org/Wiki/images/a/af/Spatio-temporal-diagram.png" style="vertical-align: middle; display: block; margin-left: auto; margin-right: auto;" title="Spatio-temporal pipeline" width="569"/>
+ </p>
+ <p>
+  In this example, there are 12 MPI processes in the run and 3 total time steps. Processes 1 through 4 compute information for the first time step, processes 5 through 8 compute information for the second time step and processes 9 through 12 compute information for the third time step. We call the set of processes working together on their set of time steps a time compartment and the time compartment size is the number of processes in a time compartment. A good rule of thumb to set the time compartment size is to minimize it such that the time compartment has enough available memory to compute while using all cores on a node.
+ </p>
+ <p>
+  To showcase the ability of ParaView’s spatio-temporal parallelism to utilize a supercomputer’s resources efficiently we performed some runs on Mustang (http://www.top500.org/system/177456), which is housed at Los Alamos National Laboratory. We compared processing the same amount of data with pure spatial parallelism compared to spatio-temporal parallelism and this is shown in the table below.
+ </p>
+ <p>
+  <img alt="Spatio-temporal performance" height="309" src="http://paraview.org/Wiki/images/1/1d/Spatio-temporal-table.png" style="vertical-align: middle; display: block; margin-left: auto; margin-right: auto;" title="Spatio-temporal performance" width="600"/>
+ </p>
+ <p>
+  From the table it is clear how powerful spatio-temporal parallelism is in using a supercomputer’s resources efficiently to reduce the computation time. The next step to its adoption is making this functionality easy to use. To this end, we’ve developed a ParaView plugin which creates Python scripts with the spatio-temporal parallelism functionality built in to the script. For more information, see the wiki page at
+  <a href="http://www.paraview.org/Wiki/Spatio-Temporal_Parallelism">
+   http://www.paraview.org/Wiki/Spatio-Temporal_Parallelism
+  </a>
+  .
+ </p>
+ <p>
+  This work was done in conjunction with John Patchett and Boonthanome Nouanesengsy of Los Alamos National Laboratory and was supported by the UV-CDAT project (http://uv-cdat.llnl.gov/).
+ </p>
+</div>

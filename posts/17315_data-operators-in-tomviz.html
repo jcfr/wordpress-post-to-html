@@ -1,0 +1,2034 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  A core feature of Tomviz is the ability to modify 3D image data by one or more of the data operators available in the program. These operators can be used to perform 3D reconstruction of raw electron tomography data, to imbue images with metadata, or to perform general 3D image processing and analysis on reconstructed images. Tomviz has a couple ways to implement operators, one of which involves the use of Python. In this blog post I give a summary of the different ways to implement operators with specific emphasis on defining them in Python.
+ </p>
+ <p>
+  <b>
+   Types of Data Operators
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The core of Tomviz is written in C++, and some data operators are expressed in that language. The bulk of the processing functionality is contained in a function that takes the current dataset, operates on it, and then returns a boolean value indicating the success or failure of the operator. Tomviz invokes this function while executing each data operator in a pipeline.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Data operators may accept user input in the form of parameters that control how the operator executes. To obtain those parameters, some operators create a custom dialog box with user interface elements where parameters can be set. When the “OK” button is clicked in the dialog box, the input parameters are copied from the user interface to the data operator, and then the operator executes.
+  </span>
+ </p>
+ <p>
+  <img alt="" class="alignnone size-large wp-image-17329" height="477" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-1024x477.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-1024x477.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-300x140.png 300w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-768x358.png 768w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-220x102.png 220w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-250x116.png 250w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-355x165.png 355w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-730x340.png 730w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1-90x42.png 90w, https://blog.kitware.com/wp-content/uploads/2017/02/TomvizSetTiltAngles-1.png 1276w" width="1024"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   There is great flexibility in the types of data operators and in creating rich user interfaces for controlling them within Tomviz at the cost of some implementation complexity. For many operations, however, it is advantageous to have a fast path to implementing a new operator, especially when that path makes use of a language that is becoming increasingly popular among domain scientists.
+  </span>
+ </p>
+ <p>
+  <b>
+   Python Operators
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   A Python data operator executes a Python script when the data operator is applied. This design is very flexible and enables implementation of an unlimited number of reconstruction algorithms and data operators with minimal code. In fact, Tomviz 0.9.3 supplies a total of 51 Python data operators and reconstruction algorithms, compared to 5 operators defined purely in C++, making it by far the predominant means by which functionality has been added to Tomviz.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Tomviz provides extensive support for manipulating data through Python. The ParaView platform, on which Tomviz is built, provides Python bindings for both ParaView itself and the Visualization Toolkit (VTK). NumPy and SciPy are also included with Tomviz so that data can be manipulated with functions in those popular Python packages. Additionally, Python bindings for the Insight and Segmentation Toolkit (ITK) are included. Bridges between NumPy, VTK, and ITK enable mixing of functionality from all the Python packages to create powerful data operators.
+  </span>
+ </p>
+ <p>
+  <b>
+   Python Script Types
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   There are two types of Python scripts that can be used to define a data operator: simple scripts and cancelable scripts.
+  </span>
+ </p>
+ <p>
+  <b>
+   Simple Scripts
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The general form of a simple Python script is:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e86acf2ea359944936" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def transform_scalars(dataset):
+    # apply operations to dataset
+    # place results back in the dataset passed
+    # into this function</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e86acf2ea359944936-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2ea359944936-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2ea359944936-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2ea359944936-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e86acf2ea359944936-1">
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         transform_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2ea359944936-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # apply operations to dataset
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2ea359944936-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # place results back in the dataset passed
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2ea359944936-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # into this function
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   dataset
+  </span>
+  <span style="font-weight: 400">
+   parameter is a
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   vtkImageData
+  </span>
+  <span style="font-weight: 400">
+   object containing the current version of the data. I say “current version” because data operators can be chained together into a pipeline in the user interface to create complex data processing operations. This means that the script in the current data operator may be getting a dataset that has been modified by one or more data operators operating before it. Script writers need not, and indeed should not, make assumptions about whether any prior data operators exist, or their order.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Let’s take a look at a very simple example of a operator that sets all the voxels in the dataset to zero if they are less than zero.
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e86acf2f2766928135" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def transform_scalars(dataset):
+    """Set negative voxels to zero"""
+ 
+    from tomviz import utils
+    data = utils.get_array(dataset)
+ 
+    data[data &lt; 0] = 0 # Set negative voxels to zero
+ 
+    # Set the result as the new scalars.
+    utils.set_array(dataset, data)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f2766928135-10">
+        10
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-1">
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         transform_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ""
+        </span>
+        <span class="crayon-s">
+         "Set negative voxels to zero"
+        </span>
+        <span class="crayon-s">
+         ""
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-3">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-e">
+         tomviz
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         utils
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-5">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-v">
+         data
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         utils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         get_array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-6">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         data
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         data
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Set negative voxels to zero
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-8">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Set the result as the new scalars.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f2766928135-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         utils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         set_array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         data
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0040 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   This script imports the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   tomviz.utils
+  </span>
+  <span style="font-weight: 400">
+   module to access useful functions. The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   tomviz.utils.get_array()
+  </span>
+  <span style="font-weight: 400">
+   function takes a dataset and returns a NumPy array. The returned array can be manipulated like any other NumPy array – here, numbers below zero are set to zero. At the end of the script, the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   tomviz.utils.set_array(…)
+  </span>
+  <span style="font-weight: 400">
+   function replaces the data in the dataset with the contents of the NumPy array.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   For potentially long-running operators that should report progress and/or be cancellable, a slightly different Python script can be used. In it, you define a subclass of a
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   tomviz.operators.CancelableOperator
+  </span>
+  <span style="font-weight: 400">
+   Python class. The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   CancelableOperator
+  </span>
+  <span style="font-weight: 400">
+   class provides two features – the ability to cancel an operation while it is still executing, and the ability to report operator progress. The only method that needs to be defined in this subclass is called
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   transform_scalars
+  </span>
+  <span style="font-weight: 400">
+   , and it takes the standard
+  </span>
+  <span style="font-weight: 400">
+   self
+  </span>
+  <span style="font-weight: 400">
+   parameter in addition to the dataset parameter.
+  </span>
+ </p>
+ <p>
+  <b>
+   Cancelable Scripts
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Let’s take a look at an example of a cancelable data operator:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e86acf2f6916487176" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import tomviz.operators NUMBER_OF_CHUNKS = 10
+
+class InvertOperator(tomviz.operators.CancelableOperator):
+    def transform_scalars(self, dataset):
+        from tomviz import utils
+        import numpy as np
+        self.progress.maximum = NUMBER_OF_CHUNKS
+        scalars = utils.get_scalars(dataset)
+        if scalars is None:
+            raise RuntimeError("No scalars found!")
+        result = np.float32(scalars)
+        max = np.amax(scalars)
+        step = 0
+        for chunk in np.array_split(result, NUMBER_OF_CHUNKS):
+            if self.canceled:
+                return
+            chunk[:] = max - chunk
+            step += 1
+            self.progress.value = step
+        utils.set_scalars(dataset, result)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2f6916487176-20">
+        20
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-v">
+         tomviz
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         operators
+        </span>
+        <span class="crayon-v">
+         NUMBER_OF_CHUNKS
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         10
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-3">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         InvertOperator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tomviz
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         operators
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         CancelableOperator
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         transform_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-e">
+         tomviz
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         utils
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-6">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         numpy
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         np
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-7">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         progress
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         maximum
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         NUMBER_OF_CHUNKS
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-8">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-v">
+         scalars
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         utils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         get_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         scalars
+        </span>
+        <span class="crayon-st">
+         is
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         None
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         raise
+        </span>
+        <span class="crayon-e">
+         RuntimeError
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "No scalars found!"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         result
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         np
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         float32
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         scalars
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         max
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         np
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         amax
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         scalars
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         step
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         chunk
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         np
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         array_split
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         result
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         NUMBER_OF_CHUNKS
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         canceled
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         chunk
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         max
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         chunk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-18">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-v">
+         step
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         progress
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         value
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         step
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2f6916487176-20">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-v">
+         utils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         set_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         result
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0007 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   This operator inverts the voxel values in the dataset. Note that the class declaration of
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   InvertOperator
+  </span>
+  <span style="font-weight: 400">
+   is a subclass of
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   tomviz.operators.CancelableOperator
+  </span>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   CancelableOperator
+  </span>
+  <span style="font-weight: 400">
+   class has some member variables that are used to communicate progress information back to the application. The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   CancelableOperator.progress.maximum
+  </span>
+  <span style="font-weight: 400">
+   member variable defines the number of units of work. In this example, the work is split up into 10 chunks. The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   CancelableOperator.progress.value
+  </span>
+  <span style="font-weight: 400">
+   member variable communicates which unit of work has been completed. Additional progress information can be communicated to the user by setting the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   CancelableOperator.progress.message
+  </span>
+  <span style="font-weight: 400">
+   member variable to a message string.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The inherited member variable
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   CancelableOperator.canceled
+  </span>
+  <span style="font-weight: 400">
+   indicates whether Tomviz has requested cancellation of the data operator, usually at the direction of the user. The script can check this flag at places where stopping the operator makes sense. In this example, this flag is checked prior to computing each chunk.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Additional information for defining data operators is available in the
+  </span>
+  <a href="https://github.com/OpenChemistry/tomviz/blob/1f6d3d996b7a3385a63a436ce55b80c26fece52f/tomviz/python/Operators.md#implementing-python-operators">
+   <span style="font-weight: 400">
+    Tomviz Python Operators documentation
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+ <p>
+  <b>
+   Defining Data Operator Parameters
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   As mentioned, data operators can have user-supplied parameters that affect their operation. For Python-based data operators, these parameters can be described succinctly in a JSON file. The user interface for setting these parameters is generated automatically from the JSON description, eliminating the need to design a custom user interface for each data operator. Additionally, the values from the automatically generated user interface are added as optional named Python function arguments that are passed to the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   transform_scalars
+  </span>
+  <span style="font-weight: 400">
+   function defined in the Python script. Writing the parameter description once in JSON gets you the user interface and argument passing to the Python script for free, saving you a lot of time when developing new data operators.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   An example JSON description looks like the following:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e86acf2fa404417814" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+{
+   "name" : "Rotate",
+   "label" : "Rotate",
+   "description" : "Rotate dataset along a given axis.",
+   "parameters" : [
+     {
+       "name" : "rotation_angle",
+       "label" : "Angle",
+       "description" : "Rotation angle in degrees.",
+       "type" : "double",
+       "default" : 90.0,
+       "minimum" : -360.0,
+       "maximum" : 360.0
+     },
+     {
+       "name" : "rotation_axis",
+       "label" : "Axis",
+       "description" : "Axis of rotation.",
+       "type" : "enumeration",
+       "default" : 0,
+       "options" : [
+         {"X" : 0},
+         {"Y" : 1},
+         {"Z" : 2}
+       ]
+     }
+   ]
+ }</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf2fa404417814-28">
+        28
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-1">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "name"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Rotate"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "label"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Rotate"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "description"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Rotate dataset along a given axis."
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "parameters"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "name"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "rotation_angle"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "label"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Angle"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "description"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Rotation angle in degrees."
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "type"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "double"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "default"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         90.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "minimum"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         360.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "maximum"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         360.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "name"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "rotation_axis"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "label"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Axis"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "description"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Axis of rotation."
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "type"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "enumeration"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "default"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "options"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-s">
+         "X"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-s">
+         "Y"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-s">
+         "Z"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-25">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf2fa404417814-28">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0007 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   From this description, Tomviz creates the following user interface.
+  </span>
+ </p>
+ <p style="text-align: center">
+  <img class="alignnone wp-image-17317 size-thumbnail" height="156" src="https://blog.kitware.com/wp-content/uploads/2017/02/TomvizRotate-235x156.png" width="235"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Several top-level JSON keys provide basic information about the data operator, including its
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   name
+  </span>
+  <span style="font-weight: 400">
+   , the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   label
+  </span>
+  <span style="font-weight: 400">
+   that should be used to represent it in the user interface, and a more detailed
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   description
+  </span>
+  <span style="font-weight: 400">
+   of the data operator. The parameters key specifies the list of all the parameters defined for the data operator.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Each parameter is described as a JSON object with several key-value pairs. Some of these key-value pairs are required. The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   name
+  </span>
+  <span style="font-weight: 400">
+   key gives the name of the parameter, the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   label
+  </span>
+  <span style="font-weight: 400">
+   key gives the text used to represent the parameter in the user interface, the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   description
+  </span>
+  <span style="font-weight: 400">
+   is a detailed description of the parameter, the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   type
+  </span>
+  <span style="font-weight: 400">
+   specifies the type of parameter, and the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   default
+  </span>
+  <span style="font-weight: 400">
+   entry specifies the default value of the parameter.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Other parameters are optional or depend on the type of the parameter. The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   minimum
+  </span>
+  <span style="font-weight: 400">
+   and
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   maximum
+  </span>
+  <span style="font-weight: 400">
+   options specify the range that a parameter value may take. Neither, one, or both minimum and maximum can be provided. If only one is given, then the range is bound by only that constraint.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Numeric type parameters can have one or more elements. For parameters with one element, the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   default
+  </span>
+  <span style="font-weight: 400">
+   ,
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   minimum
+  </span>
+  <span style="font-weight: 400">
+   , and
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   maximum
+  </span>
+  <span style="font-weight: 400">
+   values should be defined by a single numeric JSON value, e.g.,
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   1
+  </span>
+  <span style="font-weight: 400">
+   . Parameters with two or more elements are defined as a list of numeric JSON values, e.g.,
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   [0, 1]
+  </span>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   enumeration
+  </span>
+  <span style="font-weight: 400">
+   type requires definition of another key-value pair named
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   options
+  </span>
+  <span style="font-weight: 400">
+   . The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   options
+  </span>
+  <span style="font-weight: 400">
+   entry is a list of JSON objects where the single key in the object is the name of the enumeration value and its value is an integer value associated with that name. The integer value is what is the parameter value passed to the Python script. Look
+  </span>
+  <a href="https://github.com/OpenChemistry/tomviz/blob/1f6d3d996b7a3385a63a436ce55b80c26fece52f/tomviz/python/Operators.md#generating-the-user-interface-automatically">
+   <span style="font-weight: 400">
+    here
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   for more information about the JSON description format.
+  </span>
+ </p>
+ <p>
+  <b>
+   Handling parameter values in Python scripts
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The parameters defined in the JSON description are passed as named arguments to the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   transform_scalars
+  </span>
+  <span style="font-weight: 400">
+   function (or member function) in the Python script. These parameters should be defined as optional arguments with default values in the Python script. For example, the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   transform_scalars
+  </span>
+  <span style="font-weight: 400">
+   definition for the Rotate data operator is defined with the following:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e86acf301340425792" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def transform_scalars(dataset, rotation_angle=90.0,
+                      rotation_axis=0):
+    # processing occurs here</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e86acf301340425792-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf301340425792-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e86acf301340425792-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e86acf301340425792-1">
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         transform_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rotation_angle
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         90.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf301340425792-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rotation_axis
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e86acf301340425792-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # processing occurs here
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   Note the function arguments
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   rotation_angle
+  </span>
+  <span style="font-weight: 400">
+   and
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   rotation_axis
+  </span>
+  <span style="font-weight: 400">
+   match the names of the parameters defined in the JSON file.
+  </span>
+ </p>
+ <p>
+  <b>
+   Conclusion
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   This concludes our tour of data operators in Tomviz. The facilities for defining operators with Python make it possible to rapidly develop new operators with features users expect and/or need, such as the ability to set custom parameters and cancel the operator. Future version of Tomviz will load new data operators created by users and not expose just those that are packaged with it.
+  </span>
+ </p>
+</div>

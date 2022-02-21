@@ -1,0 +1,458 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p style="text-align: justify;">
+  VTK provides a variety of classes to perform actor, point, cell, and world point picking:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkCellPicker
+    </em>
+   </span>
+  </li>
+  <li>
+   <em>
+    <span style="font-family: 'courier new', courier;">
+     vtkPropPicker
+    </span>
+   </em>
+  </li>
+  <li>
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkWorldPointPicker
+    </em>
+   </span>
+  </li>
+  <li>
+   …
+  </li>
+ </ul>
+ <p style="text-align: justify;">
+  Depending on the type of picker used, either software-based geometric intersection or hardware picking is applied. While all the pickers work appropriately, to date, there is no communication between pickers.
+ </p>
+ <p>
+  This shortage of communication leads to problems with the interaction, in particular within the VTK widgets:
+ </p>
+ <ul>
+  <li>
+   For a given position, multiple props can be picked by different pickers. This is typically an issue when hovering VTK widgets. At a given mouse point,  more than 1 VTK widget can be hovered (there is no grabFocus() to break the callbacks) at the same time. See Figures 1a/1b for an illustration.
+  </li>
+  <li>
+   A prop, can be picked despite being further away from the camera than other pickable props. Depending on the order of insertion of mouse press event observations, a VTK widget – first in the callback list – can grab the focus on a mouse click preventing the remaining VTK widgets from being picked. See figures 4a/4b for an example.
+  </li>
+ </ul>
+ <div>
+  <table border="0" style="width: 100%;">
+   <tbody>
+    <tr>
+     <td align="center" style="width: 50%;" valign="middle">
+      <img alt="" class="aligncenter size-full wp-image-22067" height="223" sizes="(max-width: 260px) 100vw, 260px" src="http://blog.kitware.com/wp-content/uploads/2018/04/Small.161_308976543.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_308976543.png 260w, https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_308976543-220x189.png 220w, https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_308976543-250x214.png 250w, https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_308976543-90x77.png 90w" width="260"/>
+     </td>
+     <td align="center" style="width: 50%;" valign="middle">
+      <img alt="" class="aligncenter size-full wp-image-22068" height="223" sizes="(max-width: 256px) 100vw, 256px" src="http://blog.kitware.com/wp-content/uploads/2018/04/Small.161_1417932233.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_1417932233.png 256w, https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_1417932233-220x192.png 220w, https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_1417932233-250x218.png 250w, https://blog.kitware.com/wp-content/uploads/2018/04/Small.161_1417932233-90x78.png 90w" width="256"/>
+     </td>
+    </tr>
+    <tr>
+     <td align="center" style="width: 50%;" valign="top">
+      Figure 1a – No Picking Manager (or disabled)
+      <br/>
+      Both
+      <span style="font-family: 'courier new', courier;">
+       <em>
+        vtkBoxWidget2
+       </em>
+      </span>
+      and
+      <span style="font-family: 'courier new', courier;">
+       <em>
+        vtkBalloonWidget
+       </em>
+      </span>
+      (associated with the cone) are picked/highlighted on mouse hover
+     </td>
+     <td align="center" style="width: 50%;" valign="top">
+      Figure 1b – Picking Manager enabled
+      <br/>
+      Only the
+      <span style="font-family: 'courier new', courier;">
+       <em>
+        vtkBoxWidget2
+       </em>
+      </span>
+      handler is picked/highlighted.
+     </td>
+    </tr>
+   </tbody>
+  </table>
+ </div>
+ <p>
+  In both cases, the root cause of the problem comes from a lack of “communication” between pickers. Based on its awareness (
+  <span style="font-family: 'courier new', courier;">
+   <em>
+    vtkAbstractPicker::PickList
+   </em>
+  </span>
+  ), a picker returns a picked prop that might not be the best picked prop in the scene.
+ </p>
+ <p>
+  This is the reason why a picking manager (
+  <em>
+   <span style="font-family: 'courier new', courier;">
+    vtkPickingManager
+   </span>
+  </em>
+  ) is introduced into VTK. Its role is to coordinate picking across all widgets simultaneously by implementing a more natural interaction based on the concept of “What you see is what you get”. In practice, the Picking Manager maintains a collection of registered pickers and every time a
+  <span style="font-family: 'courier new', courier;">
+   <em>
+    Pick()
+   </em>
+  </span>
+  is issued by a VTK widget, the manager evaluates every registered pickers and selects the “best” picker, the one that returns a prop the closest from the camera. It then returns the widget/representation of the picker that was chosen or the picker itself.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="text-decoration: underline;">
+    Implementation:
+   </span>
+  </strong>
+ </p>
+ <p style="text-align: justify;">
+  Much effort has been made in order to keep the integration within VTK as minimal as possible. Nonetheless, in order to ease the use of the picking manager and to keep as minimal the code required to activate the management, picking manager awareness has been added to VTK widgets and representations.
+ </p>
+ <p>
+  <span style="text-decoration: underline;">
+   Note:
+  </span>
+  <span style="font-family: 'courier new', courier;">
+   <em>
+    vtkInteractorObserver
+   </em>
+  </span>
+  is the base class of all the VTK widgets (e.g.
+  <em>
+   <span style="font-family: 'courier new', courier;">
+    vtkHandleWidget
+   </span>
+   ,
+   <span style="font-family: 'courier new', courier;">
+    vtkImplicitPlaneWidget
+   </span>
+  </em>
+  ) and the
+  <span style="font-family: 'courier new', courier;">
+   <em>
+    vtkWidgetRepresentation
+   </em>
+  </span>
+  is the representation for different types of widgets (e.g.
+  <em>
+   <span style="font-family: 'courier new', courier;">
+    vtkHandleRepresentation
+   </span>
+   ,
+   <span style="font-family: 'courier new', courier;">
+    vtkImplicitPlaneRepresentation
+   </span>
+  </em>
+  ).
+ </p>
+ <table border="0" style="width: 100%;">
+  <tbody>
+   <tr>
+    <td>
+     <a href="/blog/kwblog/files/49_1304562756.png" rel="noopener" target="_blank">
+      <img alt="PickingManager Process" height="450" src="https://blog.kitware.com/blog/files/161_2097983688.png" style="display: block; margin-left: auto; margin-right: auto;" width="649"/>
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td align="center" valign="top">
+     Figure 2 – High Level implementation schema
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="text-decoration: underline;">
+    In Practice:
+   </span>
+  </strong>
+ </p>
+ <p style="text-align: justify;">
+  Every time a vtkWidget or a vtkWidgetRepresentation is instantiated, the widget or representation automatically registers its picker(s) and starts to be managed. For fine-tuning, it is possible to manually interact with the management in two ways:
+ </p>
+ <ul>
+  <li>
+   For each individual widgets,
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkInteractorObserver::PickingManaged
+    </em>
+   </span>
+   or
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkWidgetRepresentation::PickingManaged
+    </em>
+   </span>
+   can be turned on/off to  determine whether it uses the manager or not.
+  </li>
+  <li>
+   It is also possible to directly disable the manager itself with the methods
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkPickingManager::EnableOn()/EnableOff()/SetEnable(bool)
+    </em>
+   </span>
+   . If disabled, the VTK widgets/representations will behave as before.
+  </li>
+ </ul>
+ <table border="0" style="width: 100%;">
+  <tbody>
+   <tr>
+    <td>
+     <a href="/blog/kwblog/files/49_817659764.png" rel="noopener" target="_blank">
+      <img alt="PickingManager Diagram" height="511" src="https://blog.kitware.com/blog/files/161_1459183195.png" width="649"/>
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td align="center" valign="top">
+     Figure 3 – Picking manager workflow
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p style="text-align: justify;">
+  <span style="background-color: #ffffff;">
+   Here is an example to activate picking manager for all the widgets in the scene:
+  </span>
+ </p>
+ <table border="0" style="width: 100%;">
+  <tbody>
+   <tr>
+    <td style="width: 100%; background-color: #000000;">
+     <p style="color: #ffffff;">
+      vtkNew&lt;vtkRenderer&gt; renderer;
+      <br/>
+      vtkNew&lt;vtkRenderWindow&gt; renWin;
+      <br/>
+      vtkNew&lt;vtkRenderWindowInteractor&gt; iren;
+      <br/>
+      …
+      <br/>
+      vtkNew&lt;vtkSeedWidget&gt; seedWidget;
+      <br/>
+      seedWidget-&gt;SetRepresentation(seedRepresentation.GetPointer());
+      <br/>
+      seedWidget-&gt;SetInteractor(iren.GetPointer());
+      <br/>
+      seedWidget-&gt;EnabledOn();
+      <br/>
+      for (…)
+      <br/>
+      {
+      <br/>
+      vtkHandleWidget* newHandle = seedWidget-&gt;CreateNewHandle();
+      <br/>
+      newHandle-&gt;EnabledOn();
+      <br/>
+      }
+      <br/>
+      <strong>
+       iren-&gt;GetPickingManager()-&gt;EnabledOn();
+      </strong>
+      <br/>
+      iren-&gt;Start();
+      <br/>
+      return EXIT_SUCCESS;
+     </p>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+ </p>
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7a957dca508488564" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7a957dca508488564-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7a957dca508488564-1">
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <p>
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="text-decoration: underline;">
+    Results &amp; Performances:
+   </span>
+  </strong>
+ </p>
+ <p>
+  We have good results and several demos are available highlighting the Picking Manager in different use cases. The images below compare scenes when the Picking Manager is disabled versus enabled.
+ </p>
+ <table border="0" style="width: 100%;">
+  <tbody>
+   <tr>
+    <td style="width: 50%;">
+     <a href="/blog/kwblog/files/49_2052491431.png" rel="noopener" target="_blank">
+      <img alt="" height="209" src="https://blog.kitware.com/blog/files/Small.161_958891322.png" style="display: block; margin-left: auto; margin-right: auto;" width="213"/>
+     </a>
+    </td>
+    <td style="width: 50%;">
+     <a href="/blog/kwblog/files/49_2073460090.png" rel="noopener" target="_blank">
+      <img alt="" height="208" src="https://blog.kitware.com/blog/files/161_315666739.png" style="display: block; margin-left: auto; margin-right: auto;" width="212"/>
+     </a>
+    </td>
+   </tr>
+   <tr>
+    <td align="center" valign="top">
+     Figure 4a – Picking Manager off/disabled
+     <br/>
+     Two spheres are under the mouse cursor. Here the firstly created sphere is picked/highlighted (grabFocus()) but it is not the “closest” sphere
+    </td>
+    <td align="center" valign="top">
+     Figure 4b – Picking Manager on/enabled
+     <br/>
+     Despite being last in the mouse press callback list, the sphere representation closest to camera is correctly picked/highlighted
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p style="text-align: justify;">
+  A video showing the picking manager in action is available
+  <a href="http://youtu.be/NyHrJ6DTWtQ" rel="noopener" target="_blank" title="Picking Manager video - Seed widgets">
+   here
+  </a>
+  .
+ </p>
+ <p style="text-align: justify;">
+  In terms of performance, we are very close to matching Picking Manager-free performance, with an average speed drop of only
+  <span style="background-color: #ffff00;">
+   <span style="background-color: #ffffff;">
+    6%
+   </span>
+  </span>
+  within a scene involving 64 seed widgets:
+ </p>
+ <p>
+  <a href="/blog/files/161_785365139.png" rel="noopener" target="_blank">
+   <img alt="" height="268" src="https://blog.kitware.com/blog/files/Small.161_785365139.png" style="display: block; margin-left: auto; margin-right: auto;" width="645"/>
+  </a>
+ </p>
+ <p style="text-align: justify;">
+  The graphs represent the time in seconds taken by an action versus the action ID; blue represents interaction without activating the Picking Manager and green represents interaction with it activated. On the left side is the immediate time taken for each action; on the right is the cumulative time.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="text-decoration: underline;">
+    Future Direction:
+   </span>
+  </strong>
+ </p>
+ <p style="text-align: justify;">
+  We are investigating how to allow different strategies for the picking selection based on some bitfield flags.
+ </p>
+ <p style="text-align: justify;">
+  <span style="background-color: #ffffff;">
+   We are working on the processes involving the
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkMultiblockDataSet
+    </em>
+   </span>
+   and, more particularly, on a
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkCompositeActor
+    </em>
+   </span>
+   , and will then focus on making the use and integration of the Manager clean and easy.
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  <span style="background-color: #ffffff;">
+   We also plan to optimize the Manager use during interaction to avoid methods such as
+   <span style="font-family: 'courier new', courier;">
+    <em>
+     vtkRenderWindowInteractor::GrabFocus
+    </em>
+    ()
+   </span>
+   , which we could follow with cutting off the research space to use the bounding boxes of the registered objects to only focus on a few pickers.
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  The Picking Manager can also be speed up  by parallelizing non hardware pickers.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="text-decoration: underline;">
+    Conclusion:
+   </span>
+  </strong>
+ </p>
+ <p style="text-align: justify;">
+  We have provided a proof of concept of a Picking Manager for VTK 6.0 with convincing results. The integration within VTK stays limited and performance is not dramatically affected during management. This feature is important in the development of VTK and fixes major interaction issues seen in situations using the
+  <span style="text-decoration: underline;">
+   composite actor
+  </span>
+  or other interactions such as with the
+  <em>
+   <span style="font-family: 'courier new', courier;">
+    vtkButtons
+   </span>
+  </em>
+  .
+ </p>
+ <p>
+  The Picking Manager will not be active by default as it slightly reduces performance when interacting with the scene.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="text-decoration: underline;">
+    Acknowledgements:
+   </span>
+  </strong>
+ </p>
+ <p>
+  The commit associated with the Picking Manager is available at
+  <a href="http://review.source.kitware.com/#/c/6642/">
+   http://review.source.kitware.com/#/c/6642/
+  </a>
+  .
+ </p>
+ <p title="MSV-Project">
+  The development effort for the Picking Manager is part of the MSV project. For information, the
+  <a href="http://www.msv-project.eu">
+   MSV official website
+  </a>
+  has further details. You can also find the complete source code and follow the other features’ development on the git repository:
+  <a href="https://github.com/MSV-Project" rel="noopener" target="_blank" title="MSVTK repository">
+   https://github.com/MSV-Project
+  </a>
+  .
+ </p>
+</div>

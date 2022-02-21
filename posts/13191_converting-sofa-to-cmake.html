@@ -1,0 +1,187 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p style="text-align: justify;">
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     A Little SOFA History
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  SOFA is a software project created eight years ago to tackle a seemingly obvious but unaddressed issue: Many scientists and Ph.D. Students in the mechanical simulation field had to regularly reinvent the wheel. Collision detection, FEM simulation, and contact solver are some of the many common algorithms that have been rewritten several times by different people.
+ </p>
+ <p>
+  <a href="/source/files/4_1108649710.jpg" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_1108649710.jpg" style="margin-left: 75px; margin-right: 75px; width: 500px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: SOFA “caduceus” sample scene
+  </em>
+ </p>
+ <p style="text-align: justify;">
+  In the French research institute INRIA, three teams working on medical simulation joined their efforts to write a set of reusable algorithms around a common, open framework. As a result, Simulation Open Framework Architecture (SOFA) was born. The main paradigm was to separate the layers of a simulation into different components (collision models, deformation models, force fields, solvers, etc.) so that, when working on a new algorithm for one of the components, you no longer need to care about the implementation of the other components. This saves a substantial amount of time.
+ </p>
+ <p style="text-align: justify;">
+  From some of the architecture’s core components, the codebase grew rapidly as new users became involved in SOFA’s development. There was no real project management; the only principle was to share work with others in order to save development time in the future.
+ </p>
+ <p style="text-align: justify;">
+  SOFA has since become a standard for research teams around the globe. Its modular architecture makes it suitable for many simulation subjects, regardless of whether or not they fall under the domain of the medical field.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Need for a New Build System
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p style="text-align: justify;">
+  As SOFA has been used for a large number of research papers and dissertations, it has had dozens of contributors who have added a comparable number of sub-projects. This includes around 200 library projects that have many external library dependencies and run in various hardware and software environments. As SOFA is used on three different operating systems (not including game consoles), in addition to GPU support (Cuda &amp; OpenCL), various haptic devices, stereoscopic video output, and spatial tracking systems, it can present quite a challenge for the build system!
+ </p>
+ <p style="text-align: justify;">
+  One year ago, the entire build system was based on qmake. The setup process to build SOFA from source involved copying and patching some text preference files, setting up the paths to the external SDKs, launching the project generation, making the product, and waiting and hoping for everything to be fine in the following two hours. Having everything turn out fine was rarely the case on the first run.
+ </p>
+ <p style="text-align: justify;">
+  Despite my 12 years of software engineering experience, between the external dependency problems, understanding the setup of configuration files, and the build time, my first SOFA build took me a whole working day. It took even longer for me to begin to understand what was under the hood of SOFA, but that is another story.
+ </p>
+ <p style="text-align: justify;">
+  Our build system configuration was primarily missing:
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   1. Ease of customization:
+  </strong>
+  <br/>
+  While it is not uncommon in software development to   open and modify a text preferences file, it is definitely not the easiest task for users who are not software developers.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   2. Reliability of the external dependencies:
+  </strong>
+  <br/>
+  No automatic library detection was provided. It was up to the user to setup the library path and to specify what library was present on the system. The user had to hope that the library on the system corresponded to the version used by SOFA.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   3. Early setup problems detection:
+  </strong>
+  <br/>
+  It was common to issue a « make » command and come back from lunch one hour later to see that the build went wrong because the « x » or « y » library was not present.
+ </p>
+ <p style="text-align: justify;">
+  CMake looked very promising in addressing these points and, as it turns out, we would not be disappointed.
+ </p>
+ <p style="text-align: justify;">
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     CMake Improvements
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p style="text-align: justify;">
+  Among the different advantages of our new CMake-based build system, I am personally thankful for several features.
+ </p>
+ <p style="text-align: justify;">
+  First, I am thankful for CMake’s shadow builds feature. For a project like SOFA, which has many optional features and possible option combinations, being able to quickly test a modification on several typical setups on my machine before pushing a significant change to the repository is a very valuable security. This is especially true for a complex project like ours.
+ </p>
+ <p style="text-align: justify;">
+  Second, in my opinion, the library system is very elegant. Issuing a « find_package(Python 2.7 REQUIRED) » is much more elegant than directly quoting the name of the library file. Moreover, most of the time, you do not have to bother determining the library location on your system. CMake finds it for you. In rare cases when CMake does not know what library you are referencing, you can add your own « findXXXX.cmake » scripts to the build system, which is great!
+ </p>
+ <p style="text-align: justify;">
+  And last but not least, CMake is substantially stricter than qmake regarding configuration problems. If there is a missing library or an incorrect path, you are immediately told that there is an error during the makefiles generation. Therefore, you are no longer given a link error after two hours of build! As a result, I have reduced my coffee consumption while I wait for the result of the build.
+ </p>
+ <p style="text-align: justify;">
+  The only lacking feature we would have liked to use was the multiple choice option, as we met several cases where we had options with three or more possibilities. But to be honest, I recently learned this feature has existed since CMake 2.8! As we already require CMake 2.8 or greater for our scripts, this is no longer a problem. This is yet another confirmation we made the right choice, using a tool which is constantly evolving in the right direction.
+ </p>
+ <p style="text-align: justify;">
+  Anyway, this was a small inconvenience in comparison to all the benefits we have experienced by using CMake over our former build system.
+ </p>
+ <p style="text-align: justify;">
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     A Long Exodus to the Promised Land
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  It took almost six months to handle the compatibility issues we met during our migration from the qmake world to the CMake Promised Land. After three weeks, we had the first running build. Problems started to arise, however, when we began to make some volunteer « guinea pigs » using CMake. You could not imagine all of the strange use cases we met.
+ </p>
+ <p style="text-align: justify;">
+  Nevertheless, this was not a problem related to CMake. On the contrary, the problem was on our side. SOFA is a very complex piece of software, and the former build system had been developed for years to address all potential issues. This development, however, came at the price of various tricky non-documented hacks that are known by some experts.
+ </p>
+ <p style="text-align: justify;">
+  Now, after some changes have been made, it is much easier for someone who does not know the framework to generate a default build of SOFA on (almost) the first try. There is still a long way to go to clean and simplify SOFA, but on the particular point mentioned above: mission complete!
+ </p>
+ <p style="text-align: justify;">
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Users’ Feedback
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  It was such a big surprise to me that almost no one complained about our move to CMake. I was expecting there to be more yelling and screams of horror. I thought that habits would be much harder to change. Perhaps the lack of resistance can be attributed to the notion that we took the time to adequately develop the CMake scripts before making people switch. We also found that some people were naturally contributing to our CMake effort during the creation process of the CMake scripts, which makes me think people wanted to switch to CMake.
+ </p>
+ <p style="text-align: justify;">
+  We held a « SOFA Day » in November that had almost 50 attendees. Throughout the day, we were given feedback by SOFA users during roundtables and coffee-break discussions. The feedback regarding the CMake transition was unanimously good. It is always pleasant to hear you made the right choice.
+ </p>
+ <p style="text-align: justify;">
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Future enhancements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  SOFA has always been distributed in a source code format. We really hope CMake will soon help us provide binary packages for various system environments. While not impossible, the SOFA options combinatory problem and its dependencies make providing binary packages for different system environments a non-trivial task. Moreover, we have a lot of work to complete on refactoring some core mechanisms before we can release a decent stand-alone binary package. After all, SOFA is still, and always will be, under development!
+ </p>
+ <p style="text-align: justify;">
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Acknowledgements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  Engineers who worked on this migration:
+ </p>
+ <p style="text-align: justify;">
+  Olivier Carre (INRIA Grenoble – Rhône-Alpes)
+  <br/>
+  Bruno Carrez (INRIA Lille – Nord Europe)
+  <br/>
+  Brina Goyette (INRIA Sophia Antipolis – Méditerrannée)
+  <br/>
+  SOFA framework: http://www.sofa-framework.org
+  <br/>
+  INRIA: http://www.inria.fr/en
+ </p>
+ <p>
+  <a href="/source/files/4_92143350.jpg" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/source/files/Small.4_92143350.jpg" style="float: left; margin-right: 20px; width: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: justify;">
+  <em>
+   <strong>
+    Bruno Carrez
+   </strong>
+   has been employed in the video game industry for 12 years. During this time, he has worked on several commercial console games on PS2, Wii, PSP, and X360. As a software engineer, he focused on multi-platform engines (sound, IO, and physics) and project management. He joined the SOFA dev team in INRIA Lille – Nord Europe in 2012 as the new head developer.
+  </em>
+ </p>
+</div>

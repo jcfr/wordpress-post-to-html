@@ -1,0 +1,267 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400;">
+   Last year, we made an effort to modernize code in the Visualization Toolkit (VTK). As part of this effort, we updated the CMake build system in VTK. We based the
+  </span>
+  <span style="font-weight: 400;">
+   infrastructure on
+   <a href="https://steveire.wordpress.com/2017/11/05/embracing-modern-cmake/" rel="noopener" target="_blank">
+    Modern CMake
+   </a>
+   and
+   <a href="https://public.kitware.com/pipermail/vtk-developers/2017-January/034597.html" rel="noopener" target="_blank">
+    CMake 3.3
+   </a>
+   , in particular. This version of CMake is easily available from most Linux distributions; it adheres to
+   <a href="https://cmake.org/cmake/help/v3.8/manual/cmake-buildsystem.7.html#build-specification-and-usage-requirements" rel="noopener" target="_blank">
+    usage requirements;
+   </a>
+   and it provides C++11 detection for major vendors such as GCC, MSVC, Clang and Xcode.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The existing build system had developed a large amount of cruft, and it was causing CMake to perform tasks such as graph building and traversal. We presumed that reworking the build system would not only improve the readability and maintainability, but it would also improve the responsiveness of the software platform for users.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   To our surprise, the performance of the new build system was consistent with the previous implementation. This prompted an investigation. Initially, we thought that the bottleneck came from the number of files that were created by VTK’s wrapping at generation time. With this in mind, we started to instrument CMake using
+   <a href="http://www.brendangregg.com/perf.html" rel="noopener" target="_blank">
+    perf
+   </a>
+   . We visualized the results with a
+   <a href="http://www.brendangregg.com/flamegraphs.html" rel="noopener" target="_blank">
+    Flame Graph
+   </a>
+   .
+  </span>
+ </p>
+ <p>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21767" style="width: 1034px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2018/03/cmake_vtk_perf_310.svg">
+   <img alt="" class="wp-image-21767 size-large" height="521" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-1024x521.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-1024x521.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-300x153.png 300w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-768x391.png 768w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-220x112.png 220w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-250x127.png 250w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-355x181.png 355w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-730x371.png 730w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1-90x46.png 90w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-1.png 1600w" width="1024"/>
+  </a>
+  <p class="wp-caption-text">
+   Click the image to watch the graph in motion.
+  </p>
+ </div>
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   Based on the results, we realized that around 15 percent of CMake’s runtime was spent in
+   <span style="font-family: 'courier new', courier;">
+    cmMakefile::GetSource
+   </span>
+   . Digging deeper, it became clear that
+   <span style="font-family: 'courier new', courier;">
+    cmSourceFile
+   </span>
+   (a custom command) had no way to express that it represented a file whose absolute path was known. Therefore, CMake was unnecessarily performing expensive searching and extension matching. After refactoring
+   <span style="font-family: 'courier new', courier;">
+    cmSourceFile
+   </span>
+   , it became possible to designate certain input, output and dependency information for the command as fully known. As a result, VTK’s workflow improved.
+  </span>
+ </p>
+ <p>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_21768" style="width: 1034px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2018/03/cmake_vtk_perf_311.svg">
+   <img alt="" class="wp-image-21768 size-large" height="505" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-1024x505.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-1024x505.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-300x148.png 300w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-768x379.png 768w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-220x108.png 220w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-250x123.png 250w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-355x175.png 355w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-730x360.png 730w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2-90x44.png 90w, https://blog.kitware.com/wp-content/uploads/2018/03/CMake-Flame-Graph-2.png 1600w" width="1024"/>
+  </a>
+  <p class="wp-caption-text">
+   Click the image to watch the graph in motion.
+  </p>
+ </div>
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   Additional efforts increased the performance of
+   <span style="font-family: 'courier new', courier;">
+    cmMakefile::GetSource
+   </span>
+   by improving the
+   <a href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1154" rel="noopener" target="_blank">
+    source file lookup heuristics
+   </a>
+  </span>
+  <span style="font-weight: 400;">
+   . Along with the refactor of
+   <span style="font-family: 'courier new', courier;">
+    cmSourceFile
+   </span>
+   , the effort enhanced CMake’s performance over a wide range of use cases.
+  </span>
+ </p>
+ <h2>
+  Example Use Case 1
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Our first use case is a synthetic micro benchmark that constructs 10 custom commands. These commands are consumed by a custom target, which we call a single “block.”
+  </span>
+  <span style="font-weight: 400;">
+   We ran the tests for this use case with the
+   <a href="https://gitlab.kitware.com/cmake/cmake/tree/v3.11.0-rc1" rel="noopener" target="_blank">
+    first release candidate
+   </a>
+   of CMake 3.11
+  </span>
+  <span style="font-weight: 400;">
+   on Linux. On Windows,
+  </span>
+  <span style="font-weight: 400;">
+   we discovered a performance regression, which we fixed in the third release candidate. As a result, we ran the tests with a
+   <a href="https://gitlab.kitware.com/cmake/cmake/commit/57f35bba84f53300641c6a597b4eca728f02874a" rel="noopener" target="_blank">
+    commit
+   </a>
+   that followed the second release candidate.
+  </span>
+ </p>
+ <p>
+  The table below displays the results. Please note that the number of loops was determined by the operating system, generator and blocks. In addition, note that
+  <span style="font-weight: 400;">
+   “N/A” indicates a runtime that was too long to record.
+  </span>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-21772" height="424" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1-300x124.jpg 300w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1-768x318.jpg 768w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1-220x91.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1-250x104.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1-355x147.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1-730x302.jpg 730w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-1-90x37.jpg 90w" width="1024"/>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   As the micro benchmark shows, before version 3.11, CMake’s performance did not scale linearly with the number of custom commands. For projects that use a heavy number of custom commands, this means that there will be a significant improvement in runtime come CMake 3.11.
+  </span>
+ </p>
+ <h2>
+  Example Use Case 2
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Our second benchmark looks at VTK with Python and Java wrapping enabled. These two options create numerous custom commands. We arrived at the benchmark using VTK’s
+  </span>
+  <span style="font-weight: 400;">
+   <a href="https://gitlab.kitware.com/vtk/vtk/commit/4fbc4a6c0311673e47fb05f27d0e98e3f9e3abc7" rel="noopener" target="_blank">
+    master branch
+   </a>
+   as of March 2, 2018.
+  </span>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-21775" height="184" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1-300x54.jpg 300w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1-768x138.jpg 768w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1-220x40.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1-250x45.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1-355x64.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1-730x131.jpg 730w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-1-90x16.jpg 90w" width="1024"/>
+ </p>
+ <h2>
+ </h2>
+ <h2>
+  Example Use Case 3
+ </h2>
+ <p>
+  Our third benchmark looks at
+  <span style="font-weight: 400;">
+   VTK’s new module system, which is still under development. The system
+   <a href="https://gitlab.kitware.com/ben.boeckel/vtk/commit/cf8d2a361712bcf387fb4eaf33e232a224470d7e" rel="noopener" target="_blank">
+    leverages
+   </a>
+   CMake’s target usage requirements.
+  </span>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-21776" height="184" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2-300x54.jpg 300w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2-768x138.jpg 768w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2-220x40.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2-250x45.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2-355x64.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2-730x131.jpg 730w, https://blog.kitware.com/wp-content/uploads/2018/03/Use-Case-2-Test-2-90x16.jpg 90w" width="1024"/>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The new module system enables all modules that are supported on the system. It differs from VTK’s current build system (Use Case 2), as the current build system builds a minimal subset of VTK by default. For this reason, the runtime durations are not comparable between Use Case 2 and Use Case 3.
+  </span>
+ </p>
+ <h2>
+  Additional Improvements
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   While this blog focuses on the driving motivator behind a subset of the performance improvements, it would be a shame to not mention other improvements that will come with CMake 3.11:
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    CMake’s
+    <span style="font-family: 'courier new', courier;">
+     AUTOMOC
+    </span>
+    and
+    <span style="font-family: 'courier new', courier;">
+     AUTOUIC
+    </span>
+    parsing and generation will be done in
+    <a href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1632" rel="noopener" target="_blank">
+     parallel
+    </a>
+   </span>
+   <span style="font-weight: 400;">
+    .
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    CTest’s
+    <a href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1455" rel="noopener" target="_blank">
+     parallel job execution
+    </a>
+    will reduce runtime test latency overhead
+   </span>
+   <span style="font-weight: 400;">
+    .
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    <a href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1717" rel="noopener" target="_blank">
+     Runtime
+    </a>
+    will decrease for projects that have a significant number of import targets
+   </span>
+   <span style="font-weight: 400;">
+    .
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    Faster
+    <a href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1154" rel="noopener" target="_blank">
+     generate times
+    </a>
+    will result from better source file lookup heuristics
+   </span>
+   <span style="font-weight: 400;">
+    .
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    Fewer
+    <a href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1698" rel="noopener" target="_blank">
+     heap allocations
+    </a>
+    and
+    <a href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1729" rel="noopener" target="_blank">
+     string copies
+    </a>
+    will improve configure and generate times
+   </span>
+   <span style="font-weight: 400;">
+    .
+   </span>
+  </li>
+ </ul>
+ <p>
+  We plan to make the final release of version 3.11 next week, so look for it on
+  <a href="https://cmake.org/download/" rel="noopener" target="_blank">
+   CMake’s download page
+  </a>
+  .
+ </p>
+</div>

@@ -1,0 +1,220 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One of the first things that any visualization tool user does when he (or she) opens up a new dataset and looks at the mesh is to color the mesh with some scalar data. Color mapping is a common visualization technique that maps data to colors, and displays the colors in the rendered image. Of course, to map the data array to colors, we use a transfer function. A transfer function can also be used to map the data array to opacity for rendering translucent surfaces or for volume rendering. The UI that allows the user to edit these transfer functions has been redesigned for ParaView 4.1. This post discusses how to use this new
+  <strong>
+   Color Map Editor
+  </strong>
+  .
+ </p>
+ <p>
+  This post focuses on the basics. In the subsequent posts, we will cover the annotations and using categorical color maps.
+ </p>
+ <h3>
+  The Basics
+ </h3>
+ <hr/>
+ <p>
+  If you’ve used ParaView for a while, you can skip this section. It may either have been too obvious or you may have learnt it the hard way, in any case, you couldn’t have not realized this if you have been doing serious visualizations with ParaView. For the rest, here’s a quick overview of how color transfer functions are managed in ParaView.
+ </p>
+ <p>
+  ParaView associates a transfer function with the data array identified by its name and number of components. The same transfer function is used when coloring with the same array in different 3D views, or results from different stages in the pipeline.
+ </p>
+ <p>
+  There are separate transfer functions for color and opacity. The opacity transfer function is optional when doing surface renderings (one can turn it on/off by using the Color Map Editor as explained later), but gets used when volume rendering.
+ </p>
+ <p>
+  The Color Map Editor panel is now a dockable panel, and not a popup dialog as with previous versions of ParaView. To can toggle the visibility of the panel by selecting the “Color Map Editor” option from the
+  <strong>
+   View
+  </strong>
+  menu. Additionally, any other UI elements that allow users to edit the color mapping now show this panel e.g. the
+  <em>
+   Edit Color Map
+  </em>
+  button in the toolbar, or the Properties panel.
+ </p>
+ <h3>
+  The Panel
+ </h3>
+ <hr/>
+ <p>
+  <center>
+   <a href="/blog/files/48_1909078830.png" rel="noopener" target="_blank">
+    <img alt="" src="https://blog.kitware.com/blog/files/48_1909078830.png" width="100%"/>
+   </a>
+   <br/>
+   <strong>
+    Figure 1: Color Map Editor Panel
+   </strong>
+  </center>
+  As shown in
+  <strong>
+   Figure 1
+  </strong>
+  , the panel follows a layout similar to the
+  <a href="https://blog.kitware.com/effectively-using-the-properties-panel-in-paraview/">
+   Properties panel
+  </a>
+  . The panel shows the properties for the transfer function, if any, used for coloring the active data source (or filter) in the active view. If the active source if not visible in the active view, or is not employing scalar coloring, then the panel will be empty.
+ </p>
+ <p>
+  Similar to the Properties panel, by default, the commonly used properties are shown. One can toggle the visibility of advanced properties by using the button labelled
+  <em>
+   Toggle advanced properties
+  </em>
+  in Figure 1. Additionally, one can search for a particular property by typing its name in the
+  <em>
+   Search
+  </em>
+  box.
+ </p>
+ <p>
+  Whenever the transfer function is changed, we need to re-render which may be time consuming. Hence, by default, changes made on this panel do not trigger an update until the user hits the
+  <strong>
+   Update
+  </strong>
+  button. To automatically update after changes, one can check the push-button labelled
+  <strong>
+   Auto-apply changes
+  </strong>
+  . The button’s state is remember across sessions, similar to
+  <strong>
+   Apply
+  </strong>
+  button on the Properties panel.
+ </p>
+ <p>
+  The
+  <strong>
+   Save as default
+  </strong>
+  button can be used to make the current color and opacity transfer function with all its properties to be the default that ParaView will use next time it needs to setup a transfer function to color a new data array. Note that this will not affect any already colors data arrays. Also this is saved across sessions, so ParaView will remember this even after restart.
+ </p>
+ <h3>
+  Mapping Data
+ </h3>
+ <hr/>
+ <p>
+  <center>
+   <a href="/blog/files/48_1536770536.png" rel="noopener" target="_blank">
+    <img alt="" src="https://blog.kitware.com/blog/files/48_1536770536.png" width="100%"/>
+   </a>
+   <br/>
+   <strong>
+    Figure 2: Transfer Function Editor and related properties
+   </strong>
+  </center>
+  The
+  <strong>
+   Mapping Data
+  </strong>
+  group of properties control how the data is mapped to colors or opacity. The transfer function editor widgets are user to control the transfer function for color and opacity. The panel always shows both the transfer functions. Whether the opacity transfer function gets used depends on several things: when doing surface mesh rendering, it will be used only if
+  <strong>
+   Enable opacity mapping for surfaces
+  </strong>
+  is checked; when doing volume rendering, the opacity mapping will always be used.
+ </p>
+ <p>
+  To map the data to color using a log scale, rather than a linear scale, check the
+  <strong>
+   Use log scale when mapping data to colors
+  </strong>
+  . It is assumed that the data is in the non-zero, positive range. ParaView will report errors and try to automatically fix the range if it’s ever invalid for log mapping.
+ </p>
+ <p>
+  Based on the user preference set in the
+  <strong>
+   Settings
+  </strong>
+  dialog, ParaView can automatically rescale the transfer function every time when the user hits the “Apply” on the properties panel, or when the time step changes. This behavior can be disabled by unchecking the
+  <strong>
+   Automatically rescale transfer functions to fit data
+  </strong>
+  checkbox.
+ </p>
+ <h4>
+  Transfer Function Editor
+ </h4>
+ <p>
+  Using the transfer function editors is pretty straight forward. Control points in the opacity editor widget and the color editor widget are independent of each other. To select a control point, click on it. When selected, the control point is highlighted with a red circle and data value associated with the control point is shown in the
+  <strong>
+   Data
+  </strong>
+  input box under the widget. Clicking in an empty area will add a control point at that location. To move a control point, click on the control point and drag it. One can fine tune the data value associated with the selected control point using the Data input box. To delete a control point, select the control point and then hit the
+  <em>
+   Del
+  </em>
+  key. Note that the mouse pointer should be within the transfer function widget for Qt to send the event to the editor widget correctly. The end control points cannot be moved or deleted, however. One can rescale the entire transfer function to move the control points as explained later.
+ </p>
+ <p>
+  In the opacity transfer function widget, one can move the control points vertically to control the opacity value associated with that control point. In the color transfer function widget, one can double click on the control point to pop up a color chooser widget to set the color associated with that control point.
+ </p>
+ <p>
+  The opacity transfer function widget also offers some control over the interpolation between the control points. Double click on a control point to show the interpolation control widget which allows changing the sharpness and midpoint which affect the interpolation. Click and drag the control points to see the change in interpolation.
+ </p>
+ <p>
+  The several control buttons on the right side of the transfer function widgets support the following actions:
+ </p>
+ <ul>
+  <li>
+   <strong>
+    Rescale to data range
+   </strong>
+   : Rescales the color and opacity transfer functions using the data range from the data source selected in the Pipeline browser i.e. the active source. This rescale the entire transfer function, thus all control points including the intermediate ones and proportionally adjusted to fit the new range.
+  </li>
+  <li>
+   <strong>
+    Rescale to custom range
+   </strong>
+   : Rescales the color and opacity transfer functions using a range provided by the user. A dialog will be popped up for the user to enter the custom range.
+  </li>
+  <li>
+   <strong>
+    Invert color transfer function
+   </strong>
+   : Inverts the color transfer function by moving the control points e.g. a red-to-green transfer function will be inverted to a green-to-red. This only affects the color transfer function, and leaves the opacity transfer function untouched.
+  </li>
+  <li>
+   <strong>
+    Load color transfer function preset
+   </strong>
+   : Load the color transfer function from a preset. Color present manager dialog popped up allows the user to load presets from file, if needed. Currently, this only supports the color transfer function, but in the future, it will be extended to support the opacity transfer function as well.
+  </li>
+  <li>
+   <strong>
+    Save color transfer function to presets
+   </strong>
+   : Save the current color transfer function to presets. Color present manager dialog popped up allows the user to export the transfer function to a file, if needed. Currently, this only supports the color transfer function, but in the future, it will be extended to support the opacity transfer function as well.
+  </li>
+ </ul>
+ <p>
+ </p>
+ <h3>
+  Color Mapping Parameters
+ </h3>
+ <hr/>
+ <p>
+  <center>
+   <a href="/blog/files/48_2054199854.png" rel="noopener" target="_blank">
+    <img alt="" src="https://blog.kitware.com/blog/files/48_2054199854.png" width="90%"/>
+   </a>
+   <br/>
+   <strong>
+    Figure 3: Color Mapping Parameters (showing advanced properties as well)
+   </strong>
+  </center>
+  The
+  <strong>
+   Color Mapping Parameters
+  </strong>
+  group of properties provides additional control over the color transfer function including controlling the color interpolation space: RGB, HSV, Lab or diverging. When color mapping floating point arrays with NaNs, one can select the color to use for NaN values. One can also affect whether the color transfer function uses smooth interpolation or uses a discretization of the same into a fixed number of bins (similar to the difference between a smooth transfer function and a lookup table).
+ </p>
+ <h3>
+  Still to come…
+ </h3>
+ <hr/>
+ <p>
+  In the subsequent posts, we will cover using annotations in the color legend to explicitly control the labels shown on the color legend and using categorical color maps for discrete coloring.
+ </p>
+</div>

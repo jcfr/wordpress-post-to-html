@@ -1,0 +1,415 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <img alt="MAPTK_Logo_128" class="size-full wp-image-14293 alignleft" height="128" sizes="(max-width: 128px) 100vw, 128px" src="https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128.png 128w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-96x96.png 96w" width="128"/>
+  A recent “Kitware Source” article [1] introduced the Kitware Image and Video Exploitation and Retrieval (KWIVER) tookit. KWIVER is a collection of open-source computer vision software tools for video analytics. This article goes into depth on one of the components of KWIVER: Motion-imagery Aerial Photogrammetry Toolkit (MAP-Tk) [2].
+ </p>
+ <p>
+  MAP-Tk provides tools that estimate camera parameters and three-dimensional (3D) measurements in video. Specifically, the tools estimate camera poses (e.g., position and orientation), camera intrinsic parameters (e.g., focal length and radial distortion), and sparse 3D point clouds of landmarks in scenes. Computer vision literature refers to such estimation as structure from motion (SfM). In addition to SfM, MAP-Tk offers image stabilization for use in other parts of KWIVER such as the moving object tracker.
+ </p>
+ <p>
+  MAP-Tk has similar goals to other open-source SfM software such as Bundler [3], VisualSfM [4], and OpenMVG [5]. While most other systems concentrate on unordered collections of photographs, MAP-Tk exploits temporal order and continuity in video. In particular, MAP-Tk focuses on aerial video and its unique challenges and opportunities.
+ </p>
+ <p>
+  MAP-Tk provides a C++ application programming interface (API), command-line interface (CLI) tools, and a graphical user interface (GUI) application. Kitware offers all of these components under a permissive Berkeley Software Distribution (BSD) license with commercial support.
+ </p>
+ <p>
+  The framework of MAP-Tk is highly modular. It uses plug-ins and configuration files to combine and configure different algorithmic components at runtime. The core of MAP-Tk has minimal dependencies, but the plug-ins bring in established algorithms from other open-source toolkits like Ceres Solver [6], OpenCV [7], and VXL [8]. The MAP-Tk development team recently factored out the core framework and moved it into Vital [9], a new repository, for better reuse across KWIVER tools. For more details on the architecture and algorithms of MAP-Tk, please see the paper “Open Source Structure-from-Motion for Aerial Video” [10].
+ </p>
+ <p>
+  The remainder of this article steps through some examples to demonstrate how to start using MAP-Tk. The software, sample data, and configuration files are all available for download.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     MAP-Tk Installation
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  The MAP-Tk source code is available on GitHub [2]. One option to build the source code on Windows, Mac OS X, or Linux is to use CMake. The easiest way to try out the software, however, is to grab one of the binary packages for the latest release. Examples in this article use the MAP-Tk 0.8.0 release. Binary packages of this release are available at
+  <a href="https://github.com/Kitware/maptk/releases/tag/v0.8.0">
+   https://github.com/Kitware/maptk/releases/tag/v0.8.0
+  </a>
+  .
+ </p>
+ <p>
+  The binary packages prominently feature the GUI application MapGUI and include CLI tools. In the current release, the GUI can visualize results from the CLI tools. For now, the GUI only runs a subset of the computational pipeline; the CLI tools do the rest. The binary package for a Windows installation stores the CLI tools in
+  <span style="font-family: courier new,courier;">
+   C:\Program Files\MAP-Tk 0.8.0\bin
+  </span>
+  . The binary package for a Mac OS X installation stores the tools in
+  <span style="font-family: courier new,courier;">
+   /Applications/MAP-Tk.app/Contents/bin
+  </span>
+  , and the binary package for a Linux installation stores the tools in
+  <span style="font-family: courier new,courier;">
+   /usr/local/bin
+  </span>
+  (assuming default install paths).
+ </p>
+ <p>
+  The following examples work through an end-to-end pipeline using two of the tools:
+  <span style="font-family: courier new,courier;">
+   maptk_track_features
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   maptk_bundle_adjust_tracks
+  </span>
+  .
+ </p>
+ <p>
+  Note: MAP-Tk loads plug-ins and configurations files dynamically at run time. Relative to the above bin paths, it installs these files in
+  <span style="font-family: courier new,courier;">
+   ../lib/maptk
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   ../share/maptk/0.8.0/config
+  </span>
+  , respectively. In a standard install, MAP-Tk finds these files automatically. Environment variables
+  <span style="font-family: courier new,courier;">
+   KWIVER_PLUGIN_PATH
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   KWIVER_CONFIG_PATH
+  </span>
+  will extend the search paths, if needed.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Test Data
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  The KWIVER website contains downloadable data for following along with the examples discussed in this article on
+  <a href="http://www.kwiver.org/TestData">
+   http://www.kwiver.org/TestData
+  </a>
+  . This article covers two data sets. The first,
+  <span style="font-family: courier new,courier;">
+   kwiver_fmv_set_1
+  </span>
+  , is the same full-motion video (FMV) sample from the “Kitware Source” article on KWIVER [1]. The second,
+  <span style="font-family: courier new,courier;">
+   kwiver_wami_set_1
+  </span>
+  , is a down-sampled excerpt of the Columbus Large Image Format (CLIF) 2007 data set from Air Force Research Laboratory (AFRL) [11].
+ </p>
+ <p>
+  The examples directory in MAP-Tk contains the configuration files that correspond to both data sets. These data sets provide videos as sequences of image files (Joint Photographic Experts Group (JPEG) or Portable Network Graphics (PNG)). MAP-Tk currently requires image sequences, but future releases will handle video files directly. One way to obtain a sequence of images from a video file is to use FFmpeg [12].
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Feature Tracking
+    </span>
+   </span>
+  </strong>
+  <br/>
+  The first step in the SfM pipeline is to track image features. A feature is the two-dimensional (2D) image coordinates of a distinguishable scene location that appears repeatedly across images. A feature track is the association of a feature across multiple images. Each feature track has the potential to become a 3D landmark during bundle adjustment, which is the second step in the pipeline.
+ </p>
+ <p>
+  Running
+  <span style="font-family: courier new,courier;">
+   maptk_track_features
+  </span>
+  with a configuration file such as the following computes the feature tracks:
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier;">
+   maptk_track_features -c my_track.conf
+  </span>
+ </p>
+ <p>
+  The configuration file specifies the input and output files, the selection of algorithms from the plug-ins, and the parameters to the algorithms. The main configuration file can include other configuration files. This allows for the utilization of reusable files that contain the default configuration for each algorithm. In this case, the configuration files for feature tracking are the same for both data sets. They use Speeded Up Robust Features (SURF) detection and matching from the OpenCV plug-in with homography-guided feature matching and loop closure from Kitware [10].
+ </p>
+ <p>
+  While the default parameters work reasonably well out of the box, other data sets may need some parameter tuning. One commonly tuned parameter is feature detection sensitivity, which controls the number of features a detector tracks. For the OpenCV SURF detector, this parameter is
+  <span style="font-family: courier new,courier;">
+   detector:Feature2D.SURF:hessianThreshold
+  </span>
+  .
+ </p>
+ <p>
+  The value 1000 suffices for these examples, but it may be too high or low for other imagery with different resolutions or contrasts. In general, adjusting the threshold to produce around 500 to 1000 features works well.
+ </p>
+ <p>
+  The key input/output parameters for the
+  <span style="font-family: courier new,courier;">
+   maptk_track_features
+  </span>
+  tool are
+  <span style="font-family: courier new,courier;">
+   image_list_file
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   output_track_file
+  </span>
+  . The former points to a text file that lists paths to all images that the feature tracker will process. The latter points to a text file that will contain the computed tracks. Optionally, specifying
+  <span style="font-family: courier new,courier;">
+   output_homography_file
+  </span>
+  provides a homography sequence for use in video stabilization applications. Figure 1 displays the outcome of feature tracking on
+  <br/>
+  <span style="font-family: courier new,courier;">
+   kwiver_fmv_set_1
+  </span>
+  .
+ </p>
+ <div class="wp-caption alignnone" id="attachment_14377" style="width: 760px">
+  <img alt="Figure 1: Feature tracking results for kwiver_fmv_set_1. The green points show feature tracks on this frame, and the red curves show feature motion over recent history." class="wp-image-14377 size-full" height="512" sizes="(max-width: 750px) 100vw, 750px" src="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1.png 750w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1-300x205.png 300w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1-220x150.png 220w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1-250x171.png 250w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1-355x242.png 355w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1-730x498.png 730w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig1-90x61.png 90w" width="750"/>
+  <p class="wp-caption-text">
+   Figure 1: Feature tracking results for kwiver_fmv_set_1. The green points show feature tracks on this frame, and the red curves show feature motion over recent history.
+  </p>
+ </div>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Bundle Adjustment
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  The second step in the SfM pipeline is bundle adjustment. This step optimizes both camera and 3D landmark parameters. The CLI tool
+  <span style="font-family: courier new,courier;">
+   maptk_bundle_adjust_tracks
+  </span>
+  takes the feature track output from the previous step and estimates the cameras and 3D landmarks. This tool can optionally take in metadata as additional input (e.g., from the Global Positioning System and Inertial Measurement Unit systems). MAP-Tk currently supports reading and writing metadata in the POS format that the CLIF data [11] provides. Future releases will handle other metadata formats.
+ </p>
+ <p>
+  Running the
+  <span style="font-family: courier new,courier;">
+   maptk_bundle_adjust_tracks
+  </span>
+  tool follows the same pattern:
+ </p>
+ <p style="text-align: center;">
+  <span style="font-family: courier new,courier;">
+   maptk_bundle_adjust_tracks -c my_bundle_adjust.conf
+  </span>
+ </p>
+ <p>
+  This time, however, the configuration is a little different between the two data sets. For example, some of the configuration options provide base camera parameters, which are the initial values for the intrinsic parameters for the camera (e.g., focal length, principal point, etc.). These parameters differ between the data sets. Furthermore, the CLIF example uses metadata for initialization, whereas the FMV example configuration does not use any metadata. Instead, the FMV example bootstraps the camera locations from the imagery incrementally using essential matrix estimation from the VXL plug-in [8]. The FMV data also has a higher frame rate and is more redundant than the CLIF 2007 data. Therefore, the configuration file for this data enables a hierarchical bundle adjustment approach [10].
+ </p>
+ <p>
+  Configuration files for both sample data sets use the Ceres Solver [6] plug-in to perform the bundle adjustment itself. There are numerous parameters to the Ceres Solver to adjust. Based on the configuration in the examples, the Ceres Solver plug-in estimates a shared focal length across all the frames, ignores radial distortion, uses a Cauchy robust loss function, and utilizes an iterative Schur linear solver with Schur-Jacobi preconditioning. Numerous configurable parameters determine termination conditions and control which solver to use and which parameters to estimate. Figure 2 presents the output of the bundle adjustment for
+  <span style="font-family: courier new,courier;">
+   kwiver_fmv_set_1
+  </span>
+  .
+ </p>
+ <div class="wp-caption alignnone" id="attachment_14378" style="width: 760px">
+  <img alt="Figure 2: Bundle adjustment results for kwiver_fmv_set_1. The red curve shows the camera path, the green points depict the 3D landmarks near a ground plane (the grid), the magenta outlines the active camera frustum, and the gray shows frustums at all other frames." class="wp-image-14378 size-full" height="553" sizes="(max-width: 750px) 100vw, 750px" src="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2.png 750w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2-300x221.png 300w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2-220x162.png 220w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2-250x184.png 250w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2-355x262.png 355w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2-730x538.png 730w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig2-90x66.png 90w" width="750"/>
+  <p class="wp-caption-text">
+   Figure 2: Bundle adjustment results for kwiver_fmv_set_1. The red curve shows the camera path, the green points depict the 3D landmarks near a ground plane (the grid), the magenta outlines the active camera frustum, and the gray shows frustums at all other frames.
+  </p>
+ </div>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Visualization
+    </span>
+   </span>
+  </strong>
+  <br/>
+  MapGUI provides a graphical tool for visualizing the outputs of MAP-Tk. Qt serves as the foundation for MapGUI, and the Visualization Toolkit (VTK) furnishes the visualization. As shown in Figure 3, MapGUI has a main World View with dockable Camera View and Camera Selection panes.
+ </p>
+ <div class="wp-caption alignnone" id="attachment_14379" style="width: 760px">
+  <img alt="Figure 3: Results for kwiver_wami_set_1 in MapGUI." class="wp-image-14379 size-full" height="418" sizes="(max-width: 750px) 100vw, 750px" src="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3.png 750w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3-300x167.png 300w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3-220x123.png 220w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3-250x139.png 250w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3-355x198.png 355w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3-730x407.png 730w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig3-90x50.png 90w" width="750"/>
+  <p class="wp-caption-text">
+   Figure 3: Results for kwiver_wami_set_1 in MapGUI.
+  </p>
+ </div>
+ <p>
+  The World View displays the cameras, landmarks, and ground plane in a 3D viewer. It highlights one active camera and projects the corresponding video frame onto the ground plane. The Camera View shows the same active video frame in a 2D viewer. The viewer displays the features, tracks, projected 3D landmarks, and bundle adjustment residuals on top of the video frame. The tools at the top of each view can resize, re-color, or hide rendered components.
+ </p>
+ <p>
+  The Camera Selection pane selects the active frame with a slider that scrubs through the frames. It also allows for playback of a video at various speeds.
+ </p>
+ <p>
+  The easiest way to view MAP-Tk results in the GUI is to use
+  <span style="font-family: courier new,courier;">
+   File-&gt;Open
+  </span>
+  in the menu, and select the same configuration file that the CLI tools received. The MapGUI application will load the input and output files that the configuration file specifies. The
+  <span style="font-family: courier new,courier;">
+   maptk_bundle_adjust_tracks
+  </span>
+  configuration file refers to all the data that the GUI can display. Another option is to open a configuration file for
+  <span style="font-family: courier new,courier;">
+   maptk_track_features
+  </span>
+  , but this will only show the feature tracking results.
+ </p>
+ <p>
+  In the current release, the MAP-Tk GUI has limited algorithmic capability. It can run bundle adjustment to optimize the data it loads, but it cannot yet create any new features, tracks, landmarks, or cameras. The release does provide a few other spatial transformations. For example, when using metadata in the bundle adjustment tool, the landmarks may not align with the ground plane. The
+  <span style="font-family: courier new,courier;">
+   Compute-&gt;Align
+  </span>
+  option transforms the solution to best align with the ground plane and rescales the solution to unit variance. Figure 3 applies this operation and makes the projection of images onto the ground plane more stable. After
+  <span style="font-family: courier new,courier;">
+   Compute-&gt;Align
+  </span>
+  rescales the data, the Reset View tool adapts the World View to the new scale.
+ </p>
+ <p>
+  Finally, the
+  <span style="font-family: courier new,courier;">
+   View-&gt;Match Matrix
+  </span>
+  option (shortcut key “M”) brings up a window that graphically summarizes the number of pairwise feature tracks that persist between each pair of frames. The match matrix helps to assess the quality of the feature tracking results, especially with regard to loop closures. Numerous options are available to adjust this visualization.
+ </p>
+ <p>
+  Figure 4 shows an example of the match matrix visualization for the CLIF 2007 data. The main diagonal band in the match matrix measures the sequential frame-to-frame tracks, while the off-diagonal bands indicate loop closures, as the sensor revisits the same location on subsequent orbits and re-identifies old tracks.
+ </p>
+ <div class="wp-caption alignnone" id="attachment_14380" style="width: 760px">
+  <img alt="Figure 4: Match matrix for kwiver_wami_set_1 in the MAP-Tk GUI." class="wp-image-14380 size-full" height="418" sizes="(max-width: 750px) 100vw, 750px" src="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4.png 750w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4-300x167.png 300w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4-220x123.png 220w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4-250x139.png 250w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4-355x198.png 355w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4-730x407.png 730w, https://blog.kitware.com/wp-content/uploads/2016/04/maptk_fig4-90x50.png 90w" width="750"/>
+  <p class="wp-caption-text">
+   Figure 4: Match matrix for kwiver_wami_set_1 in the MAP-Tk GUI.
+  </p>
+ </div>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Conclusions
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  MAP-Tk is an open-source toolkit and application that provides SfM for aerial video. The software is still in early development, but it already produces useful results on different types of video. MAP-Tk provides a flexible software architecture with dynamic plug-ins. The broader KWIVER collection of tools now shares these plug-ins to make it easy to experiment with new combinations of algorithms.
+ </p>
+ <p>
+  Kitware encourages community involvement in MAP-Tk. Community members can run MAP-Tk on additional data and discuss experiences on the KWIVER users’ mailing list [13]. Kitware also welcomes members to report issues and make pull requests.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Acknowledgements
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  Thank you to AFRL/Sensors Directorate for the support of this work via Small Business Innovation Research (SBIR) Contract FA8650-14-C-1820.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     References
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  [1] Fieldhouse, Keith. “KWIVER: An End-to-End Video Analytics Toolkit.” Kitware Source, January 20, 2016.
+  <a href="https://blog.kitware.com/kwiver-an-end-to-end-video-analytics-toolkit">
+   https://blog.kitware.com/kwiver-an-end-to-end-video-analytics-toolkit
+  </a>
+  .
+ </p>
+ <p>
+  [2] GitHub, Inc. “Kitware / maptk.”
+  <a href="https://github.com/Kitware/maptk">
+   https://github.com/Kitware/maptk
+  </a>
+  .
+ </p>
+ <p>
+  [3] Snavely, Noah. “Bundler: Structure from Motion (SfM) for Unordered Image Collections”
+  <a href="http://www.cs.cornell.edu/~snavely/bundler">
+   http://www.cs.cornell.edu/~snavely/bundler
+  </a>
+  .
+ </p>
+ <p>
+  [4] Wu, Changchang. “VisualSFM : A Visual Structure from Motion System.”
+  <a href="http://ccwu.me/vsfm">
+   http://ccwu.me/vsfm
+  </a>
+  .
+ </p>
+ <p>
+  [5] Moulon, Pierre. “openMVG: ‘open Multiple View Geometry.’”
+  <a href="http://imagine.enpc.fr/~moulonp/openMVG">
+   http://imagine.enpc.fr/~moulonp/openMVG
+  </a>
+  .
+ </p>
+ <p>
+  [6] Google, Inc. “Ceres Solver.”
+  <a href="http://ceres-solver.org">
+   http://ceres-solver.org
+  </a>
+  .
+ </p>
+ <p>
+  [7] Itseez. “OpenCV.”
+  <a href="http://opencv.org">
+   http://opencv.org
+  </a>
+  .
+ </p>
+ <p>
+  [8] GitHub, Inc. “VXL.” GitHub.
+  <a href="https://github.com/vxl/vxl">
+   https://github.com/vxl/vxl
+  </a>
+  .
+ </p>
+ <p>
+  [9] GitHub, Inc. “Kitware / vital.”
+  <a href="https://github.com/Kitware/vital">
+   https://github.com/Kitware/vital
+  </a>
+  .
+ </p>
+ <p>
+  [10] Leotta, Matthew J., Smith, Eric, Dawkins, Matthew, and Tunison, Paul. “Open Source Structure-from-Motion for Aerial Video.” Paper presented at WACV 2016: IEEE Winter Conference on Applications of Computer Vision, Lake Placid, New York, March 7-9, 2016.
+ </p>
+ <p>
+  [11] U.S. Air Force. “Columbus Large Image Format (CLIF) 2007 Dataset Overview.”
+  <a href="https://www.sdms.afrl.af.mil/index.php?collection=clif2007">
+   https://www.sdms.afrl.af.mil/index.php?collection=clif2007
+  </a>
+  .
+ </p>
+ <p>
+  [12] “FFmpeg.”
+  <a href="https://www.ffmpeg.org">
+   https://www.ffmpeg.org
+  </a>
+  .
+ </p>
+ <p>
+  [13] Kitware, Inc. “Mailing List.”
+  <a href="http://www.kwiver.org/mailing-list">
+   http://www.kwiver.org/mailing-list
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <img alt="leotta_headshot" class="size-full wp-image-14382 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/04/leotta_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/leotta_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2016/04/leotta_headshot-90x113.png 90w" width="100"/>
+   Matt Leotta
+  </strong>
+  is a technical leader on the computer vision team at Kitware.  He is the lead developer of MAP-Tk and serves as a principal investigator on an AFRL SBIR award that funds MAP-Tk. Since joining Kitware in 2009, his research has focused on exploiting aerial video. His work has emphasized camera calibration, video stabilization, 3D extraction, and super resolution.
+ </p>
+</div>

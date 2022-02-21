@@ -1,0 +1,124 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The yt project (
+  <a href="http://yt-project.org/">
+   http://yt-project.org/
+  </a>
+  ) aims to provide a set of analysis and visualization tasks for astrophysical datasets, primarily drawn from hydrodynamic simulations. yt has been used to analyze the formation of the first stars in the universe, galaxy mergers, present day star formations, and galaxy clusters. It is built in Python, is parallelized with mpi4py, and can conduct a number of tasks specific to astrophysical analysis and visualization.
+ </p>
+ <p>
+  Where yt has come up short has been the user interface and interactive 3D rendering. While yt has long had a scripting interface and API to perform tasks such as image creation and volume rendering, these have always been designed from the standpoint of deliberate, rather than exploratory, visualization. ParaView, on the other hand, has been designed from the ground up to allow and enable exploratory visualization with a strong quantitative component. It exposes a rich API and allows for very detailed interoperability with Python components.
+ </p>
+ <p>
+  In working with Jorge Poco, George Zagaris, Charles Law and Berk Geveci of Kitware for several months this year, yt has been instrumented to be callable from ParaView and enable bidirectional flow of data between yt and ParaView. This was accomplished first by allowing in-memory data structures in yt to be supplied to VTK as their corresponding data structures (with little to no duplication of memory), and then allowing VTK components to be supplied as raw data to yt. This is accomplished by utilizing the ProgrammablePythonSource capability in ParaView, and the streaming data front-end in yt.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_873652520.gif" style="border: 0pt none; display: block; margin-left: auto; margin-right: auto;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Halo Detection &amp; Analysis using yt plugin: (a) Resulting output after running the HOP algorithm. The halo region is encapsulated in the sphere, shown in white, overlaid on top of the particle input dataset (b) Streamlines seeded at the halo region visualizing the flow around the halo.
+  </em>
+ </p>
+ <p>
+  This interoperability allows yt to load data, process it (for instance, applying unit conversions), and supply that data to ParaView for processing. Conversely, data flowing in the other direction, from ParaView to yt, can then be processed and analyzed by yt with the results being passed back to ParaView. This allows for analysis such as halo finding, multi-resolution image generation, spectral energy distribution, and even multi-resolution (AMR) aware volume rendering to be conducted in yt and displayed in ParaView.
+ </p>
+ <p>
+  The simplest way to get data to ParaView from yt, while retaining full control over the process, is to create a 2D image and then wrap it with a VTK object. If you have yt in your ParaView-accessible Python path, you can do this with a ProgrammablePythonFilter that outputs image data.
+ </p>
+ <table border="0" style="height: 24px; width: 600px; background-color: #d2d2d0;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      rom paraview.vtk import dataset_adapter as DA
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      import yt.mods
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pf = yt.mods.EnzoStaticOutput
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      (“JHK-DD0030/galaxy0030”)
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      proj = pf.h.proj(0, “Density”)
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      frb = yt.mods.FixedResolutionBuffer
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      (proj, (0.0, 1.0, 0.0, 1.0), (512, 512))
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pdo = self.GetOutput()
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pdo.SetDimensions(512,512,1)
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pdo.SetOrigin(0,0,0)
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pdo.SetSpacing(1, 1, 1)
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pdo.SetWholeExtent(0,511,0,511,0,0)
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pdo.SetUpdateExtentToWholeExtent()
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      import numpy as na
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      farr = yt.mods.na.log10(frb[“Density”])
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      arr = DA.numpyTovtkDataArray
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      (farr.ravel(“C”), ‘ImageScalars’)
+     </span>
+     <br/>
+     <span style="font-family: courier new,courier; font-size: x-small;">
+      pdo.GetCellData().AddArray(arr)
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  A projection will be taken through the domain, pixelized into a fixed region, and then be supplied back to ParaView in the middle of the pipeline. Subsequent processing can be applied as well as displayed.
+ </p>
+ <p>
+  Jorge Poco developed a full-fledged plugin to ParaView for yt this summer by unifying the various approaches and using the ParaView plugin definition format. This plugin allows for interactive plotting of adaptive-resolution images, volume rendering utilizing a camera and transfer function edited directly in ParaView, and most importantly the ability to conduct both these yt-specific tasks while still utilizing the broad array of tasks available from ParaView.
+ </p>
+ <p>
+  In the future, we hope to expose more tasks from yt to Paraview, and vice versa. A particularly important aspect of this is going to use the co-processing capabilities of ParaView. By using its existing protocol for concurrent visualization with extremely large simulations, we hope to be able to use Paraview as an engine for visualization and analysis, on top of which we will apply astrophysics-specific tasks from yt. Exploring these possibilities will help to strengthen domain-specific analysis guided by interactive exploration, from small scales to large.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_2134198897.gif" style="border: 0pt none; float: left;" width="80"/>
+ </p>
+ <p>
+  Matthew Turk is an NSF OCI Postdoctoral fellow at Columbia University, working on simulations of the  universe’s first stars and galaxies. He has a PhD from Stanford University and is interested in the high-redshift universe, HPC, agile and immersive data analysis, and the development of infrastructure for next-generation simulations and visualization.
+ </p>
+</div>

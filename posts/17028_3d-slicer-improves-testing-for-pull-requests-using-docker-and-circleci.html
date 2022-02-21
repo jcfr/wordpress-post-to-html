@@ -1,0 +1,842 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  3D Slicer is an industry-leading, free, open-source software platform for medical image informatics, image processing, and three-dimensional (3D)/four-dimensional (4D) visualization. In the last five years, over 230,000 downloads of the software have occurred. Since its early age, a rigorous software process has been central to the development of 3D Slicer. Currently, more than 650 tests validate that 3D Slicer and its different components work as expected.
+ </p>
+ <p>
+  The Kitware blog post “Why should we spend time writing tests?” offers the following quote from Luis Ibáñez, Ph.D. “The safe assumption is: if it is not tested, it is broken” [1]. This quote summarizes the importance of software testing. Software testing serves as a key component of the scientific ecosystem, as it enables reproducible research. The 3D Slicer testing infrastructure also enables adherence to “Rules for tools” [2]. Dr. Ron Kikinis, who serves as the Robert Greenes distinguished director of biomedical informatics in the department of radiology at  Brigham and Women’s Hospital, first defined these informal rules, which developers should keep in mind when they work on interactive tools for translational clinical research.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Concepts, Tools, and Services
+   </strong>
+  </span>
+ </p>
+ <p>
+  Before this article covers the most recent improvements to the 3D Slicer software process, it describes the concepts, tools, and services that support 3D Slicer development.
+ </p>
+ <p>
+  <strong>
+   Continuous Integration
+  </strong>
+  <br/>
+  As the Wikipedia article for continuous integration outlines, “In software engineering, continuous integration (CI) is the practice of merging all developer working copies to a shared mainline several times a day” [3].
+ </p>
+ <p>
+  <strong>
+   CTest
+  </strong>
+  <br/>
+  CTest is a language-agnostic testing harness that comes with CMake [4]. After CMake creates tests as part of a project build, CTest executes them [4]. Within 3D Slicer, CTest drives the execution of unit tests, which check that individual classes work as expected. CTest also drives the execution of integration tests, called “self-tests.” Users can execute self-tests after they install 3D Slicer and enable developer mode.
+ </p>
+ <p>
+  A given self-test downloads data and checks that the corresponding biomedical workflow, which generally involves multiple modules, functions as expected. Most of the 3D Slicer tutorials have corresponding self-tests that evaluate whether or not changes to 3D Slicer break the tutorials. Additional information on self-tests is available at
+  <a href="https://www.slicer.org/wiki/Documentation/Nightly/Developers/Tutorials/SelfTestModule">
+   https://www.slicer.org/wiki/Documentation/Nightly/Developers/Tutorials/SelfTestModule
+  </a>
+  . More details on the CMake testing cycle is available at
+  <a href="https://cmake.org">
+   https://cmake.org
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   CDash
+  </strong>
+  <br/>
+  According to its website, “CDash is an open-source, web-based software testing server” [5]. The server “aggregates, analyzes, and displays the results of software testing processes,” which CTest drives [5]. 3D Slicer developers can easily verify the state of the current 3D Slicer software and the state of associated extensions on
+  <a href="http://slicer.cdash.org/index.php?project=Slicer4">
+   http://slicer.cdash.org/index.php?project=Slicer4
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   Pull Requests
+  </strong>
+  <br/>
+  Pull requests allow developers to propose and discuss changes before they become integrated into the main line (also known as the “trunk” of the code base or the “master” branch). Practically speaking, anyone can fork the 3D Slicer code base on GitHub and create pull requests. To date, 3D Slicer has received more than 615 pull requests. More information on pull requests is available at
+  <a href="https://github.com/Slicer/Slicer">
+   https://github.com/Slicer/Slicer
+  </a>
+  .
+ </p>
+ <p>
+  On a historical note, the introduction of Git and the use of GitHub to manage the 3D Slicer code base occurred in 2010. The year 2011 marked the first pull request, which occurred a few weeks after the National Alliance for Medical Image Computing (NA-MIC) Summer Project Week hackathon. Until recently, pull requests only served as platforms for discussing and reviewing changes.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    The challenge
+   </strong>
+  </span>
+ </p>
+ <p>
+  Build servers that Kitware maintains and build scripts run every night on Linux, Mac, and Windows operating systems made it possible to consistently verify that changes in the main line did not break the build and/or cause tests to fail. While the use of nightly builds validated changes, simply relying on them delayed the development cycle. Fixes, for example, could not undergo validation until the next day. To speed up the development cycle, it was important to verify fixes as soon as they became integrated into the main line.
+ </p>
+ <p>
+  An initial attempt to speed up the development cycle consisted of systematically testing all the changes in the main line. Every few minutes, the build servers described above downloaded the most recent changes. These changes triggered project builds and tests, the results of which appeared on the dashboard.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17030" style="width: 1060px">
+  <img class="wp-image-17030 size-full" height="209" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-300x60.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-768x153.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-1024x204.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-220x44.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-250x50.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-355x71.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-730x145.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig2-90x18.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   The former testing approach automatically builds and tests the master branch at a fixed interval.
+  </p>
+ </div>
+ <p>
+  This approach turned out to be ineffective for the reasons that follow:
+  <br/>
+  Fixes for changes that occurred at the end of the day still had to wait until the next day for validation. Sometimes, however, developers moved on to other tasks before they attended to the regressions.
+ </p>
+ <p>
+  It took time to identify the source of a regression. Since the build servers did not test each change or set of changes independently, they required manual intervention to understand the problem and notify the associated developers.
+  <br/>
+  The creation of another independent 3D Slicer build tree had to occur before the faster increment build could start, as the build tree associated with nightly testing had to remain untouched to allow CMake tools to build, test, and package the 3D Slicer extensions.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Improvement 1
+   </strong>
+  </span>
+ </p>
+ <p>
+  Every night (and up until the next morning), the build servers build and test the most recent changes to 3D Slicer, build updated 3D Slicer extensions against the most recent version of 3D Slicer, and build updated extensions against the last 3D Slicer release. Accordingly, the 3D Slicer development team looked to improve the developer experience.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17029" style="width: 1146px">
+  <img alt="" class="size-full wp-image-17029" height="328" sizes="(max-width: 1136px) 100vw, 1136px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1.png 1136w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-300x87.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-768x222.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-1024x296.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-220x64.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-250x72.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-355x103.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-730x211.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig1-90x26.png 90w" width="1136"/>
+  <p class="wp-caption-text">
+   The 3D Slicer dashboard lists build and test results from November 25, 2016.
+  </p>
+ </div>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    The Use of CircleCI and Docker to Continuously Build 3D Slicer
+   </strong>
+  </span>
+  <br/>
+  The team leveraged the following cloud services that come free to open-source projects.
+ </p>
+ <p>
+  <strong>
+   Docker Hub
+  </strong>
+  <br/>
+  Docker Hub is a cloud-based registry that links code repositories and builds Docker images. A Docker image represents a lightweight container that can run any version of Linux. Said differently, a Docker image enables software re-execution to occur in the same context to assure that results remain consistent. More information on Docker is available at
+  <a href="https://www.docker.com">
+   https://www.docker.com
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   Dockerfile
+  </strong>
+  <br/>
+  A
+  <span style="font-family: courier new,courier;">
+   Dockerfile
+  </span>
+  is a text document that contains all the commands that can assemble an image. Many commands can describe this document such as
+  <span style="font-family: courier new,courier;">
+   RUN
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   COPY
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   VOLUME
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   ENV
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   ARG
+  </span>
+  , and even
+  <span style="font-family: courier new,courier;">
+   LABEL
+  </span>
+  . These commands offer the abilities to execute processes, mount directories, set some environment variables, and describe an image each time it builds with
+  <span style="font-family: courier new,courier;">
+   docker build
+  </span>
+  . Once an image builds, it can undergo instantiation to become a container. Information about best practices on how to write a
+  <span style="font-family: courier new,courier;">
+   Dockerfile
+  </span>
+  is available at
+  <a href="https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices">
+   https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   CircleCI
+  </strong>
+  <br/>
+  CircleCI is a hosted continuous integration and continuous delivery service. Compared to other services such as AppVeyor or Travis, CircleCI offers built-in efficient support for Docker. CircleCI can link with GitHub and launch a script for every pull request. It refers to the
+  <span style="font-family: courier new,courier;">
+   circle.yml
+  </span>
+  file, which has to appear in the source root folder of a project. More information on CircleCI is available at
+  <a href="https://circleci.com">
+   https://circleci.com
+  </a>
+  .
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Required Images
+   </strong>
+  </span>
+  <br/>
+  Systematically building 3D Slicer pull requests with CircleCI requires a 3D Slicer Docker image (or a set of images) that can complete a 3D Slicer build in under two hours. With the help of Matt McCormick, Ph.D., the 3D Slicer development team came up with the following set of images.
+ </p>
+ <p>
+  <strong>
+   thewtex/centos-build
+  </strong>
+  <br/>
+  This image provides a build environment that stems from an old Linux distribution (Centos 5). The build environment depends on an older version of GlibC (2.5), and it supplies a recent toolchain (Red Hat
+  <span style="font-family: courier new,courier;">
+   devtoolset-2
+  </span>
+  ), which provides
+  <span style="font-family: courier new,courier;">
+   gcc-4.1.2-55
+  </span>
+  . Since the build environment depends on an older version of GlibC, it enables the creation of binaries that are compatible with most of the current Linux distributions. The ABI Laboratory website illustrates the application binary interface (ABI) compatibility of the different versions of GlibC [6].
+ </p>
+ <p>
+  In addition to a build environment,
+  <span style="font-family: courier new,courier;">
+   thewtex/centos-build
+  </span>
+  includes supporting tools like CMake, Git, and Apache Subversion (SVN).
+ </p>
+ <p>
+  <strong>
+   slicer/slicer-base
+  </strong>
+  <br/>
+  This serves as the base image for
+  <span style="font-family: courier new,courier;">
+   slicer/slicer-dependencies
+  </span>
+  .
+ </p>
+ <p>
+  <strong>
+   slicer/slicer-dependencies
+  </strong>
+  <br/>
+  This image contains all the dependencies necessary to build 3D Slicer itself. These dependencies include the Insight Segmentation and Registration Toolkit (ITK), the Visualization Toolkit (VTK), the Common Toolkit (CTK), the Digital Imaging and Communications in Medicine Toolkit (DCMTK), and Qt.
+ </p>
+ <p>
+  <strong>
+   slicer/slicer-build
+  </strong>
+  <br/>
+  This image contains both 3D Slicer and the dependencies that test a 3D Slicer extension.  An example,
+  <span style="font-family: courier new,courier;">
+   SlicerITKUltrasound
+  </span>
+  , is available at
+  <a href="https://github.com/KitwareMedical/SlicerITKUltrasound">
+   https://github.com/KitwareMedical/SlicerITKUltrasound
+  </a>
+  .
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    The Build of a Pull Request
+   </strong>
+  </span>
+ </p>
+ <p>
+  The build of a pull request begins when the proposed pull request triggers CircleCI to read the configuration file (
+  <span style="font-family: courier new,courier;">
+   circle.yml
+  </span>
+  ) from the 3D Slicer code base. The file instructs CircleCI to only build the core of 3D Slicer, not its dependencies. If CircleCI detects an update to the 3D Slicer dependencies, it aborts the build, which indicates the need to manually generate a new
+  <span style="font-family: courier new,courier;">
+   slicer/slicer-dependencies
+  </span>
+  image and publish it on DockerHub.
+ </p>
+ <p>
+  Each proposed pull request automatically merges with the master branch in a temporary repository. The Docker image completes the associated build in under an hour and a half. The below schema illustrates the overall improved process.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17031" style="width: 1060px">
+  <img class="wp-image-17031 size-full" height="900" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-300x257.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-768x658.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-1024x878.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-220x189.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-250x214.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-355x304.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-730x626.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig3-90x77.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   3D Slicer builds and tests a pull request through continuous integration.
+  </p>
+ </div>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Improvement 2
+   </span>
+  </strong>
+ </p>
+ <p>
+  To follow up on Improvement 1 and to consolidate continuous integration, the 3D Slicer development team added a testing process that follows a pull request. The tests verify that everything builds correctly for each pull request. As part of the process, CDash stores metadata about the build time. It also stores test information from the commit that triggered the testing process. More information on the CircleCI features that link with GitHub are available at
+  <a href="https://circleci.com/docs/environment-variables">
+   https://circleci.com/docs/environment-variables
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    The Use of CircleCI and Docker to Continuously Run 3D Slicer Tests
+   </span>
+  </strong>
+ </p>
+ <p>
+  In order to make the testing process work, the 3D Slicer development team built a new Docker image,
+  <span style="font-family: courier new,courier;">
+   thewtex/opengl:centos
+  </span>
+  , which it based on Centos 5. The Docker image provides the X11 window display that many tests require. The following section takes a closer look at this new Docker image.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    OpenGL Docker Image
+   </span>
+  </strong>
+ </p>
+ <p>
+  As previously mentioned, the team based the OpenGL Docker image on
+  <span style="font-family: courier new,courier;">
+   thewtex/opengl:centos
+  </span>
+  , which draws inspiration from
+  <span style="font-family: courier new,courier;">
+   thewtex/opengl:debian
+  </span>
+  . When a container that stems from
+  <span style="font-family: courier new,courier;">
+   thewtex/opengl:centos
+  </span>
+  launches, it runs a single process [7].  The container runs
+  <span style="font-family: courier new,courier;">
+   supervisord
+  </span>
+  as the
+  <span style="font-family: courier new,courier;">
+   Dockerfile
+  </span>
+  command [8] to collect failed processes (process identifier reaping) and simultaneously launch multiple commands such as
+  <span style="font-family: courier new,courier;">
+   graphical_app
+  </span>
+  [9],
+  <span style="font-family: courier new,courier;">
+   vnc
+  </span>
+  [10], and
+  <span style="font-family: courier new,courier;">
+   Xdummy
+  </span>
+  . These commands display windows from tests. The orchestrated X window system provides a graphical context to run the tests. Virtual Network Computing (VNC) provides an interface to the system for debugging.
+ </p>
+ <p>
+  The below schema summarizes the testing process.
+  <img alt="" class="size-full wp-image-17032" height="1334" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-236x300.png 236w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-768x976.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-806x1024.png 806w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-220x280.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-250x318.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-355x451.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-730x927.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig4-90x114.png 90w" width="1050"/>
+ </p>
+ <p>
+  The testing process continues with Docker.The first step to create a Docker image is to set up a
+  <span style="font-family: courier new,courier;">
+   Dockerfile
+  </span>
+  that begins with
+  <span style="font-family: courier new,courier;">
+   FROM thewtex/opengl:centos (or :debian)
+  </span>
+  . After the container generates, the
+  <span style="font-family: courier new,courier;">
+   Dockerfile
+  </span>
+  launches
+  <span style="font-family: courier new,courier;">
+   supervisord
+  </span>
+  . Once
+  <span style="font-family: courier new,courier;">
+   supervisord
+  </span>
+  launches, it deals with
+  <span style="font-family: courier new,courier;">
+   graphical_app
+  </span>
+  , which calls the application environment variable. The
+  <span style="font-family: courier new,courier;">
+   Dockerfile
+  </span>
+  must specify this variable using
+  <span style="font-family: courier new,courier;">
+   ENV APP “what_you_want_to_launch
+   <span style="font-family: georgia,palatino;">
+    .
+   </span>
+   “
+  </span>
+ </p>
+ <p>
+  Now, each time the image runs, the run.sh script from the
+  <span style="font-family: courier new,courier;">
+   thewtex/opengl
+  </span>
+  repository configures and creates the container. (The script sets the VNC localhost, removes the container when the application is done, and displays prompts from the container.) For further information, please take a look at the
+  <span style="font-family: courier new,courier;">
+   README
+  </span>
+  file
+  <a href="https://github.com/thewtex/docker-opengl/blob/centos/README.rst">
+   https://github.com/thewtex/docker-opengl/blob/centos/README.rst
+  </a>
+  .
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17033" style="width: 1010px">
+  <img alt="" class="size-full wp-image-17033" height="480" sizes="(max-width: 1000px) 100vw, 1000px" src="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5.png 1000w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5-300x144.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5-768x369.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5-220x106.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5-250x120.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5-355x170.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5-730x350.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/slicer_interface_fig5-90x43.png 90w" width="1000"/>
+  <p class="wp-caption-text">
+   The localhost displays the OpenGL Docker image.
+  </p>
+ </div>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Future Work
+   </strong>
+  </span>
+ </p>
+ <p>
+  The 3D Slicer development team seeks to improve the integration of 3D Slicer with VNC and to increase testing speed by leveraging additional CircleCI containers. Please visit the Kitware blog at
+  <a href="https://blog.kitware.com">
+   https://blog.kitware.com
+  </a>
+  to remain updated.
+ </p>
+ <p>
+  For those interested in integrating 3D Slicer or its testing framework with products and processes, Kitware offers consulting and support services. To get started, please contact
+  <a href="mailto:kitware@kitware.com">
+   kitware@kitware.com
+  </a>
+  .
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Docker Tip
+   </strong>
+  </span>
+ </p>
+ <p>
+  The team noticed that Docker can burn free space disk storage. During local tests on a machine, Docker saves all of the exited containers, mounted volumes, and images that it builds. To save space, the team recommends deleting useless image containers and volumes by running the following:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e869db76d549804587" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+# remove exited containers:
+docker ps --filter status=dead --filter status=exited -aq | xargs -r docker rm -v    
+# remove unused images:
+docker images --no-trunc | grep '&amp;lt;none&amp;gt;' | awk '{ print $3 }' | xargs -r docker rmi
+# remove unused volumes:
+docker volume ls -qf dangling=true | xargs -r docker volume rm</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e869db76d549804587-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e869db76d549804587-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e869db76d549804587-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e869db76d549804587-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e869db76d549804587-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e869db76d549804587-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e869db76d549804587-1">
+        <span class="crayon-p">
+         # remove exited containers:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e869db76d549804587-2">
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-v">
+         ps
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-e">
+         filter
+        </span>
+        <span class="crayon-v">
+         status
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         dead
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-e">
+         filter
+        </span>
+        <span class="crayon-v">
+         status
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         exited
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         aq
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         |
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         xargs
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         r
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-v">
+         rm
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         v
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e869db76d549804587-3">
+        <span class="crayon-p">
+         # remove unused images:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e869db76d549804587-4">
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-v">
+         images
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-v">
+         no
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         trunc
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         |
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         grep
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         '&amp;lt;none&amp;gt;'
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         |
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         awk
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         '{ print $3 }'
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         |
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         xargs
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         r
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-v">
+         rmi
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e869db76d549804587-5">
+        <span class="crayon-p">
+         # remove unused volumes:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e869db76d549804587-6">
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-e">
+         volume
+        </span>
+        <span class="crayon-v">
+         ls
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         qf
+        </span>
+        <span class="crayon-v">
+         dangling
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-t">
+         true
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         |
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         xargs
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         r
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         docker
+        </span>
+        <span class="crayon-e">
+         volume
+        </span>
+        <span class="crayon-v">
+         rm
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0004 seconds] -->
+ <p>
+ </p>
+ <p>
+  Note that the presence of the
+  <span style="font-family: courier new,courier;">
+   VOLUME
+  </span>
+  command in a
+  <span style="font-family: courier new,courier;">
+   Dockerfile
+  </span>
+  creates volumes.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    References
+   </strong>
+  </span>
+ </p>
+ <p>
+  Legarreta, John Haitz, and Matt McCormick. “Why should we spend time writing tests?” Kitware blog, November 21, 2016.
+  <a href="https://blog.kitware.com/why-should-we-spend-time-writing-tests">
+   https://blog.kitware.com/why-should-we-spend-time-writing-tests
+  </a>
+  .
+ </p>
+ <p>
+  [1] “Documentation-Rons-Rules-For-Tools.”
+  <a href="https://www.slicer.org/wiki/Documentation-Rons-Rules-For-Tools">
+   https://www.slicer.org/wiki/Documentation-Rons-Rules-For-Tools
+  </a>
+  .
+ </p>
+ <p>
+  [2] Wikipedia. “Continuous integration.”
+  <a href="https://en.wikipedia.org/wiki/Continuous_integration">
+   https://en.wikipedia.org/wiki/Continuous_integration
+  </a>
+  .
+ </p>
+ <p>
+  [3] Hoffman, Bill, Libby Rose, Michael Grauer, and Patrick Reynolds. “Enhancing Software Quality with CI in the Cloud.” Kitware Blog, November 22, 2016.
+  <a href="https://blog.kitware.com/enhancing-software-quality-with-ci-in-the-cloud">
+   https://blog.kitware.com/enhancing-software-quality-with-ci-in-the-cloud
+  </a>
+  .
+ </p>
+ <p>
+  [4] Kitware, Inc. “CDash.”
+  <a href="http://www.cdash.org">
+   http://www.cdash.org
+  </a>
+  .
+ </p>
+ <p>
+  [5] Ponomarenko, Andrey. “ABI Tracker (glibc).” Last modified December 19, 2016.
+  <a href="https://abi-laboratory.pro/tracker/timeline/glibc">
+   https://abi-laboratory.pro/tracker/timeline/glibc
+  </a>
+  .
+ </p>
+ <p>
+  [6] Docker Inc. “Use Supervisor with Docker.”
+  <a href="https://docs.docker.com/engine/admin/using_supervisord">
+   https://docs.docker.com/engine/admin/using_supervisord
+  </a>
+  .
+ </p>
+ <p>
+  [7] Agendaless Consulting and Contributors. “Supervisor: A Process Control System.” Last modified December 20, 2016.
+  <a href="http://supervisord.org">
+   http://supervisord.org
+  </a>
+  .
+ </p>
+ <p>
+  [8] GitHub, Inc. “thewtex/docker-opengl.” Last modified December 14, 2016.
+  <a href="https://github.com/thewtex/docker-opengl/blob/centos/usr/bin/graphical-app-launcher.py">
+   https://github.com/thewtex/docker-opengl/blob/centos/usr/bin/graphical-app-launcher.py
+  </a>
+  .
+ </p>
+ <p>
+  [9] Wikipedia. “Virtual Network Computing.” Last modified October 17, 2016.
+  <a href="https://en.wikipedia.org/wiki/Virtual_Network_Computing">
+   https://en.wikipedia.org/wiki/Virtual_Network_Computing
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17034 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/chassagnard_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/chassagnard_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/chassagnard_headshot-90x113.png 90w" width="100"/>
+   Mayeul Chassagnard
+  </strong>
+  is a research and development intern at Kitware. He studies computer science, mathematics, electronics, and signal processing at École Supérieure de Chimie Physique Électronique de Lyon.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17035 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/jc_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/jc_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/jc_headshot-90x113.png 90w" width="100"/>
+   Jean-Christophe Fillion-Robin
+  </strong>
+  is a technical expert and the lead developer of 3D Slicer at Kitware. He is also the lead developer of 3D Slicer for the NA-MIC community. As such, he developed the infrastructure for 3D Slicer extensions.
+ </p>
+</div>

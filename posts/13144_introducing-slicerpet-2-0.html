@@ -1,0 +1,300 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  As noted in the paper “SlicerPET: A workflow based software module for PET/CT guided needle biopsy” [1], clinicians frequently use biopsies to confirm cancer diagnoses when radiologically indicated. Positron emission tomography/computed tomography (PET/CT) guidance may improve the diagnostic yield of biopsies, as PET can localize tumors that are not visible in CT. To bring PET image guidance into the interventional CT suite [2], Kitware developed a user-friendly, workflow-based application, known as SlicerPET.
+ </p>
+ <p>
+  In this article, we summarize the work detailed in the paper and introduce a new version of the software application (SlicerPET 2.0).
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Workflow Steps
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  SlicerPET utilizes a module [1] to facilitate PET/CT-guided needle biopsy. The module is implemented using the 3D Slicer framework [3]. 3D Slicer is a software platform for medical image analysis and visualization. Medical researchers employ 3D Slicer to visualize and process images.
+ </p>
+ <p>
+  Following the development of 3D Slicer 4.5 [4], Kitware released SlicerPET 2.0. SlicerPET 2.0 takes advantage of the improvements and bug fixes made in 3D Slicer 4.5.
+ </p>
+ <p>
+  <a href="/source/files/134_1412555046.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1412555046.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   SlicerPET 2.0 introduces an all-new logo and icon.
+  </em>
+ </p>
+ <p>
+  Both 3D Slicer and SlicerPET’s module are open source. The following subsections outline the workflow of the module.
+ </p>
+ <p>
+  <a href="/source/files/134_535289488.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_535289488.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The workflow begins with data loading.
+  </em>
+ </p>
+ <p>
+  <strong>
+   Step 1: Data Loading
+  </strong>
+  <br/>
+  The workflow begins with the selection of three volumes required for needle guidance. These volumes are respiratory-compensated PET, respiratory-compensated CT, and interventional CT scans. Any of the image-loading techniques available in 3D Slicer work when making this selection. Examples include use of the Digital Imaging and Communications in Medicine (DICOM) database browser, as well as drag and drop.
+ </p>
+ <p>
+  <strong>
+   Step 2: Registration
+  </strong>
+  <br/>
+  SlicerPET registers the respiratory-compensated CT with the interventional CT scan. SlicerPET 2.0 features a refactored registration step, which allows for multi-phase rigid body registration in addition to optional deformable B-spline registration. The release also offers a manual interface for adjusting the initial transform to ensure convergence, even with grossly different CT images. What is more, the release removes rarely used parameters from the user interface.
+ </p>
+ <p>
+  <a href="/source/files/134_1018109372.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1018109372.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Completing rigid-only registration makes adjusted initial positions visible in the left panel. The slice views show an overlap of interventional CT and CT components from the PET/CT suite.
+  </em>
+ </p>
+ <p>
+  <strong>
+   Step 3: Tracking
+  </strong>
+  <br/>
+  SlicerPET establishes a connection between the tracking system and 3D Slicer using the Image Guided Surgery Toolkit (IGSTK). IGSTK is a component-based framework that reads and displays medical images. The toolkit offers visualization and point-based registration capabilities, with provisions for logging, handling exceptions, and completing problem resolution.
+ </p>
+ <p>
+  <a href="/source/files/134_1996706642.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1996706642.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   SlicerPET uses IGSTK to connect the tracking device with 3D Slicer.
+  </em>
+ </p>
+ <p>
+  <strong>
+   Step 4: Tool Calibration
+  </strong>
+  <br/>
+  If necessary, SlicerPET finds the transformation between the tip and the head of the biopsy needle. To do so, SlicerPET relies on Public software Library for UltraSound imaging research’s (PLUS’s)
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e83fc3312032182167" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    PivotCalibration
+   </span>
+  </span>
+  module [5].
+ </p>
+ <p>
+  <a href="/source/files/134_83305473.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_83305473.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The pivot-calibration step is optional.
+  </em>
+ </p>
+ <p>
+  <strong>
+   Step 5: Patient Registration
+  </strong>
+  <br/>
+  Through point-based registration, SlicerPET registers the interventional CT coordinate system to the needle tracker coordinate system in the interventional suite.
+ </p>
+ <p>
+  <a href="/source/files/134_791243245.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_791243245.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The test session captured in the screenshot uses a simulated tracker, which moves randomly. The high root mean square (RMS) error reflects this movement.
+  </em>
+ </p>
+ <p>
+  <strong>
+   Step 6: Needle Path Planning
+  </strong>
+  <br/>
+  Once given target and entry points, SlicerPET visualizes the path between them. Repositioning the endpoints enables avoidance of ribs, etc., during procedures. A key highlight of this step is the PET image layer, which makes it easy to localize tumors.
+ </p>
+ <p>
+  <a href="/source/files/134_2062441054.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_2062441054.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   SlicerPET permits adjustment of planned-path visualization parameters.
+  </em>
+ </p>
+ <p>
+  SlicerPET 2.0 improves visualization elements in needle path planning. The next step, guidance, also benefits from improved visual elements.
+ </p>
+ <p>
+  <strong>
+   Step 7: Guidance
+  </strong>
+  <br/>
+  In this step, SlicerPET overlays a model of the needle and offers 3D visualization guidance for needle placement.
+ </p>
+ <p>
+  During a biopsy procedure, SlicerPET tracks the needle in real time and updates the virtual image. SlicerPET displays four slices: axial, sagittal, parallel to the needle, and perpendicular to the needle. Capabilities of the latter display include rotation. Clinicians use this display as guidance for biopsies.
+ </p>
+ <p>
+  <a href="/source/files/4_479338226.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_479338226.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   SlicerPET allows for adjustment of needle visualization parameters.
+  </em>
+ </p>
+ <p>
+  With version 2.0, SlicerPET can save statistical data and a screenshot at the end of each procedure. Clinicians refer to this information for quantitative analysis of biopsy guidance.
+ </p>
+ <p>
+  A clinical feasibility study at Georgetown University is underway to evaluate the effectiveness of the SlicerPET guidance system for clinical patients. For more information on SlicerPET, contact
+  <a href="mailto:kitware@kitware.com">
+   kitware@kitware.com
+  </a>
+  . To use the latest version of SlicerPET, download the installers [6] and the source code [7].
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Acknowledgment
+    </strong>
+   </span>
+  </span>
+  <br/>
+  Research reported in this publication was supported by the National Cancer Institute of the National Institutes of Health under Award Number R42CA153488. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+  <br/>
+  1.    Zukić, Dženan, Julien Finet, Emmanuel Wilson, Filip Banovac,  Giuseppe Esposito, Kevin Cleary, and Andinet Enquobahrie. “SlicerPET: A workflow based software module for PET/CT guided needle biopsy.” Proceedings of the Computer Assisted Radiology and Surgery 29th International Congress and Exhibition, Barcelona, Spain, June 24-27, 2015: S186-S187.
+  <br/>
+  2.    Kitware, Inc. “Overview.” PET-CT.
+  <a href="http://public.kitware.com/Wiki/PET-CT">
+   http://public.kitware.com/Wiki/PET-CT
+  </a>
+  .
+  <br/>
+  3.    Fedorov Andriy, Reinhard Beichel, Jayashree Kalpathy-Cramer, Julien Finet, Jean-Christophe Fillion-Robin, Sonia Pujol, Christian Bauer, Dominique Jennings, Fiona Fennessy, Milan Sonka, John Buatti, Stephen Aylward, James V. Miller, Steve Pieper, and Ron Kikinis. “3D Slicer as an Image Computing Platform for the Quantitative Imaging Network.” Magnetic Resonance Imaging 30 (2012): 1323-41. PMID: 22770690.
+  <br/>
+  4.    “Summary.” Documentation/4.5/Announcements.
+  <a href="http://wiki.slicer.org/slicerWiki/index.php/Documentation/4.5/Announcements">
+   http://wiki.slicer.org/slicerWiki/index.php/Documentation/4.5/Announcements
+  </a>
+  .
+  <br/>
+  5.    Lasso, Andras. “Home.” Plus. November 25, 2015.
+  <a href="https://www.assembla.com/spaces/plus/wiki">
+   https://www.assembla.com/spaces/plus/wiki
+  </a>
+  .
+  <br/>
+  6.    Kitware, Inc. “SlicerPET.” Girder.
+  <a href="http://bit.ly/1Inw5LF">
+   http://bit.ly/1Inw5LF
+  </a>
+  .
+  <br/>
+  7.    “SlicerPET.” Petct / SlicerPET.
+  <a href="https://gitlab.kitware.com/petct/SlicerPET">
+   https://gitlab.kitware.com/petct/SlicerPET
+  </a>
+  .
+ </p>
+ <p>
+  <a href="/source/files/4_1688924881.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1688924881.png" style="width: 100px; padding-right: 10px; float: left;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Dženan Zukić
+  </strong>
+  is a research and development engineer on Kitware’s Medical Computing team. His interests include image processing and manipulation, as well as image-guided surgical software.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_978798192.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_978798192.png" style="width: 100px; padding-right: 10px; float: left;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Emmanuel Wilson
+  </strong>
+  is a staff scientist at Children’s National Health System in Washington, DC. His interest is in biomedical technology development for the clinical environment.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_350352090.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_350352090.png" style="width: 100px; padding-right: 10px; float: left; height: 125px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Kevin Cleary
+  </strong>
+  leads an interdisciplinary bioengineering team at Children’s National Health System, with a focus on improving visualization in pediatric surgery through medical devices and robotics.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1831705118.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1831705118.png" style="width: 100px; padding-right: 10px; float: left;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Andinet Enquobahrie
+  </strong>
+  is the Assistant Director of Medical Computing at Kitware.  As a subject matter expert, he is responsible for technical contribution and management of image-guided intervention, quantitative imaging, and surgical simulation projects.
+ </p>
+</div>

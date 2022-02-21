@@ -1,0 +1,1291 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  Introduction
+ </h1>
+ <p>
+  The Visualization Toolkit system has been in active development for over twenty years, and from the earliest days the community has concerned itself with parallel computing. The class vtkMultiThreader was introduced in 1997, mainly to support threaded, shared-memory data processing in the imaging pipeline. Scalable, distributed parallel computing has also been a major focus. Applications such as ParaView depend on these capabilities to execute on large leadership computing facilities. For example, ParaView/VTK has been successfully run using 256,000 processors in a co-processing simulation with the Phasta turbulent flow analysis code on Argonne’s Mira IBM Blue Gene Q system [https://vimeo.com/120504264]. Such data parallel, distributed computing applications require a sophisticated execution model, and VTK has seen several incarnations of the pipeline architecture as a result. Similar development efforts continue to this day, with client-server models extending the reach of server-side parallel computing through systems such as VTK/ParaViewWeb [http://www.paraview.org/web/]. In fact with the advent of cloud computing and inexpensive systems such as Amazon AWS and Google Compute Engine, it is now possible to use VTK/ParaView in a distributed, customized, relatively inexpensive, on-demand basis to meet the computational needs of many organizations.
+ </p>
+ <p>
+  However as we all know the computing industry is not standing still and the field of parallel computing is advancing rapidly due to innovations in GPU and multicore technologies. With the plateauing of serial clock speeds (due to power and other physical constraints), chip manufacturers are adding computing capacity in the form of additional computing cores and vectorized processing units. While such hardware represents a significant leap in computing potential—with the distinct possibility of a dawning exascale computing era—these hardware advances pose significant challenges to software systems. Not only are popular programming languages unsuited for most parallel computing applications, the diversity of emerging parallel approaches makes it very difficult to create general programs that can take advantage of different hardware and software libraries across a variety of platforms. There is also the algorithm design challenge: Many developers simply adapt applications that were initially developed in a serial computing environment. Such adaptations typically use relatively limited task- and data-parallel approaches that require significant synchronization and interprocess communication, as well as locks and mutexes to access serial data structures. These approaches often do not scale well on massively parallel hardware. Instead, in the interest of scaling across the emerging parallel hardware, developers must rethink parallel algorithms that may be slower and less efficient at small scale, but execute efficiently as data becomes large.
+ </p>
+ <p>
+  These challenges are significant and require concerted effort to realize the full potential of parallel computing. The VTK/ParaView community, led by Dr. Berk Geveci at Kitware in collaboration with prestigious computing organizations such as DOE’s Sandia, Los Alamos, and Oak Ridge National Labs, is taking these challenges to heart and has developed a broad vision for the future, one that depends on a multi-pronged approach to address differing parallel computing needs. The major components of this vision include:
+ </p>
+ <ul>
+  <li>
+   vtkSMPTools, an abstraction for threaded processing which under the hood uses different libraries such as TBB, OpenMP and X-Kaapi. The typical target application is coarse-grained shared-memory computing as provided by mainstream multicore, threaded CPUs such as Intel’s i5 and i7 architectures.
+  </li>
+  <li>
+   VTK-m, a toolkit of scientific visualization algorithms for emerging processor architectures (GPUs and co-processors). VTK-m is designed for fine-grained concurrency and provides abstract data and execution models that can be utilized to construct a variety of scalable algorithms.
+  </li>
+  <li>
+   New Algorithms, requiring the redesign and implementation of algorithms and data structures that best take advantage of new parallel computing hardware and libraries. This requires identifying essential capabilities for a variety of visualization and data analysis tasks.
+  </li>
+ </ul>
+ <p>
+  Currently all of these areas are under active development. In particular this blog post addresses vtkSMPTools due to its relative simplicity and maturity. Future articles will describe the other approaches as they mature and are further incorporated into VTK and ParaView.
+ </p>
+ <h1>
+  vtkSMPTools
+ </h1>
+ <p>
+  The best place to start is to read this
+  <a href="http://m.vtk.org/Wiki/images/3/3b/VTK_SMP_Guide.pdf">
+   short but informative description
+  </a>
+  . As stated in the introduction to this document, the objective of the SMP (symmetric multiprocessing) framework is to provide a basic infrastructure for the easy development of shared memory parallel algorithms in VTK. The resulting framework is quite simple supporting:
+ </p>
+ <ul>
+  <li>
+   atomic integers and associated operations;
+  </li>
+  <li>
+   thread local storage; and
+  </li>
+  <li>
+   parallel building blocks such as parallel for loops.
+  </li>
+ </ul>
+ <p>
+  A noteworthy feature of vtkSMPTools is that it defines an abstraction to a variety of underlying threading systems, and at compile time (using the CMake advanced option VTK_SMP_IMPLEMENTATION_TYPE) it is possible to choose one of several possible threading facilities. Currently the choices are the Intel Threading Building Blocks library
+  <a href="https://www.threadingbuildingblocks.org">
+   TBB
+  </a>
+  ;
+  <a href="https://github.com/perarnau/xkaapi/blob/kcomputer/README">
+   Kaapi
+  </a>
+  ; Simple (soon to be replaced by the
+  <a href="http://openmp.org">
+   OpenMP
+  </a>
+  backend); and Sequential (as in serial processing). At the time of this writing, OpenMP is also being added to the mix as well and will be available soon. In addition, key general-purpose algorithms such as parallelsort will also be supported by vtkSMPTools.
+ </p>
+ <p>
+  With vtkSMPTools, rather than worrying about scheduling and balancing work among multiple threads, a developer can focus on writing algorithms as a sequences of small, independent tasks. vtkSMPTools takes care of distributing the work to the underlying thread resources.
+ </p>
+ <h1>
+  Parallel For()
+ </h1>
+ <p>
+  This framework implements a thin wrapper around existing tools such as TBB and OpenMP, and provides a simple API for writing parallel code. Useful algorithms that scale well can be created using the parallel for loop vtkSMPTools::For(). The arguments to For() consist of start and end parameters, expressed as integers of type vtkIdType and which define the semi-open range [start,end), and a functor to be executed over this range. The functor is a C++ class with an implementation of operator(). Optionally, a “chunk” or “grain” size can be provided that provides a hint as how to divide up the problem for effective load balancing vs scheduling overhead.
+ </p>
+ <p>
+  In practice the parallel for construct will look like the following:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e81bc17ec781491457" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+vtkSomeFunctor func;
+vtkSMPTools::For(begin,end,func);</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ec781491457-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ec781491457-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e81bc17ec781491457-1">
+        <span class="crayon-e">
+         vtkSomeFunctor
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ec781491457-2">
+        <span class="crayon-v">
+         vtkSMPTools
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-st">
+         For
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-st">
+         end
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  This high level specification of the computation enables the different backends to employ various scheduling strategies for best performance. For example, the OpenMP backend supports static, dynamic, guided or implementation-dependent, default scheduling strategies, which can be chosen at runtime by setting the OMP_SCHEDULE environment variable. (Please refer to the OpenMP specification for a description of these strategies.) The TBB backend implements a technique called
+  <a href="http://en.wikipedia.org/wiki/Work_stealing">
+   work stealing
+  </a>
+  . In work stealing, each thread has its own work pool, from where it takes the next task to execute and adds any new tasks that are generated. Using local queues removes contention that is present when using a single work pool. When a thread has exhausted its own pool, it steal more work from other threads’ pools hence balancing the workload.
+ </p>
+ <p>
+  The optional grain size parameter to parallel-for gives a hint about the granularity of the computation to be performed. This is useful for a good balance between scheduling overhead and load balancing. Parallelism is achieved by splitting the input range into smaller sub-ranges based on the grain size and assigning these sub ranges to the threads. If the grain size is too low, the functor is invoked many times and the overhead of invocation adds up resulting in poor performance. If it is too high, the overhead is reduced, but it can result in poor load balancing as some threads may finish their work sooner (if some of the sub-ranges are less demanding) and become idle since there are not enough sub-ranges to keep them fed. The grain size depends on the type of computation and it is recommended that an appropriate value be specified. The TBB backend can chose a grain size heuristically (and adaptively adjust it) but this feature is not available on the other backends. Other backends simply assign tasks based on a small multiple of the number of available threads.
+ </p>
+ <h1>
+  Example
+ </h1>
+ <p>
+  Here’s a simple example inspired by the VTK class vtkWarpVector to create the class vtkSMPWarpVector. vtkSMPWarpVector simply computes new point coordinates by displacing input points by an associated, scaled vector field. First the functor is defined, including overloading operator(), which in this case is templated over the type of points and vectors.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e81bc17fa357844136" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include "vtkSMPTools.h"
+
+template &lt;class T1, class T2&gt;
+class vtkSMPWarpVectorOp
+{
+public:
+  T1 *InPoints;
+  T1 *OutPoints;
+  T2 *InVector;
+  T1 scaleFactor;
+
+  void  operator()(vtkIdType begin, vtkIdType end)
+  {
+    T1* inPts = this-&gt;InPoints + 3*begin;
+    T1* outPts = this-&gt;OutPoints + 3*begin;
+    T2* inVec = this-&gt;InVector + 3*begin;
+    T1 sf = this-&gt;scaleFactor;
+    vtkIdType size = 3*(end-begin);
+    vtkIdType nend = begin + size;
+
+    for (vtkIdType index = begin; index &lt; nend; index++)
+      {
+      *outPts = *inPts + sf * (T1)(*inVec);
+      inPts++; outPts++; inVec++;
+      }
+  }
+};</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17fa357844136-27">
+        27
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-1">
+        <span class="crayon-p">
+         #include "vtkSMPTools.h"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-3">
+        <span class="crayon-v">
+         template
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         T1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         T2
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-4">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkSMPWarpVectorOp
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-5">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-6">
+        <span class="crayon-m">
+         public
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T1 *
+        </span>
+        <span class="crayon-v">
+         InPoints
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T1 *
+        </span>
+        <span class="crayon-v">
+         OutPoints
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T2 *
+        </span>
+        <span class="crayon-v">
+         InVector
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         T1
+        </span>
+        <span class="crayon-v">
+         scaleFactor
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-11">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         operator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-st">
+         end
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T1*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inPts
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-v">
+         InPoints
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T1*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outPts
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-v">
+         OutPoints
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T2*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inVec
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-v">
+         InVector
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         T1
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-v">
+         scaleFactor
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         size
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-st">
+         end
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         nend
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         size
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-20">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         index
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         begin
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         index
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nend
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         index
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         outPts
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         inPts
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         sf *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         T1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         inVec
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inPts
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outPts
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inVec
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-25">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17fa357844136-27">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0009 seconds] -->
+ <p>
+  Next in the VTK class, the functor is used as follows (in the templated execution method vtkSMPWarpVectorExecute2):
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e81bc17ff822653572" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+template &lt;class T1, class T2&gt;
+void vtkSMPWarpVectorExecute2(vtkSMPWarpVector *self, T1 *inIter, T1 *outIter,
+                              T2 *inVecIter, vtkIdType size)
+{
+  vtkSMPWarpVectorOp&lt;T1, T2&gt; func;
+  func.InPoints = inIter;
+  func.OutPoints = outIter;
+  func.InVector = inVecIter;
+  func.scaleFactor = (T1)self-&gt;GetScaleFactor();
+
+  vtkSMPTools::For(0, size, func);
+}</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e81bc17ff822653572-12">
+        12
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-1">
+        <span class="crayon-v">
+         template
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         T1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         T2
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-2">
+        <span class="crayon-t">
+         void
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkSMPWarpVectorExecute2
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e ">
+         vtkSMPWarpVector *
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T1 *
+        </span>
+        <span class="crayon-v">
+         inIter
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T1 *
+        </span>
+        <span class="crayon-v">
+         outIter
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         T2 *
+        </span>
+        <span class="crayon-v">
+         inVecIter
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkIdType
+        </span>
+        <span class="crayon-v">
+         size
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-4">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkSMPWarpVectorOp
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-v">
+         T1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         T2
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         InPoints
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inIter
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         OutPoints
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outIter
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         InVector
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inVecIter
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         scaleFactor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         T1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         GetScaleFactor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-10">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkSMPTools
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-st">
+         For
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         size
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         func
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e81bc17ff822653572-12">
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+  (The full implementation is available in Filters/SMP/vtkSMPWarpVector.h/.cxx) That’s it, with very few lines of code, a scalable, threaded, load-balanced algorithm has been implemented.
+ </p>
+ <h1>
+  Advanced Capabilities and Future Work
+ </h1>
+ <p>
+  In an ideal parallel algorithm, threads operate on data without retaining state between invocations; and read and write from and to shared memory without contention. In the example above, no initialization or final reduction is required on each thread, and writing to memory is uniquely determined by which point id the thread is working on. In more realistic applications, however, many algorithms do require synchronization, initialization, and maintenance of local state. To provide these capabilities, vtkSMPTools provides the following tools (see the document referenced previously for more information):
+ </p>
+ <p>
+  Thread local storage is used to store VTK instances and other objects. Developers can instantiate objects using vtkSMPThreadLocal and vtkSMPThreadLocalObject (for VTK classes that require VTK-specific allocation and deletion). These objects are created once per thread, and persist as each edge processes its assigned tasks. Such local thread objects are a great way to accumulate output over multiple thread invocations. Functor initialization and reduction is typically used in combination with the creation of local thread objects, since these objects must often be initialized; and the results combined (or reduced) into final form as execution concludes. vtkSMPTools provides these capabilities by invoking the optional Initialize() and Reduce() method (defined by the functor in combination with the operator() method). Atomic Integers can be used to ensure data integrity when reading from and writing to shared memory. vkSMPTools supports a subset of the C++11 atomic API; mainly the operators ++, -, +=, -=, load, and store. These integers can be used when multiple threads must access and manipulate a common data structure.
+ </p>
+ <p>
+  Currently many VTK algorithms are being rewritten with these simple constructs with good performance scaling. New algorithms are also being designed and implemented (both in the vtkSMPTools framework as well as in VTK-m). If you are interested in realizing performance gains in your own code, we recommend that you build VTK with vtkSMPTools enabled (currently TBB is the most popular). We also look forward to receiving contributions of your new and old algorithms implemented using this framework.
+ </p>
+</div>

@@ -1,0 +1,212 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  Introduction
+ </h1>
+ <p dir="ltr">
+  <span id="docs-internal-guid-72f2e862-5066-9c20-48f6-5c0f4cbc8402">
+   We use
+   <a href="http://www.paraview.org">
+    ParaView
+   </a>
+   for many of our our point cloud projects:
+  </span>
+  <a href="http://vimeo.com/43975225">
+   object detection
+  </a>
+  ,
+  <a href="http://vimeo.com/91453207">
+   mobile LiDAR
+  </a>
+  ,
+  <a href="https://blog.kitware.com/visualizing-point-clouds-in-paraview/">
+   advanced visualization
+  </a>
+  , and more. ParaView provides a platform for interactive visualization and processing pipelines with python scriptability. Last year we wrote a
+  <a href="https://blog.kitware.com/interactive-visualization-of-google-project-tango-data-with-paraview/">
+   blog post
+  </a>
+  describing how to load point cloud data into ParaView from the first generation Project Tango development kit. In this article we describe an updated method that works with the current development kit from Google. We are just getting started using the device and SDK and wanted to share our initial experiences and results.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" class="alignnone wp-image-18235" height="324" sizes="(max-width: 400px) 100vw, 400px" src="https://blog.kitware.com/wp-content/uploads/2015/02/image1-2-300x243.gif" srcset="https://blog.kitware.com/wp-content/uploads/2015/02/image1-2-300x243.gif 300w, https://blog.kitware.com/wp-content/uploads/2015/02/image1-2-220x178.gif 220w, https://blog.kitware.com/wp-content/uploads/2015/02/image1-2-250x202.gif 250w, https://blog.kitware.com/wp-content/uploads/2015/02/image1-2-355x287.gif 355w, https://blog.kitware.com/wp-content/uploads/2015/02/image1-2-90x73.gif 90w" width="400"/>
+ </p>
+ <p>
+  <span id="docs-internal-guid-72f2e862-505d-ea91-01f9-d42337b99422">
+   Using the new device, we have begun mapping and analyzing our 3D environment.  The video below shows the recorded information from a walk around our office.  This video uses the eye-dome lighting feature of ParaView to visualize the point cloud over the whole sequence.  The individual point cloud captured at each acquisition is highlighted in red, and the path of the tablet is shown in yellow.
+  </span>
+ </p>
+ <h1>
+  Installing the recorder app
+ </h1>
+ <p>
+  <span id="docs-internal-guid-15660131-505e-cc07-9bd8-e740df085f38">
+   We used the Point Cloud Java example from
+  </span>
+  <a href="https://github.com/googlesamples/tango-examples-java">
+   Project Tango Java API Example Projects
+  </a>
+  as the basis for our recording tool. We modified the application to record device pose and point cloud data from the Project Tango API.  This data is saved to
+  <a href="http://www.vtk.org/">
+   VTK
+  </a>
+  files which can be directly loaded into ParaView. The source code for this application is available
+  <u>
+   <a href="https://github.com/Kitware/ParaViewTangoRecorder">
+    here
+   </a>
+  </u>
+  under the Apache 2.0 license.  Improvements or fixes to this app are welcome as pull requests.  A binary download of the .apk is available
+  <u>
+   <a href="http://midas3.kitware.com/midas/item/316868">
+    here
+   </a>
+  </u>
+  <strong>
+   (updated)
+  </strong>
+  .  The current version is built against the Fermat release of the Project Tango SDK.
+ </p>
+ <h1 dir="ltr">
+  <span style="line-height: 1.2em;">
+   Using the recorder app
+  </span>
+ </h1>
+ <p dir="ltr" style="line-height: 20.7999992370605px;">
+  <span id="docs-internal-guid-72f2e862-505f-584d-d271-54db7991ff06">
+   To start recording, open the ParaView Tango Recorder on the device.  After starting the app, hold the device still for several seconds while the device initializes itself. You can start using the app when you see a point cloud appear. The app listens to callbacks from the Project Tango SDK for updates of the device pose and for new point cloud data.  Recorded data is written to the sdcard storage.
+  </span>
+ </p>
+ <p dir="ltr">
+  <span id="docs-internal-guid-72f2e862-505f-584d-d271-54db7991ff06">
+   The app can record two different types of data:
+  </span>
+ </p>
+ <ul style="list-style-type: disc;">
+  <li>
+   <span style="line-height: 1.6em;">
+    Point Cloud – the 3D coordinates of each point in the pointcloud along with a timestamp.  Currently we record a subset of the available point cloud data (every third frame of the point cloud data) to reduce overall storage requirements.
+   </span>
+  </li>
+  <li>
+   <span style="line-height: 1.6em;">
+    <span id="docs-internal-guid-72f2e862-505f-584d-d271-54db7991ff06">
+     Device Pose – The 3D position, orientation, and timestamp of the device position are recorded separately.
+    </span>
+   </span>
+  </li>
+ </ul>
+ <p style="text-align: center;">
+  <img alt="" class="alignnone wp-image-18239" height="251" sizes="(max-width: 401px) 100vw, 401px" src="https://blog.kitware.com/wp-content/uploads/2015/02/image5-300x188.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/02/image5-300x188.png 300w, https://blog.kitware.com/wp-content/uploads/2015/02/image5-768x480.png 768w, https://blog.kitware.com/wp-content/uploads/2015/02/image5-1024x640.png 1024w, https://blog.kitware.com/wp-content/uploads/2015/02/image5-220x138.png 220w, https://blog.kitware.com/wp-content/uploads/2015/02/image5-250x156.png 250w, https://blog.kitware.com/wp-content/uploads/2015/02/image5-355x222.png 355w, https://blog.kitware.com/wp-content/uploads/2015/02/image5-730x456.png 730w, https://blog.kitware.com/wp-content/uploads/2015/02/image5-90x56.png 90w" width="401"/>
+ </p>
+ <p dir="ltr">
+  <span id="docs-internal-guid-72f2e862-505f-f4d2-3b2d-f707751f49a2">
+   To start recording the user should toggle on the
+  </span>
+  Record switch; this will begin recording the pose information only.  Point cloud data can be acquired either by tapping the Snapshot button to record a single point cloud or by enabling Auto Mode which will automatically record every third point cloud that becomes available.  The First, Third, and Top buttons control the camera viewpoint of the live point cloud stream showing first person, third-person, and top-down views.  If difficulties are encountered in viewing the point cloud data try restarting the app and review the
+  <a href="https://developers.google.com/project-tango/hardware/tablet#troubleshooting_and_support">
+   troubleshooting
+  </a>
+  procedures.
+ </p>
+ <p>
+  <span id="docs-internal-guid-72f2e862-505f-f4d2-3b2d-f707751f49a2" style="line-height: 1.6em;">
+   When recording is stopped by switching off the
+  </span>
+  <span style="line-height: 1.6em;">
+   Record button, a dialog will appear to share the scan data compressed as a .zip, to another application. You can then save the scan to another application such as Google Drive, Email, etc.
+  </span>
+ </p>
+ <p style="text-align: center;">
+  <img alt="" class="alignnone wp-image-18236" height="252" sizes="(max-width: 402px) 100vw, 402px" src="https://blog.kitware.com/wp-content/uploads/2015/02/image2-300x188.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/02/image2-300x188.png 300w, https://blog.kitware.com/wp-content/uploads/2015/02/image2-768x480.png 768w, https://blog.kitware.com/wp-content/uploads/2015/02/image2-1024x640.png 1024w, https://blog.kitware.com/wp-content/uploads/2015/02/image2-220x138.png 220w, https://blog.kitware.com/wp-content/uploads/2015/02/image2-250x156.png 250w, https://blog.kitware.com/wp-content/uploads/2015/02/image2-355x222.png 355w, https://blog.kitware.com/wp-content/uploads/2015/02/image2-730x456.png 730w, https://blog.kitware.com/wp-content/uploads/2015/02/image2-90x56.png 90w" width="402"/>
+ </p>
+ <p dir="ltr">
+  <span id="docs-internal-guid-72f2e862-5060-3f4e-ab55-9eb3c7520cd9">
+   There will be a delay before this dialog appears, so be patient; longer scans will require more time to launch the
+  </span>
+  Send Data To… dialog.
+ </p>
+ <p>
+  <span id="docs-internal-guid-72f2e862-5060-3f4e-ab55-9eb3c7520cd9">
+   The data is also recorded on the SD card, in the folder
+  </span>
+  /sdcard/Tango/MyPointCloudData. There is no feature within the current app to clear that data from disk. If you want to free disk space you can use a file manager app or adb to delete the files manually.
+ </p>
+ <h1 dir="ltr">
+  <span id="docs-internal-guid-72f2e862-5060-6756-b4d1-ee60e3defe16">
+   Loading data in ParaView
+  </span>
+ </h1>
+ <p dir="ltr">
+  <span id="docs-internal-guid-72f2e862-5060-9600-86b8-706917282e58">
+   The ParaView Tango Recorder app uses the VTK file format to store pose and point cloud information stored in a .zip file.  Sample data is available
+   <a href="http://midas3.kitware.com/midas/item/316864">
+    <u>
+     here
+    </u>
+   </a>
+   .  After the .zip file is extracted, the contents may be opened in ParaView.  For this tutorial we used
+  </span>
+  <a href="http://www.paraview.org/download/">
+   ParaView 4.3.1
+  </a>
+  .  After opening ParaView, use File &gt; Open… to load the pose and point cloud data.  The point cloud files should appear as a single collapsed entry.  If you select and load this entry, without uncollapsing the filenames, the data will load as a point cloud animation sequence. After loading, we toggle off the visibility of the scan data to show only the file pc_14143861_poses.vtk.
+  <span style="line-height: 1.6em;">
+   This shows the XYZ position of the device during recording.  In this case it traces a path through our office.  The orientation and time information are stored as point data within the object.
+  </span>
+ </p>
+ <p dir="ltr" style="text-align: center;">
+  <img alt="" class="alignnone wp-image-18237" height="123" sizes="(max-width: 401px) 100vw, 401px" src="https://blog.kitware.com/wp-content/uploads/2015/02/image3-300x92.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/02/image3-300x92.png 300w, https://blog.kitware.com/wp-content/uploads/2015/02/image3-768x236.png 768w, https://blog.kitware.com/wp-content/uploads/2015/02/image3-1024x315.png 1024w, https://blog.kitware.com/wp-content/uploads/2015/02/image3-220x68.png 220w, https://blog.kitware.com/wp-content/uploads/2015/02/image3-250x77.png 250w, https://blog.kitware.com/wp-content/uploads/2015/02/image3-355x109.png 355w, https://blog.kitware.com/wp-content/uploads/2015/02/image3-730x225.png 730w, https://blog.kitware.com/wp-content/uploads/2015/02/image3-90x28.png 90w, https://blog.kitware.com/wp-content/uploads/2015/02/image3.png 1453w" width="401"/>
+ </p>
+ <p dir="ltr">
+  <span id="docs-internal-guid-72f2e862-5060-cb05-f6b2-711b953f78e6">
+   Second we can view and animate the point cloud data. The Animation toolbar at the top enables sequential playback of the point cloud data. In the figure below, we see a 3D scan of a person wearing boxing gloves from the perspective of the depth camera.
+  </span>
+ </p>
+ <p dir="ltr" style="text-align: center;">
+  <img alt="" class="alignnone wp-image-18238" height="220" sizes="(max-width: 400px) 100vw, 400px" src="https://blog.kitware.com/wp-content/uploads/2015/02/image4-300x165.gif" srcset="https://blog.kitware.com/wp-content/uploads/2015/02/image4-300x165.gif 300w, https://blog.kitware.com/wp-content/uploads/2015/02/image4-768x424.gif 768w, https://blog.kitware.com/wp-content/uploads/2015/02/image4-1024x565.gif 1024w, https://blog.kitware.com/wp-content/uploads/2015/02/image4-220x121.gif 220w, https://blog.kitware.com/wp-content/uploads/2015/02/image4-250x138.gif 250w, https://blog.kitware.com/wp-content/uploads/2015/02/image4-355x196.gif 355w, https://blog.kitware.com/wp-content/uploads/2015/02/image4-730x403.gif 730w, https://blog.kitware.com/wp-content/uploads/2015/02/image4-90x50.gif 90w" width="400"/>
+ </p>
+ <p dir="ltr">
+  <span id="docs-internal-guid-72f2e862-5060-f296-34ae-483a58f36a73">
+   In a followup post we will show how to align the depth information with the device pose, visualize the orientation of the device as glyphs, overlay multiple depth scans into a single scene, and other techniques needed to create visualizations like the video at the top of the blog post.
+  </span>
+ </p>
+ <h1>
+  Links
+ </h1>
+ <ul>
+  <li>
+   ParaView:
+   <span style="color: #222222; font-family: arial, sans-serif; font-size: small; line-height: normal;">
+   </span>
+   <a href="http://www.paraview.org/download/" rel="noopener noreferrer" style="color: #1155cc; font-family: arial, sans-serif; font-size: small; line-height: normal;" target="_blank">
+    http://www.paraview.org/downlo
+    <wbr/>
+    ad/
+   </a>
+  </li>
+  <li>
+   <span style="line-height: 1.6em;">
+    Recording APK:
+   </span>
+   <a href="http://midas3.kitware.com/midas/item/316868">
+    http://midas3.kitware.com/midas/item/316868
+   </a>
+   <strong>
+    (updated)
+   </strong>
+  </li>
+  <li>
+   Source code for recorder:
+   <a href="https://github.com/Kitware/ParaViewTangoRecorder">
+    https://github.com/Kitware/ParaViewTangoRecorder
+   </a>
+  </li>
+  <li>
+   Example data:
+   <a href="http://midas3.kitware.com/midas/item/316864">
+    http://midas3.kitware.com/midas/item/316864
+   </a>
+  </li>
+ </ul>
+</div>

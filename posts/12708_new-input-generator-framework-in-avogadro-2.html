@@ -1,0 +1,1020 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="http://avogadro.openmolecules.net/">
+   Avogadro 1.x
+  </a>
+  had quite a large number of input generators from very humble beginnings. These input generators were designed to be easy to write, and to give a simple path from a structure in Avogadro to something that could be used as an input file in one of many codes. Our basic approach was to add a C++ class per program we targeted, with one or two special cases. This meant that to develop an input generator it was necessary to learn some of the Avogadro API, and to at least compile a plugin (matching our compiler,
+  <a href="http://qt-project.org/">
+   Qt
+  </a>
+  , library versions, etc). It also led to minor differences between the different input generators, and a lot of copying/pasting of boilerplate code.
+ </p>
+ <p>
+  <center>
+   <img alt="Avogadro 2 showing an ethane molecule" height="518" src="https://blog.kitware.com/blog/files/7_971629032.png" width="600"/>
+  </center>
+ </p>
+ <p>
+  When developing the input generators for
+  <a href="http://openchemistry.org/">
+   Avogadro 2 as part of the Open Chemistry project
+  </a>
+  we wanted to make it easier to add new generators. We put a lot of thought into how to make this possible, and how to maintain a native look and feel without necessarily making an input generator developer learn C++, Qt, Avogadro and everything that goes along with setting up a development environment. The new input generator framework is largely language agnostic, with a minimum of assumptions. It currently executes the
+  <a href="http://python.org/">
+   Python
+  </a>
+  interpreter, but that is largely an artifact of the fact we have only developed input generators using Python.
+ </p>
+ <p>
+  <center>
+   <img alt="Avogadro 2 NWChem input generator with syntax highlighting" height="519" src="https://blog.kitware.com/blog/files/7_2026438301.png" width="600"/>
+  </center>
+ </p>
+ <p>
+  The input generators are executed in a separate process, using several passes to get the display name, options supported, syntax highlighting rules and finally to actually generate the input. The current pass is communicated using command-line arguments, input is passed to the program using standard input and formatted as
+  <a href="http://www.json.org/">
+   JSON
+  </a>
+  . The results should be passed back using the standard output stream, and depending on the pass should be JSON results or the actual input file. We also do some post-processing of the input file where the molecular geometry can be inserted following the specified format. This command line API is
+  <a href="http://doc.openchemistry.org/avogadrolibs/api/class_avogadro_1_1_qt_plugins_1_1_input_generator.html#details">
+   documented here
+  </a>
+  . The
+  <a href="https://github.com/OpenChemistry/avogadrolibs/blob/master/avogadro/qtplugins/quantuminput/inputGenerators/nwchem.py">
+   NWChem input generator
+  </a>
+  is the first to add syntax highlighting in an external plugin, the GAMESS input generator shows an approach using C++ ported from Avogadro 1.x.
+ </p>
+ <p>
+  This approach assures that an input generator cannot possibly crash or hang the interface, licensing is not an issue (separate execution process) and gives input generator developers the freedom to concentrate on turning options into the appropriate input file without worrying about the details of the application it is being used in. With relatively minor modifications Avogadro 2 could look for other file extensions and execute the appropriate interpreter, or simply execute the programs found in a given path. These files can be modified directly, if options change it is currently necessary to restart Avogadro, but if the input generation changes those changes would be reflected in Avogadro the next time the generator was run. Menu entries are added dynamically at program start up, and this concept could be extended to more of Avogadro. The main for the
+  <a href="http://www.nwchem-sw.org/">
+   NWChem
+  </a>
+  input generator is shown below,
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7c6c2e7e980351004" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser('Generate a NWChem input file.')
+  parser.add_argument('--debug', action='store_true')
+  parser.add_argument('--print-options', action='store_true')
+  parser.add_argument('--generate-input', action='store_true')
+  parser.add_argument('--display-name', action='store_true')
+  args = vars(parser.parse_args())
+
+  debug = args['debug']
+
+  if args['display_name']:
+    print("NWChem")
+  if args['print_options']:
+    print(json.dumps(getOptions()))
+  elif args['generate_input']:
+    print(json.dumps(generateInput()))</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e7e980351004-16">
+        16
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-1">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         __name__
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "__main__"
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         parser
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         argparse
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ArgumentParser
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'Generate a NWChem input file.'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         parser
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         add_argument
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         '--debug'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         action
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'store_true'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         parser
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         add_argument
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         '--print-options'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         action
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'store_true'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         parser
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         add_argument
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         '--generate-input'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         action
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'store_true'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         parser
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         add_argument
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         '--display-name'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         action
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'store_true'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         args
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         parser
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         parse_args
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         debug
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         args
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'debug'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-10">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         args
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'display_name'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "NWChem"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         args
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'print_options'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         json
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         dumps
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         getOptions
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         elif
+        </span>
+        <span class="crayon-v">
+         args
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'generate_input'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e7e980351004-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         json
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         dumps
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         generateInput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0053 seconds] -->
+ <p>
+ </p>
+ <p>
+  A snippet of the input generation code is shown below, where a variable is populated with what will be the raw input passed to the code.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7c6c2e88106389271" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def generateInputFile(opts):
+  # Extract options:
+  title = opts['Title']
+  calculate = opts['Calculation Type']
+  theory = opts['Theory']
+  basis = opts['Basis']
+  multiplicity = opts['Multiplicity']
+  charge = opts['Charge']
+  # Preamble
+  nwfile = ""
+  nwfile += "echo\n\n"
+  nwfile += "start molecule\n\n"
+  nwfile += "title \"%s\"\n"%title
+  # Coordinates
+  nwfile += "geometry units angstroms print xyz autosym\n"
+  nwfile += "$$coords:Sxyz$$\n"
+  nwfile += "end\n\n"
+  # More stuff here...
+  return nwfile</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7c6c2e88106389271-19">
+        19
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-1">
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         generateInputFile
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         opts
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Extract options:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         title
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opts
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'Title'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         calculate
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opts
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'Calculation Type'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         theory
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opts
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'Theory'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         basis
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opts
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'Basis'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         multiplicity
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opts
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'Multiplicity'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         charge
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opts
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'Charge'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Preamble
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ""
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "echo\n\n"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "start molecule\n\n"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "title \"%s\"\n"
+        </span>
+        <span class="crayon-o">
+         %
+        </span>
+        <span class="crayon-v">
+         title
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Coordinates
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "geometry units angstroms print xyz autosym\n"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "$$coords:Sxyz$$\n"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "end\n\n"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # More stuff here...
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7c6c2e88106389271-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nwfile
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+ </p>
+ <p>
+  We hope that this framework will make it much easier for researchers to customize their input generator scripts to their needs, and we would welcome your feedback on how we could make it even easier. If there are other languages of interest we could add examples, the major requirement is that the language can create a self-contained script or executable that can use standard in/out, has some string handling capabilities and support for JSON.
+ </p>
+</div>

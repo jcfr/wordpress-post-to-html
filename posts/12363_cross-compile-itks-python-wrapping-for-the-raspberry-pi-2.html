@@ -1,0 +1,2172 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <div class="document" id="cross-compile-itk-s-python-wrapping-for-the-raspberry-pi-2">
+  <div class="section" id="itk-python-on-the-pi">
+   <p>
+    This post describes how to cross-compile the
+    <a class="reference external" href="http://itk.org">
+     Insight Toolkit (ITK)
+    </a>
+    's Python wrapping for the
+    <a href="http://www.element14.com/community/community/raspberry-pi/raspberrypi2">
+     Raspberry Pi 2
+    </a>
+    . The default operating system on the Raspberry Pi 2 is
+    <a class="reference external" href="http://www.raspbian.org/">
+     Raspbian
+    </a>
+    , a Debian-based Linux distribution. While
+    <a class="reference external" href="https://packages.debian.org/source/insighttoolkit">
+     Debian provides packages for ITK
+    </a>
+    ., these packages are not currently available on Raspbian. We will create a Debian package optimized for the Raspberry Pi 2 that can be installed and uninstalled on our Pi. The process is similar to
+    <a class="reference external" href="http://kitware.com/blog/home/post/887">
+     the previous post on cross-compiling for the Raspberry Pi
+    </a>
+    , with the following additions:
+   </p>
+   <ol class="arabic simple">
+    <li>
+     Optimization flags specific to the Raspberry Pi 2.
+    </li>
+    <li>
+     Build wrapping against the Raspbian Python installation.
+    </li>
+    <li>
+     Create a Debian package.
+    </li>
+   </ol>
+   <p>
+    Let's go!
+   </p>
+  </div>
+  <div class="section" id="get-the-cross-compiler">
+   <h1>
+    <img alt="" src="https://pyscience.files.wordpress.com/2014/09/cropped-headerblack.png" style="opacity: 0.9; height: 160px; width: 556px;"/>
+   </h1>
+   <p style="line-height: 20.7999992370605px; text-align: center;">
+    <em>
+     Image credit:
+     <a href="https://pyscience.files.wordpress.com/">
+      the PyScience blog
+     </a>
+    </em>
+   </p>
+   <h1>
+    Get the cross-compiler
+   </h1>
+   <p>
+    If
+    <a class="reference external" href="http://docs.docker.com/installation/">
+     Docker is installed
+    </a>
+    , download the cross-compiler
+    <a class="reference external" href="https://docs.docker.com/userguide/dockerimages/">
+     image
+    </a>
+    . This cross-compiler with work with both the Raspberry Pi and the Raspberry Pi 2, even though Raspberry Pi is
+    <a class="reference external" href="https://en.wikipedia.org/wiki/ARM_architecture">
+     ARMv7
+    </a>
+    .
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82055306946459667" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker pull thewtex/cross-compiler-linux-armv6</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e82055306946459667-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e82055306946459667-1">
+          <span class="crayon-e">
+           docker
+          </span>
+          <span class="crayon-e">
+           pull
+          </span>
+          <span class="crayon-v">
+           thewtex
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           cross
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           compiler
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           linux
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           armv6
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+  </div>
+  <div class="section" id="get-the-code">
+   <h1>
+   </h1>
+   <h1>
+    Get the code
+   </h1>
+   <p>
+    Download the ITK source tree if it not already available, and create a build directory:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8205530f482813216" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd ~/src
+git clone http://itk.org/ITK.git
+mkdir -p ~/bin/ITK-build</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e8205530f482813216-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e8205530f482813216-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e8205530f482813216-3">
+          3
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e8205530f482813216-1">
+          <span class="crayon-v">
+           cd
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-e">
+           src
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e8205530f482813216-2">
+          <span class="crayon-e">
+           git
+          </span>
+          <span class="crayon-r">
+           clone
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           http
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-c">
+           //itk.org/ITK.git
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e8205530f482813216-3">
+          <span class="crayon-v">
+           mkdir
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           p
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           bin
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           build
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    We also need the Python headers and library from the Pi so we can compile and link against them. We will log into the Pi, create a tarball of the needed files and directories, and transfer that tarball to the build host.
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82055312690599936" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+ssh pi@raspberrypi
+sudo apt-get install python-dev
+tar cvzf raspbian-python.tar.gz \
+  /usr/include/python2.7 \
+  /usr/lib/python2.7 \
+  /usr/lib/libpython2.7.*
+exit
+scp pi@raspberrypi:raspbian-python.tar.gz /tmp/
+mkdir -p ~/bin/raspbian-python
+tar xvzf /tmp/raspbian-python.tar.gz -C ~/bin/raspbian-python/</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-8">
+          8
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-9">
+          9
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055312690599936-10">
+          10
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-1">
+          <span class="crayon-e">
+           ssh
+          </span>
+          <span class="crayon-v">
+           pi
+          </span>
+          <span class="crayon-sy">
+           @
+          </span>
+          <span class="crayon-e">
+           raspberrypi
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-2">
+          <span class="crayon-e">
+           sudo
+          </span>
+          <span class="crayon-v">
+           apt
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-e">
+           get
+          </span>
+          <span class="crayon-e">
+           install
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-e">
+           dev
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-3">
+          <span class="crayon-e">
+           tar
+          </span>
+          <span class="crayon-e">
+           cvzf
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           tar
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           gz
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           include
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           python2
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-cn">
+           7
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           lib
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           python2
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-cn">
+           7
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           lib
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           libpython2
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-cn">
+           7.
+          </span>
+          <span class="crayon-o">
+           *
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-7">
+          <span class="crayon-e">
+           exit
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-8">
+          <span class="crayon-e">
+           scp
+          </span>
+          <span class="crayon-v">
+           pi
+          </span>
+          <span class="crayon-sy">
+           @
+          </span>
+          <span class="crayon-v">
+           raspberrypi
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           tar
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           gz
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           tmp
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-9">
+          <span class="crayon-v">
+           mkdir
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           p
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           bin
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-e">
+           python
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055312690599936-10">
+          <span class="crayon-e">
+           tar
+          </span>
+          <span class="crayon-v">
+           xvzf
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           tmp
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           tar
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           gz
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           C
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           bin
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0005 seconds] -->
+   <p>
+   </p>
+  </div>
+  <div class="section" id="build-and-package">
+   <h1>
+   </h1>
+   <h1>
+    Build and package
+   </h1>
+   <p>
+    Start up the docker container, and mount the source directory, build directory, and Python filesystem directory as volumes in the container:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82055314212152678" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker run --rm -it \
+  -v ~/src/ITK:/usr/src/ITK:ro \
+  -v ~/bin/ITK-build:/usr/src/ITK-build:rw \
+  -v ~/bin/raspbian-python:/usr/src/raspbian-python:ro \
+  thewtex/cross-compiler-linux-armv6</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e82055314212152678-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055314212152678-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055314212152678-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055314212152678-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055314212152678-5">
+          5
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e82055314212152678-1">
+          <span class="crayon-e">
+           docker
+          </span>
+          <span class="crayon-v">
+           run
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           --
+          </span>
+          <span class="crayon-v">
+           rm
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           it
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055314212152678-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           v
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-i">
+           ro
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055314212152678-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           v
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           bin
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           build
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           build
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-i">
+           rw
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055314212152678-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           v
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           bin
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-i">
+           ro
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055314212152678-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           thewtex
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           cross
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           compiler
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           linux
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           armv6
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0004 seconds] -->
+   <p>
+   </p>
+   <p>
+    Next, clear the build tree and configure the build:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82055316377206748" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd /usr/src/ITK-build
+rm -rf *
+export flags=&amp;#39;-mfpu=neon-vfpv4 -mcpu=cortex-a7 -mfloat-abi=hard&amp;#39;
+cmake \
+  -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+  -DBUILD_EXAMPLES=OFF \
+  -DBUILD_TESTING=OFF \
+  -DITK_WRAP_PYTHON=ON \
+  -DPYTHON_LIBRARY=/usr/src/raspbian-python/usr/lib/libpython2.7.so.1 \
+  -DPYTHON_INCLUDE_DIR=/usr/src/raspbian-python/usr/include/python2.7/ \
+  -DPY_SITE_PACKAGES_PATH=lib/python2.7/dist-packages \
+  -DCMAKE_CXX_FLAGS=&amp;quot;${flags}&amp;quot; \
+  -DCMAKE_C_FLAGS=&amp;quot;${flags}&amp;quot; \
+  -DCMAKE_CXX_COMPILER_TARGET=${CROSS_TRIPLE} \
+  -DCMAKE_INSTALL_PREFIX=/usr/ \
+  -DCPACK_DEBIAN_PACKAGE_NAME=libinsighttoolkit4.8 \
+  -DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=armhf \
+  -G Ninja \
+  ../ITK</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-8">
+          8
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-9">
+          9
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-10">
+          10
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-11">
+          11
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-12">
+          12
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-13">
+          13
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-14">
+          14
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-15">
+          15
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-16">
+          16
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-17">
+          17
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-18">
+          18
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055316377206748-19">
+          19
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-1">
+          <span class="crayon-v">
+           cd
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-e">
+           build
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-2">
+          <span class="crayon-v">
+           rm
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-e ">
+           rf *
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-3">
+          <span class="crayon-e">
+           export
+          </span>
+          <span class="crayon-v">
+           flags
+          </span>
+          <span class="crayon-o">
+           =&amp;
+          </span>
+          <span class="crayon-p">
+           #39;-mfpu=neon-vfpv4 -mcpu=cortex-a7 -mfloat-abi=hard&amp;#39;
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-4">
+          <span class="crayon-i">
+           cmake
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_TOOLCHAIN_FILE
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           CMAKE_TOOLCHAIN_FILE
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DBUILD_EXAMPLES
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-i">
+           OFF
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-7">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DBUILD_TESTING
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-i">
+           OFF
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-8">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DITK_WRAP_PYTHON
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-i">
+           ON
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-9">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DPYTHON_LIBRARY
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           lib
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           libpython2
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-cn">
+           7.so.1
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-10">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DPYTHON_INCLUDE_DIR
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           raspbian
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           include
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           python2
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-cn">
+           7
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-11">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DPY_SITE_PACKAGES_PATH
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-v">
+           lib
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           python2
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-cn">
+           7
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           dist
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           packages
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-12">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_CXX_FLAGS
+          </span>
+          <span class="crayon-o">
+           =&amp;
+          </span>
+          <span class="crayon-v">
+           quot
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           flags
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-o">
+           &amp;
+          </span>
+          <span class="crayon-v">
+           quot
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-13">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_C_FLAGS
+          </span>
+          <span class="crayon-o">
+           =&amp;
+          </span>
+          <span class="crayon-v">
+           quot
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           flags
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-o">
+           &amp;
+          </span>
+          <span class="crayon-v">
+           quot
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-14">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_CXX_COMPILER_TARGET
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           CROSS_TRIPLE
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-15">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_INSTALL_PREFIX
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-16">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCPACK_DEBIAN_PACKAGE_NAME
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-v">
+           libinsighttoolkit4
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-cn">
+           8
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-17">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCPACK_DEBIAN_PACKAGE_ARCHITECTURE
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-i">
+           armhf
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-18">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           G
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-i">
+           Ninja
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055316377206748-19">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0008 seconds] -->
+   <p>
+   </p>
+   <p>
+    The
+    <cite>
+     CMAKE_TOOLCHAIN_FILE
+    </cite>
+    option informs CMake about the build toolchain.
+    <cite>
+     BUILD_EXAMPLES
+    </cite>
+    ,
+    <cite>
+     BUILD_TESTING
+    </cite>
+    , and
+    <cite>
+     ITK_WRAP_PYTHON
+    </cite>
+    are options for ITK.
+    <cite>
+     PYTHON_LIBRARY
+    </cite>
+    and
+    <cite>
+     PYTHON_INCLUDE_DIR
+    </cite>
+    inform CMake of the Python we want to build against.
+    <cite>
+     PY_SITE_PACKAGES_PATH
+    </cite>
+    tells CMake where to install the Python package. The value used,
+    <cite>
+     lib/python2.7/dist-packages,
+    </cite>
+    is obtained by running the following command on the Pi:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82055319209948858" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+python -c &amp;quot;from distutils.sysconfig import get_python_lib;print(get_python_lib(1, prefix=&amp;#39;&amp;#39;))&amp;quot;</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e82055319209948858-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e82055319209948858-1">
+          <span class="crayon-v">
+           python
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           c
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           &amp;
+          </span>
+          <span class="crayon-v">
+           quot
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-e">
+           from
+          </span>
+          <span class="crayon-v">
+           distutils
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-e">
+           sysconfig
+          </span>
+          <span class="crayon-e">
+           import
+          </span>
+          <span class="crayon-v">
+           get_python_lib
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-e">
+           print
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-e">
+           get_python_lib
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-cn">
+           1
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           prefix
+          </span>
+          <span class="crayon-o">
+           =&amp;
+          </span>
+          <span class="crayon-p">
+           #39;&amp;#39;))&amp;quot;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <p>
+   </p>
+   <p>
+    Optimization flags to use features available on the Raspberry Pi 2 processor are passed with the
+    <cite>
+     CMAKE_C_FLAGS
+    </cite>
+    and
+    <cite>
+     CMAKE_CXX_FLAGS
+    </cite>
+    options. The
+    <a class="reference external" href="http://clang.llvm.org/docs/CrossCompilation.html">
+     cross-compiling target triple
+    </a>
+    , used by
+    <a class="reference external" href="https://github.com/CastXML/CastXML">
+     the wrapping system
+    </a>
+    , is passed via the
+    <cite>
+     CMAKE_CXX_COMPILER_TARGET
+    </cite>
+    through the value of the
+    <a class="reference external" href="https://github.com/thewtex/cross-compilers/blob/master/linux-armv6/Dockerfile#L14">
+     CROSS_TRIPLE enviromental variable
+    </a>
+    .
+    <cite>
+     CMAKE_INSTALL_PREFIX
+    </cite>
+    ,
+    <cite>
+     CPACK_DEBIAN_PACKAGE_NAME
+    </cite>
+    , and
+    <cite>
+     CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+    </cite>
+    are
+    <a class="reference external" href="http://www.cmake.org/cmake/help/git-master/module/CPackDeb.html">
+     options for creating the Debian package
+    </a>
+    . We also tell CMake to use our favorite generator,
+    <a class="reference external" href="https://martine.github.io/ninja/">
+     Ninja
+    </a>
+    .
+   </p>
+   <p>
+    Build the library:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8205531c567664920" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+ninja</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e8205531c567664920-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e8205531c567664920-1">
+          <span class="crayon-v">
+           ninja
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0000 seconds] -->
+   <p>
+   </p>
+   <p>
+    Build the package:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8205531e452852107" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cpack -G DEB</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e8205531e452852107-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e8205531e452852107-1">
+          <span class="crayon-v">
+           cpack
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           G
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           DEB
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    This generates a
+    <cite>
+     .deb
+    </cite>
+    package. Copy it to the Pi:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8205531f187236123" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+scp ITK-4.8.0-Linux.deb pi@raspberrypi:</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e8205531f187236123-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e8205531f187236123-1">
+          <span class="crayon-e">
+           scp
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-cn">
+           4.8.0
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           Linux
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-e">
+           deb
+          </span>
+          <span class="crayon-v">
+           pi
+          </span>
+          <span class="crayon-sy">
+           @
+          </span>
+          <span class="crayon-v">
+           raspberrypi
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    And install it:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82055321036833546" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+ssh pi@raspberrypi
+sudo dpkg -i ITK-4.8.0-Linux.deb</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e82055321036833546-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055321036833546-2">
+          2
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e82055321036833546-1">
+          <span class="crayon-e">
+           ssh
+          </span>
+          <span class="crayon-v">
+           pi
+          </span>
+          <span class="crayon-sy">
+           @
+          </span>
+          <span class="crayon-e">
+           raspberrypi
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055321036833546-2">
+          <span class="crayon-e">
+           sudo
+          </span>
+          <span class="crayon-v">
+           dpkg
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           i
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-cn">
+           4.8.0
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           Linux
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           deb
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    Start up Python, and import the
+    <cite>
+     itk
+    </cite>
+    package:
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82055323771493211" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+python
+&amp;gt;&amp;gt;&amp;gt; import itk</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e82055323771493211-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e82055323771493211-2">
+          2
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e82055323771493211-1">
+          <span class="crayon-v">
+           python
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e82055323771493211-2">
+          <span class="crayon-o">
+           &amp;
+          </span>
+          <span class="crayon-v">
+           gt
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-o">
+           &amp;
+          </span>
+          <span class="crayon-v">
+           gt
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-o">
+           &amp;
+          </span>
+          <span class="crayon-v">
+           gt
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           import
+          </span>
+          <span class="crayon-v">
+           itk
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <p>
+    Enjoy ITK!
+   </p>
+  </div>
+ </div>
+</div>

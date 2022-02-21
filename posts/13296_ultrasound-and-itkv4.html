@@ -1,0 +1,228 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The most common imaging mode in diagnostic medical ultrasound imaging is the B-Mode (Brightness-Mode). Recently, a manuscript [1] along with corresponding source code was submitted to the Insight Journal that describes classes for the Insight Toolkit (ITK) [2] to create B-Mode images.
+ </p>
+ <p>
+  This article summarizes the Insight Journal paper and also discusses challenges and successes that were encountered in the development of the software. We will examine how the ongoing activities for ITKv4 address some of these issues.
+ </p>
+ <p>
+  Calculation of the brightness from a raw received ultrasound signal amounts to approximating the envelope of the signal. The envelope is often calculated with the analytic signal,
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="50" src="https://blog.kitware.com/source/files/4_1520144713_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+  where
+  <span style="font-size: medium;">
+   <span style="font-family: georgia,palatino;">
+    <span style="font-family: andale mono,times;">
+     <em>
+      f
+      <span style="font-size: small;">
+       <sub>
+        H
+       </sub>
+      </span>
+      (x)
+     </em>
+    </span>
+   </span>
+  </span>
+  is the Hilbert Transform of
+  <em>
+   <span style="font-size: medium;">
+    <span style="font-family: andale mono,times;">
+     f (x)
+    </span>
+   </span>
+  </em>
+  . Given the analytic signal, the envelope is simply
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="50" src="https://blog.kitware.com/source/files/4_1991860747_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+  The analytic signal is often calculated with the Fourier Transform,
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="50" src="https://blog.kitware.com/source/files/4_1520716327_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p>
+  A number of classes were implemented to perform the Fast Fourier Transform (FFT) along a single direction of an image, the direction of the ultrasound beam’s propagation.
+ </p>
+ <p>
+  We also presented code to perform scan conversion. This includes classes to resample data from a polar coordinate system, which is commonly encountered with curvilinear, phased array, or rotated single-element transducers.
+ </p>
+ <p>
+  Example high frequency ultrasound B-Mode images of the object shown in Figure 1 are rendered in Figures 2 and 3. The scan conversion and streaming capabilities described in the article were required to create this image.
+ </p>
+ <p>
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="300" src="https://blog.kitware.com/source/files/4_1840415513_png" style="border: 0pt none;" width="400"/>
+  <br/>
+  <em>
+   <br/>
+   Figure 1: Gummy bear photo
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="501" src="https://blog.kitware.com/source/files/4_17010531_png" style="border: 0pt none;" width="400"/>
+  <br/>
+  <em>
+   Figure 2: Gummy bear slices taken with the VisualSonics RMV710B 25MHz transducer.
+   <br/>
+   a) axial-lateral, scan converted slice, b) axial-elevational slice where lines in the elevation direction are
+   <br/>
+   created by a stepper motor, c) lateral-elevational, “C-Plane”, slice, and d) tri-plane view.
+   <br/>
+   Images rendered with QGoImageCompare [3].
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="472" src="https://blog.kitware.com/source/files/4_1585895349_png" style="border: 0pt none;" width="399"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3: Volume rendering of the gummy bear B-Mode. Image created with Paraview [4].
+  </em>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+     GPGPU’s and the FFT
+    </strong>
+   </span>
+  </span>
+  <br/>
+  Since the FFT is the most computationally expensive part of the algorithm, we tested three different FFT implementations: VNL, FFTW, and an OpenCL implementation. We found that the FFTW was faster than VNL, but the OpenCL was slower in spite of the hype surrounding general purpose GPU (GPGPU) computing for scientific analysis.
+ </p>
+ <p>
+  The speed deficits were likely related to our implementation: the image buffer needed to be transferred to and from the GPU when performing the forward and inverse transform. For GPGPU computing to be successful, additional infrastructure is required in ITK to prevent this memory transfer.
+ </p>
+ <p>
+  There is a proposal to add GPGPU capabilities to ITK in ITKv4 [5]. This proposal addresses the problem of keeping the image buffer on the GPU as long as possible along with abstracting out some of the difficulties experienced when writing GPGPU code. Writing OpenCL code requires extra build steps and additional memory management, and it precludes the native use of C++ templates. When developing our code, we used the C++ OpenCL class wrappers that have since been incorporated into the OpenCL 1.1 standard. However, these classes do not provide a very object-oriented interface; they just provide destructors that ease memory management. In our opinion, writing OpenCL code, a C language with extensions, is considerably more work than vanilla C++.
+ </p>
+ <p>
+  Implementing GPGPU support in ITK will take substantial work, but supporting this class of hardware means ITK can stay relevant in the parallel future.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: small;">
+    <span style="color: #000080;">
+     File Formats
+    </span>
+   </span>
+  </strong>
+  <br/>
+  Some manufacturers of clinical ultrasound systems provide methods to access the radiofrequency (RF) data collected on their systems. A considerable problem is that each system uses its own file format, and the format is proprietary. An astute examiner of the CMake configuration included with the project will notice that there is reference to optional support of a few of these formats.
+ </p>
+ <p>
+  Unfortunately, we could not include the code for the ImageIO class and supporting libraries that were developed. While it took considerable work to create readers for the complex formats and we would not like to see other researchers repeat this process, we lack the resources [6] to release this code. In order to create the readers, the companies provided documentation they considered proprietary.
+ </p>
+ <p>
+  To distribute our data, we converted the images to some of the standard supported ITK formats. We found it difficult to find a format that would support our additional metadata. We tried the MINC format, but we did not have success and ended up using the NRRD format. The NRRD format was not ideal, however, because it only supports string fields.
+ </p>
+ <p>
+  There is a proposal to add HDF5 support [7], which is a flexible format that has gained considerable traction in general scientific computing applications. Support for adding HDF5 fields to an image’s MetaDataDictionary would be beneficial for situations like this.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Streaming
+    </span>
+   </strong>
+  </span>
+  <br/>
+  Large 3D ultrasound images require data streaming to prevent the filling of system memory. In general, ITK’s excellent streaming infrastructure makes this an easy task. However, scan conversion requires the use of itk::ResampleImageFilter. In its current state, this filter does not allow streaming. We introduced a modification to this filter that would allow for streaming as long as the transform associated with it is linear. This feature may be helpful to ITK in general, and it could be incorporated into ITKv4. However, to retain its behavior in this example, the itk::Transform classes should change their IsLinear() method to return an array of booleans per dimension as opposed to a single boolean. This is required because the scan conversion transform is non-linear the r-θ plane.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Version Control
+    </span>
+   </strong>
+  </span>
+  <br/>
+  The submitted code of the repository was also a Git repository with its “origin” pointing to Gitorious [8]. This allows reviewers to easily fix or extend the work. We have been impressed by the power of Git and are happy to see it being adopted as the version control system for ITKv4.
+ </p>
+ <p>
+  The article was our first experimentation with Git submodules. This proved to be an effective method to manage logical sections of code, sometimes from disparate sources. It seems that ITKv4 will also soon take advantage of Git submodule capabilities with the modularization project [9]. There are rumors that these capabilities will be used to improve the accessibility of work published in the Insight Journal. This increased organization of such a complex project will allow users to find what they are looking for and contributers to make improvements with less effort.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: small;">
+    <span style="color: #000080;">
+     Future Work
+    </span>
+   </span>
+  </strong>
+  <br/>
+  We hope to release additional tools for basic ultrasound research with ITK including the release of a block-matching framework for deformable image registration.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Acknowledgements
+     <br/>
+    </span>
+   </strong>
+  </span>
+  The authors would like to thank the NIH for their funding with grants T90DK070079 and R90DK071515. We would also like to thank the many developers of the Insight Toolkit.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     References
+     <br/>
+    </strong>
+   </span>
+  </span>
+  [1]   McCormick, M. “An Open Source, Fast Ultrasound B-Mode Software Implementation for Commodity Hardware.”
+  <br/>
+  Insight Journal. May 2010. http://hdl.handle.net/10380/1338.
+  <br/>
+  [2]   Insight Segmentation and Registration Toolkit. itk.org/.
+  <br/>
+  [3]   Perrot-Audet A., Mosaliganti K., Gelas A., Rannou N., Souhait L., Megason S. “A simple Qt based comparison
+  <br/>
+  program for ITK and VTK images.” Insight Journal. August 2010. http://hdl.handle.net/10380/3196
+  <br/>
+  [4]   ParaView is an open-source, multi-platform data analysis and visualization application. http://paraview.org/.
+  <br/>
+  [5]   Won-Ki. GPU Acceleration. Fall ITKv4 2010 Meeting. www.itk.org/Wiki/images/3/3a/GPU-ITKv4.pdf
+  <br/>
+  [6]   Zevon, W. “Lawyers, Guns, and Money.” Excitable Boy. 1978.
+  <br/>
+  [7]   HDF5 ImageIO. www.itk.org/Wiki/Proposals:HDF5_ImageIO
+  <br/>
+  [8]   Gitorious provides free open source infrastructure for open source projects that use Git.
+  <br/>
+  http://gitorious.org/ultrasound-b-mode/b-mode
+  <br/>
+  [9]   Hoffman, B. Liu, Xiaoxiao. “Modularization.” Fall ITKv4
+  <br/>
+  2010 Meeting. http://www.itk.org/Wiki/images/f/ff/ITK-Iowa-Nov-2010-Modularization.pptx
+ </p>
+ <p>
+  <em>
+   <img alt="" height="94" src="https://blog.kitware.com/source/files/4_708287629_png" style="float: left; border: 0pt none;" width="75"/>
+   <strong>
+    Matthew McCormick
+   </strong>
+   is a PhD. candidate at the University of Wisconsin-Madison working on his thesis in medical ultrasound characterization of carotid plaques.
+  </em>
+ </p>
+</div>

@@ -1,0 +1,368 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Collaborative software development, an approach Kitware and open source communities have used for many years, is now a mainstream development model [1] [2]. Developer teams are often distributed geographically and may even work for different organizations. Kitware frequently teams with its customers to develop software solutions. New tools and processes are becoming available to manage this collaborative development model. Distributed Version Control Systems (DVCS) are especially exciting. According to Joel Spolsky [3], “This is possibly the biggest advance in software development technology in the ten years I’ve been writing articles here.”
+ </p>
+ <p>
+  Over the last nine months at Kitware we have transitioned most of our work to Git, a popular DVCS tool [10]. Although we have not yet fully realized all of the benefits, this technology will address important issues. In particular, it will help us further engage our customers and the open source community, and will improve our release process.
+ </p>
+ <p>
+  DVCS tools engage our customers and users as welcome participants in our open source software development model. They facilitate code reviews, allow easy incorporation of contributed modifications and shorten release cycles. Furthermore, “social coding” sites such as GitHub [7] and Gitorious [8] allow everyone to share their work outside the central repositories.
+ </p>
+ <p>
+  We are very excited to improve our release process using DVCS capabilities. Our new process allows all developers to take part in release preparation by deciding what changes are release-ready as they are developed. A release-ready version of the software grows in parallel with the development version. We avoid building up an inventory of partially finished work in an otherwise releasable version. This streamlines the release process and allows for stable and frequent releases.
+ </p>
+ <p>
+  <strong>
+   A Brief History of Version Control
+  </strong>
+  <br/>
+  Prior to 1986, two file locking version control systems which stored the changes for a file existed: SCCS, developed at Bell Labs, and RCS. If a developer wanted to change a file, he or she had to issue the “edit” command on the file and, if no other developer was working on that file, she would get a writable version of the file to edit. After completing edits on that file, the developer would check the changes in, and this would release the lock.
+ </p>
+ <p>
+  Having a history for each file was helpful and locking the files made sense in order to prevent two or more developers from making the same or conflicting changes. However, in practice this did not scale very well beyond a few developers. When a developer left a file in edit mode and went on vacation or was away from the office, the edit locks were forcefully and “hackishly” taken by others on the team so that work could continue. The hand merges that would happen after the developer returned were often painful and time consuming.
+ </p>
+ <p>
+  In 1986, the Concurrent Versions System (CVS) was created to address many of the shortcomings of previous version control systems. CVS offered concurrent edits on files managed by a central repository using a client/server model. Changes to files were integrated together during an update of a checkout prior to a commit to the repository by the last person to commit his/her changes on that file. This encouraged premature commits that often forced unfinished changes on the whole team. However, the model was certainly much better than the file-locking days of SCCS and RCS.
+ </p>
+ <p>
+  When CVS first came out it was a hard sell to the development community. Developers felt secure with systems based on file locks. The idea that two people could work on one file at the same time and that changes would be integrated automatically was “just plain crazy”. However, over time CVS became the accepted norm for software development. In 2000, the Subversion project (SVN) was created to replace CVS. SVN provided atomic whole-tree commits, versioned file properties and a more solid implementation of CVS’s centralized repository model.
+ </p>
+ <p>
+  A new model for version control, Distributed Version Control Systems (DVCS), is now unseating centralized systems as the standard for software development. These systems offer concurrent repositories, network-free access to local-disk repositories (Figure 1) and they enable new collaboration models with non-linear history and multiple shared repositories (Figures 2 and 5). In this article we describe the power of DVCS as a version control system and explain how we are using it to improve our collaborative development model.
+ </p>
+ <p style="text-align: center;">
+  <p style="text-align: center;">
+   <img alt="" src="https://blog.kitware.com/source/files/3_1390414441_png" style="border: 0pt none;" width="300"/>
+  </p>
+  <p>
+  </p>
+  <p style="text-align: center;">
+   <em>
+    Figure 1 – Access Information at All Times
+   </em>
+  </p>
+  <p>
+   <strong>
+    Notation &amp; Terminology
+   </strong>
+  </p>
+  <p>
+   This article uses conventions and terminology from Git, but the discussion applies to DVCS in general. Our figures denote history using a directed acyclic graph as shown in Figure 2. Nodes (circles) represent versions and directed edges point at prior versions. The subgraph reachable from any given version represents its history.
+  </p>
+  <p style="text-align: center;">
+   <p style="text-align: center;">
+    <img alt="" src="https://blog.kitware.com/source/files/3_202435804_png" style="border: 0pt none;" width="300"/>
+   </p>
+   <p style="text-align: center;">
+    <em>
+     Figure 2 – Visualizing History
+    </em>
+   </p>
+   <p>
+   </p>
+   <p>
+    <strong>
+     Collaboration Tasks
+    </strong>
+    <br/>
+    We divide collaborative development into three basic version control tasks:
+   </p>
+   <ul>
+    <li>
+     Create: Record a new version with meta-data describing the changes;
+    </li>
+    <li>
+     Share: Publish new versions for other developers to see;
+    </li>
+    <li>
+     Integrate: Combine changes from multiple versions into another new version.
+    </li>
+   </ul>
+   <p>
+    The following reviews each task in more detail.
+   </p>
+   <p>
+    <strong>
+     Create
+    </strong>
+    <br/>
+    Figure 3 shows the basic workflow we each follow to create new versions. First, we checkout a version from the repository on which to base changes. Then, we edit the content in our work tree to produce a new version. Finally, we commit the new version to the repository. All version control systems provide this basic workflow by definition.
+   </p>
+   <p style="text-align: center;">
+    <p style="text-align: center;">
+     <img alt="" src="https://blog.kitware.com/source/files/3_1237429949_png" style="border: 0pt none;" width="300"/>
+    </p>
+    <p style="text-align: center;">
+     <em>
+      Figure 3 – Basic Workflow
+     </em>
+    </p>
+    <p>
+    </p>
+    <p>
+     <strong>
+      Share
+     </strong>
+     <br/>
+     We share versions through repositories. Figure 4 shows the traditional model in which each developer has only a work tree. The checkout and commit operations share all versions through a single repository.
+    </p>
+    <p style="text-align: center;">
+     <p style="text-align: center;">
+      <img alt="" src="https://blog.kitware.com/source/files/3_1569406840_png" style="border: 0pt none;" width="300"/>
+     </p>
+     <p>
+     </p>
+     <p style="text-align: center;">
+      <em>
+       Figure 4 – Single Centralized Repository
+      </em>
+     </p>
+     <p>
+      Figure 5 shows the distributed model in which each developer has a private repository and work tree. The checkout and commit operations occur locally. Sharing occurs arbitrarily among repositories through separate operations such as push, fetch, and pull.
+     </p>
+     <p style="text-align: center;">
+      <p style="text-align: center;">
+       <img alt="" src="https://blog.kitware.com/source/files/3_564268684_png" style="border: 0pt none;" width="300"/>
+      </p>
+      <p>
+      </p>
+      <p style="text-align: center;">
+       <em>
+        Figure 5 – Concurrent Distributed Repositories
+       </em>
+      </p>
+      <p>
+       <strong>
+        Integrate
+       </strong>
+       <br/>
+       Figure 6 shows a case in which work has diverged because two developers independently created versions C and D based on version B. Assume version D has been published and we must integrate its changes with those made in version C to produce a new version.
+      </p>
+      <p style="text-align: center;">
+       <p style="text-align: center;">
+        <img alt="" src="https://blog.kitware.com/source/files/3_593278662_png" style="border: 0pt none;" width="300"/>
+       </p>
+       <p>
+       </p>
+       <p style="text-align: center;">
+        <em>
+         Figure 6 – Integrate by Rebase or Merge
+        </em>
+       </p>
+       <p>
+        The figure illustrates two approaches. One wherein we identify the changes made by C, originally based on B, and rebase them on D to create a new version C’. And another where we merge versions C and D together into a new version, M, that combines their changes.
+       </p>
+       <p>
+        Both approaches integrate the same changes into a single new version, either C’ or M, but record different history behind said version.
+       </p>
+       <p>
+        In traditional version control systems the commit operation automatically rebases changes in new versions on the latest version in the repository. If the rebase fails it asks the user to update the work tree and integrate the changes before committing. In distributed version control systems, rebase and merge are explicit operations separate from commit.
+       </p>
+       <p>
+        <strong>
+         Collaboration Workflows
+        </strong>
+       </p>
+       <p>
+        All developer communities establish a workflow involving these three version control tasks in order to collaboratively develop and maintain their projects. A workflow determines when new features are introduced, how bugs are fixed and how releases are prepared and maintained. Traditional version control systems severely limit possible workflows by inseparably combining all three version control tasks under the commit operation in a single repository. Distributed version control systems provide separate operations for the three tasks and thus support many workflows [4].
+       </p>
+       <p>
+        <strong>
+         Rebase v. Merge Workflows
+        </strong>
+        <br/>
+        No matter who creates changes or where they are shared, they eventually need to be integrated together. At this point workflows are distinguished by their approach to integration, either rebase or merge. Figure 7 illustrates both approaches with a series of commits belonging to three topics: feature a, feature b, and a bug fix. It also includes the creation and maintenance of a release branch.
+       </p>
+       <p style="text-align: center;">
+        <p style="text-align: center;">
+         <img alt="" src="https://blog.kitware.com/source/files/3_2013411858_png" style="border: 0pt none;" width="300"/>
+        </p>
+        <p>
+        </p>
+        <p style="text-align: center;">
+         <em>
+          Figure 7 – Collaboration Workflow by Rebase or Merge
+         </em>
+        </p>
+        <p>
+         In the rebase workflow, each commit is rebased on top of whatever happens to be the latest version at the time it is published; there is no record of the original base on which it was developed. The commits from all topics are intermixed with one another in history. The history of the release branch has no indication that its second commit is a copy of the bug fix changes.
+        </p>
+        <p>
+         In the merge workflow, each commit is preserved on its original base. The commits belonging to each topic appear contiguously in history. There is an explicit merge commit recording the integration of each topic. The second commit on the release branch explicitly merges the bug fix topic.
+        </p>
+        <p>
+         Traditional version control systems automatically rebase every commit, and therefore support only the rebase workflow. Distributed version control systems support both rebase and merge workflows.
+        </p>
+        <p>
+         <strong>
+          A “Branchy” Workflow
+         </strong>
+         <br/>
+         In the past, when using a central repository with a single development branch, the authors have seen work come to a halt when some bad code was committed. No other work could continue until the issue was fixed. With the use of DVCS developers can start new work from a stable working code base and no longer base new work on a moving target.
+         <br/>
+         The use of merge commits to integrate work provides greater flexibility and motivates the use of a “branchy” workflow with DVCS tools [5]. This workflow defines two types of branches: topic and integration. Topic branches contain a contiguous sequence of commits developing a specific feature or bug fix. Integration branches contain merge commits to integrate topic branches together.
+        </p>
+        <p>
+         In the bottom of Figure 7 each of feature a, feature b, and bug fix is a topic branch, and master and release are integration branches. Integration branch heads are published in a designated official repository. Topic branch heads are not named explicitly in the official repository, but appear in the history of integration branches that merge them.
+        </p>
+        <p>
+         Each integration branch has a specific purpose such as maintenance of a current release (typically called maint or release), preparation of a future release (typically called master) or bleeding-edge development (typically called next, as in the next topics to evaluate). Each topic branch starts from the most stable integration branch to which it will be merged. Typically this is master for new features and release for bug fixes.
+        </p>
+        <p style="text-align: center;">
+         <p style="text-align: center;">
+          <img alt="" src="https://blog.kitware.com/source/files/3_1978544123_png" style="border: 0pt none;" width="300"/>
+         </p>
+         <p>
+         </p>
+         <p style="text-align: center;">
+          <em>
+           Figure 8 – Multiple Integration Branches
+          </em>
+         </p>
+         <p>
+          Figure 8 shows the use of two integration branches, master and next, while developing a topic branch, my-topic. The head of master is commit (0) when the topic starts. Commits (1) and (2) develop the topic. Merge commit (3) integrates the topic into next which is then published for evaluation and testing by others. Later, when the topic is deemed stable, merge commit (4) integrates the topic into master for publication.
+         </p>
+         <p>
+          Throughout this workflow the master branch remains stable because topics are merged into it only after they have been evaluated on next. Since new topics are started from master they have a stable base version on which to work regardless of whether unstable topics have been merged to next. A new stable topic may be merged back to master at any time independent of other (unstable) topics.
+         </p>
+         <p>
+          <strong>
+           Managing Releases
+          </strong>
+          <br/>
+          Release management has two parts: preparing a new release and maintaining an existing release. In the past, Kitware placed responsibility for both parts on a release manager. We prepared new releases using a “freeze” period during which the release manager had exclusive commit access to stabilize the trunk, often by cleaning up unfinished work, before creating the release. The release manager then maintained the release branch by manually copying bug fixes from the development trunk. With this approach, development stalled during freeze periods and maintenance of releases became increasingly burdensome on the release manager as the trunk diverged over time.
+         </p>
+         <p>
+          Kitware’s new release process is based on the DVCS branchy workflow in Figure 8. New topics are merged to next for evaluation and testing and only stable topics are merged into master, keeping it release-ready at all times. This approach amortizes the cost of release preparation over the development cycle, distributes the workload to all developers and separates release scheduling from feature development.
+         </p>
+         <p>
+          We now manage releases as shown in Figure 9 (for simplicity we omit next from the figure but we use it to test changes before merging to master).
+         </p>
+         <p style="text-align: center;">
+          <p style="text-align: center;">
+           <img alt="" src="https://blog.kitware.com/source/files/3_120749478_png" style="border: 0pt none;" width="300"/>
+          </p>
+          <p style="text-align: center;">
+           <em>
+            Figure 9 – Release Maintenance
+           </em>
+          </p>
+          <p>
+          </p>
+          <p>
+           The release manager tags a new release directly on master (0) and development proceeds normally. A developer starts a bug-fix topic (1) from the released version and merges it into master (2), making the “release+fix” version (1) available without any action by the release manager. Then the release manager merges the fix into the release branch (3), tags a patch release, and merges release into master (4), making the tag reachable. The process repeats with another bug-fix (5 and 6), merge to master (7), merge to release (8), tag and merge of release into master (9).
+          </p>
+          <p>
+           This maintenance approach relieves the release manager of all tasks except trivial merge and tag operations. Release tags are always reachable from master so there is no need for a separate named branch for every new release. DVCS allows developers to commit bug fixes directly on the releases that need them.
+          </p>
+          <p>
+           <strong>
+            Conclusion
+           </strong>
+           <br/>
+           Some DVCS concepts may seem overly complex and irrelevant to many developers, but are invaluable to others. Not only are they here to stay, but they’ll improve productivity and reduce waste in the software development process. As with the advent of centralized concurrent version systems, a period of education and exploration is required to fully take advantage of this new technology.
+          </p>
+          <p>
+           Kitware has standardized on Git, our DVCS of choice. Although powerful, some consider Git to be complicated to learn. It was even introduced at the now-famous Google Tech Talk by Linus Torvalds as “expressly designed to make you feel less intelligent than you thought you were” [9]. We encourage the reader to stay the course and hang in there as the benefits really are numerous.
+          </p>
+          <p>
+           Kitware is not alone in embracing DVCS. There are many other software companies exploring the features of DVCS. For example, we are investigating use of Gerrit, a code review tool developed by Google engineers to facilitate Android development [6]. It provides tight integration with Git and a web interface for performing online code reviews. The ITK project is using it experimentally, and several developers are evaluating it internally. Gerrit can combine a human element with automated testing and multiple integration branches to provide us with a very effective workflow to collaboratively develop complex software with contributors from around the world.
+          </p>
+          <p>
+           Other online tools such as Gitorious and GitHub are already being used by developers outside Kitware to develop bug fixes and new features for Kitware-hosted projects like VTK, ParaView, ITK and CMake.
+          </p>
+          <p>
+           We hope to have armed you with some basic concepts and terminology associated with DVCS, while presenting some of the exciting new workflows that DVCS makes possible. Kitware is very excited about this technology and is looking forward to reaping the full benefits.
+          </p>
+          <p>
+           To our customers and co-developers: we look forward to releasing our work frequently and incorporating your contributions quickly and reliably.
+          </p>
+          <p>
+           <strong>
+            REFERENCES
+           </strong>
+           <br/>
+           [1] http://en.wikipedia.org/wiki/Collaborative_software_development_model
+           <br/>
+           [2] http://www-01.ibm.com/software/info/features/collaboration/main.html
+           <br/>
+           [3] “Distributed Version Control is here to stay, baby”, Joel on Software, March 17, 2010, http://joelonsoftware.com/items/2010/03/17.html
+           <br/>
+           [4] “Distributed Workflows”, Pro Git, ch. 5, http://progit.org/book/ch5-1.html
+           <br/>
+           [5] “Git help workflows”, http://www.kernel.org/pub/software/scm/git/docs/gitworkflows.html
+           <br/>
+           [6] “Gerrit Code Review”, http://code.google.com/p/gerrit/
+           <br/>
+           [7] “GitHub – Social Coding”, http://github.com/
+           <br/>
+           [8] “About Gitorious”, http://gitorious.org/about
+           <br/>
+           [9] “Linus Torvalds on git”, Google Tech Talk, May 3, 2007, https://git.wiki.kernel.org/index.php/LinusTalk200705Transcript
+           <br/>
+           [10] “Git – the fast version control system”, http://git-scm.com/
+          </p>
+          <p>
+           <em>
+            <strong>
+             <img alt="" src="https://blog.kitware.com/source/files/3_1741601919_png" style="float: left; border: 0pt none;" width="75"/>
+            </strong>
+           </em>
+          </p>
+          <p>
+           <em>
+            <strong>
+             Marcus Hanwell
+            </strong>
+            is an R&amp;D engineer in the scientific visualization team at Kitware, Inc. He joined the company in October 2009, and has a background in open source, Physics and Chemistry. He spends most of his time working with Sandia on VTK, Titan and ParaView.
+           </em>
+          </p>
+          <p>
+           <p>
+            <p>
+             <em>
+              <strong>
+               <img alt="" src="https://blog.kitware.com/source/files/3_1387462868_png" style="float: left; border: 0pt none;" width="75"/>
+              </strong>
+             </em>
+            </p>
+            <p>
+             <em>
+              <strong>
+               Bill Hoffman
+              </strong>
+              is currently Vice President and CTO for Kitware, Inc. He is a founder of Kitware, a lead architect of the CMake cross-platform build system and is involved in the development of the Kitware Quality Software Process and CDash, the software testing server.
+             </em>
+            </p>
+            <p>
+             <p>
+              <p>
+               <em>
+                <strong>
+                 <img alt="" src="https://blog.kitware.com/source/files/3_689703186_png" style="float: left; border: 0pt none;" width="75"/>
+                </strong>
+               </em>
+              </p>
+              <p>
+               <em>
+                <strong>
+                 Brad King
+                </strong>
+                is a technical developer in Kitware’s Clifton Park, NY office. He led Kitware’s transition to distributed version control, converted many of our project histories to Git, and conducted training sessions.
+               </em>
+              </p>
+             </p>
+            </p>
+           </p>
+          </p>
+         </p>
+        </p>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</div>

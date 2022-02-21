@@ -1,0 +1,314 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  Motivation
+ </h1>
+ <p>
+  <b>
+   Ghost cells
+  </b>
+  are layers of cells at boundaries of pieces of a dataset. These cells are used by data parallel algorithms, to insure the correctness of their results. For instance, consider an algorithm that computes the external faces of a dataset. Consider also that the algorithm runs in parallel on several nodes, each node processing a piece of the original dataset. This operation would produce incorrect faces at boundaries of pieces. Ghosts cells can prevent this. See the following
+  <a href="http://www.vtk.org/Wiki/VTK/Parallel_Pipeline">
+   wiki entry
+  </a>
+  for a more detailed description of ghost cells.
+ </p>
+ <p>
+  <b>
+   Blanking cells
+  </b>
+  are used to specify that certain pieces of a grid are not part of the data. For instance, a regular dataset with a hole in it could be specified by blanking the cells that cover the hole. Blanking cells are supported for
+  <b>
+   vtkStructuredGrid
+  </b>
+  and
+  <b>
+   vtkUniformGrid
+  </b>
+  .
+ </p>
+ <p>
+  We change how ghost and blanked cells are stored to:
+ </p>
+ <ol>
+  <li>
+   better support blanking: in the past blanked cells were stored as members of
+   <b>
+    vtkStructuredGrid
+   </b>
+   and
+   <b>
+    vtkUniformGrid
+   </b>
+   . This created the need for special processing when these arrays needed to be passed between algorithms or processes. Now, blanked cells are marked with a bit in a field array. Field arrays are passed automatically between algorithms and processes
+  </li>
+  <li>
+   provide binary compatibility with VisIt: VTK now uses the
+   <a href="http://www.visitusers.org/index.php?title=Representing_ghost_data">
+    same bits as VisIt
+   </a>
+   to mark ghost cells and blanked cells
+  </li>
+  <li>
+   save space: the arrays for storing blanking are not needed anymore
+  </li>
+ </ol>
+ <p>
+  Note that ghosts and blanking exists for both cells and points. Simply replace cell with point to get the corresponding description for point ghosts and blanking.
+ </p>
+ <h1>
+  Changes overview
+ </h1>
+ <p>
+  To achieve our goals we made the following changes:
+ </p>
+ <ol>
+  <li>
+   Previously, ghost cells were marked in a
+   <b>
+    unsigned char
+   </b>
+   attribute array called “
+   <b>
+    vtkGhostLevels
+   </b>
+   “. For each cell, the ghost level was stored at the corresponding cell id. Now, there is no distinction between ghost levels. Cells at any ghost level, are marked by setting
+   <b>
+    vtkDataSetAttributes::DUPLICATECELL
+   </b>
+   bit at the corresponding cell id, in the
+   <b>
+    unsigned char
+   </b>
+   attribute array called
+   <b>
+    vtkDataSetAttributes::GhostArrayName()
+   </b>
+   (“
+   <b>
+    vtkGhostType
+   </b>
+   “).
+  </li>
+  <li>
+   Previously, filters striped all ghost cells they requested from upstream before finalizing the output. This is no longer done. The user can remove all ghost cells at the end of pipeline processing, if needed. Note that ghost cells are not shown in the render window, and only consume a small amount of memory compared with the whole dataset which means that removing them is often not necessary.
+  </li>
+  <li>
+   <b>
+    vtkUniformGrid
+   </b>
+   and
+   <b>
+    vtkStructuredGrid
+   </b>
+   previously supported blanking through member arrays
+   <b>
+    CellVisibility
+   </b>
+   and
+   <b>
+    PointVisibility
+   </b>
+   . These arrays are removed and the blanking functionality is supported by setting
+   <b>
+    vtkDataSetAttributes::HIDDENCELL
+   </b>
+   bit at the corresponding cell id in the “
+   <b>
+    vtkGhostType
+   </b>
+   ” attribute array.
+  </li>
+  <li>
+   We increase file version for VTK Legacy files (see VTK/IO/Legacy) to 4.0 (from 3.0). We increase file version for VTK XML files (see VTK/IO/XML) to 2.0 (from 0.1 for files using UInt32 header type and from 1.0 for files using UInt64 header type). We increase these versions because ghost cells are now stored in a file using the new
+   <b>
+    vtkGhostType
+   </b>
+   format described in the previous section. New readers reading old files convert a
+   <b>
+    vtkGhostLevels
+   </b>
+   attribute array to a
+   <b>
+    vtkGhostType
+   </b>
+   array. This preserves ghost cells written using old readers.
+  </li>
+ </ol>
+ <h1>
+  Bits used in the ghost type array
+ </h1>
+ <p>
+  We use the following bits to store information about each cell in the dataset. These bits are
+  <a href="http://www.visitusers.org/index.php?title=Representing_ghost_data">
+   compatible
+  </a>
+  with Visit.
+ </p>
+ <p>
+  <b>
+   vtkDataSetAttribute::DUPLICATECELL
+  </b>
+  specifies that this cell is present on multiple processors. This is a ghost cell. This cell is not rendered. It is present only to help obtain correct results when processing only a subset of the original data. Attributes associated with these cells are valid, so they can be used in certain statistical operations such as min/max. Ghost cells should not be used in operations such as average because this would result counting the same cell several times. A similar description applies to
+  <b>
+   vtkDataSetAttribute::DUPLICATEPOINT
+  </b>
+ </p>
+ <p>
+  <b>
+   vtkDataSetAttribute::REFINEDCELL
+  </b>
+  specifies that other cells are present that refine this cell. Because the coarser grid is often a structured grid, it is difficult to remove cells that are further refined. Instead, this bit is used to mark this kind of cells. Values associated with this cell may be used in interpolation. Note that there is no vtkDataSetAttribute::REFINEDPOINT. For more information about AMR datasets in VTK see
+  <a href="https://blog.kitware.com/visualization-analysis-of-amr-datasets/">
+   Visualization &amp; Analysis of AMR Datasets
+  </a>
+  in The Source.
+ </p>
+ <p>
+  <b>
+   vtkDataSetAttribute::HIDDENCELL
+  </b>
+  specifies that this cell is not part of the model, it is only used to maintain the connectivity of the grid. This is a blank cell. It is not rendered and any values associated with it are ignored. A similar description applies to
+  <b>
+   vtkDataSetAttribute::HIDDENPOINT
+  </b>
+ </p>
+ <p>
+  Other bits specified by VisIt are not used in VTK.
+ </p>
+ <h1>
+  API Changes
+ </h1>
+ <p>
+  To test if a cell is a ghost cell, previously, we used
+  <b>
+   grid-&gt;GetCellData()-&gt;GetArray(“vtkGhostLevels”)-&gt;GetValue(cellId) &gt; 0
+  </b>
+  . This is because we stored ghost levels in the ghost array. Now we use
+  <b>
+   grid-&gt;GetCellGhostArray()-&gt;GetValue(cellId) &amp; vtkDataSetAttributes::DUPLICATECELL
+  </b>
+  .
+ </p>
+ <p>
+  To specify that a cell is a ghost cell, instead of
+  <b>
+   grid-&gt;GetCellData()-&gt;GetArray(“vtkGhostLevels”)-&gt;SetValue(cellId, ghostLevel)
+  </b>
+  , use:
+  <b>
+   vtkUnsignedCharArray* ghosts = grid-&gt;GetCellGhostArray(); ghosts-&gt;SetValue(cellId, ghosts-&gt;GetValue(cellId) | vtkDataSetAttributes::DUPLICATECELL);
+  </b>
+  Note that we use a ‘or’ operation to preserve other bits that might be set for the cell.
+ </p>
+ <p>
+  To create a new ghost array, instead of
+  <b>
+   vtkDataSetAttributes::GenerateGhostLevelArray
+  </b>
+  , use
+  <b>
+   vtkDataSetAttributes::GenerateGhostArray
+  </b>
+  . We changed the name because there are no ghost levels in the new ghost array.
+ </p>
+ <p>
+  To test if there are any ghost cells, instead of
+  <b>
+   grid-&gt;GetCellData()-&gt;GetArray(“vtkGhostLevels”) != NULL
+  </b>
+  , use
+  <b>
+   grid-&gt;HasAnyGhostCells()
+  </b>
+  . Make similar changes to test if there are any blank cells. We made this change because previously a non-NULL ghost array meant that there are ghost cells, now this means that there are blank cells or ghost cells.
+ </p>
+ <p>
+  To get a pointer to the ghost array, instead of
+  <b>
+   grid-&gt;GetCellData()-&gt;GetArray(“vtkGhostLevels”)
+  </b>
+  , use
+  <b>
+   grid-&gt;GetCellGhostArray()
+  </b>
+  . This new function avoids O(N) string comparisons by caching the ghost array pointer.
+ </p>
+ <p>
+  We remove a ghostLevel parameter from
+  <b>
+   vtkPolyData::RemoveGhostCells
+  </b>
+  ,
+  <b>
+   vtkUnstructuredGrid::RemoveGhostCells
+  </b>
+  ,
+  <b>
+   vtkGlyph3D::Execute
+  </b>
+  ,
+  <b>
+   vtkDataSetSurfaceFilter::UnstructuredGridExecute
+  </b>
+  . This is because we no longer remove ghost levels requested by a filter after the filter finishes executing.
+ </p>
+ <p>
+  We remove
+  <b>
+   GetCellVisibilityArray
+  </b>
+  from
+  <b>
+   vtkStructuredGrid
+  </b>
+  and
+  <b>
+   vtkUniformGrid
+  </b>
+  . Use
+  <b>
+   GetCellGhostArray
+  </b>
+  instead and use
+  <b>
+   vtkDataSetAttributes::HIDDENCELL
+  </b>
+  bit to set or test if a cell is blanked.
+ </p>
+ <p>
+  We add an extra parameter to
+  <b>
+   vtkDataReader::ReadFieldData
+  </b>
+  ,
+  <b>
+   vtkXMLDataReader::ReadArrayValues
+  </b>
+  ,
+  <b>
+   vtkXMLStructuredDataReader::ReadSubExtent
+  </b>
+  which specifies if we read cell or point data. This is needed so that we can use the proper bits when converting ghost levels.
+ </p>
+ <p>
+  We remove
+  <b>
+   vtkStructuredGridWriter:::WriteBlanking
+  </b>
+  as blanking is now written when saving the
+  <b>
+   vtkGhostType
+  </b>
+  array.
+ </p>
+ <h1>
+  VTK XML file version update (4/16/2015)
+ </h1>
+ <p>
+  Users with an older VTK won’t be able to read VTK XML files generated with a new VTK containing the ghost changes described even if those files do not contain ghost or blanking cells. This is because we increment VTK XML file version.
+ </p>
+ <p>
+  To fix this, we use the previous file version for VTK XML files (0.1 for files using UInt32 header type and 1.0 for files using UInt64 header type) unless data is unstructured or structured grid and there is a vtkGhostType array.
+ </p>
+</div>

@@ -1,0 +1,103 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One of the most frequently requested features on the ParaView mailing list has been for anti-aliasing support — that is, the ability to smooth out the jagged edges of lines and polygons that aren’t neatly aligned to pixel boundaries. The image below shows a scene rendered with aliased and anti-aliased edges (click to enlarge). Highly aliased areas are enlarged and compared in the bottom portion of the image to demonstrate the effect.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15925" style="width: 1010px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom.png">
+   <img alt="A VTK scene without anti-aliasing (left) and with FXAA (right)." class="size-full wp-image-15925" height="974" sizes="(max-width: 1000px) 100vw, 1000px" src="https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom.png 1000w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-300x292.png 300w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-768x748.png 768w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-220x214.png 220w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-250x244.png 250w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-355x346.png 355w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-730x711.png 730w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-90x88.png 90w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2016/09/TestFXAAFilter-Zoom-50x50.png 50w" width="1000"/>
+  </a>
+  <p class="wp-caption-text">
+   A VTK scene with aliased edges (left) and anti-aliased edges (right).
+  </p>
+ </div>
+ <p>
+  The anti-aliased image was generated using a technique commonly known as FXAA. The effect of FXAA is quite noticeable on the edges of the orange sphere that intersects the pink cone. While the green lines still retain some of the ‘stair-step’ effect in places, they are significantly smoother.
+ </p>
+ <h2>
+  Why FXAA?
+ </h2>
+ <p>
+  There are many ways to produce an anti-aliased rendering. However, most techniques aren’t feasible in ParaView:
+  <a href="https://en.wikipedia.org/wiki/Multisample_anti-aliasing" target="_blank">
+   Multi-Sampling (MSAA)
+  </a>
+  would introduce artifacts when rendering in parallel, and
+  <a href="https://en.wikipedia.org/wiki/Supersampling" target="_blank">
+   Super-Sampling (SSAA)
+  </a>
+  is simply too expensive for complex scenes and parallel communication.
+ </p>
+ <p>
+  Most anti-aliasing techniques modify the rendering process to smooth out edges as they’re drawn.
+  <a href="http://developer.download.nvidia.com/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf" target="_blank">
+   FXAA, or Fast approXimate Anti-Aliasing
+  </a>
+  , however, is a post-processing technique that is applied to the final image of a scene rendered with aliased edges. This offers several advantages:
+ </p>
+ <ul>
+  <li>
+   The execution time is dependent on the screen size and not the scene complexity, so it scales well for complex scenes with lots of rendered polygons.
+  </li>
+  <li>
+   FXAA does not affect the rendering process. This allows us to perform distributed parallel rendering in ParaView, compose each processor’s contribution, and then anti-alias the final image without introducing seams or other artifacts at the processor boundaries.
+  </li>
+  <li>
+   FXAA is implemented in the fragment shader of a single OpenGL full-screen pass, and thus takes advantage of highly parallel GPU resources. The glsl source for the shader is freely available
+   <a href="https://github.com/Kitware/VTK/blob/master/Rendering/OpenGL2/glsl/vtkFXAAFilterFS.glsl" target="_blank">
+    on github
+   </a>
+   .
+  </li>
+ </ul>
+ <h2>
+  How does it work?
+ </h2>
+ <p>
+  The FXAA implementation in VTK is an extension of the algorithm described by NVIDIA in their
+  <a href="http://developer.download.nvidia.com/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf" target="_blank">
+   whitepaper
+  </a>
+  . It addresses two types of aliasing:
+ </p>
+ <ol>
+  <li>
+   <strong>
+    Subpixel Aliasing
+   </strong>
+   : A single pixel that has high contrast with its immediate neighbors (often caused by specular highlights and shadow effects).
+  </li>
+  <li>
+   <strong>
+    Edge Aliasing
+   </strong>
+   : The jagged, ‘stair-step’ edges produced when an object is rasterized to a display of finite pixels.
+  </li>
+ </ol>
+ <p>
+  Subpixel aliasing is detected by computing the contrast between a pixel and its neighbors. It is corrected by blending an average of the pixel’s 3×3 neighborhood into the pixel’s final color.
+ </p>
+ <p>
+  Correcting edge aliasing is more complex. First, an edge detection method is used to determine whether the pixel is part of a horizontal or vertical edge. Second, a search is performed along the edge direction to identify the endpoints of the edge (i.e. the extent of the ‘stair’ in the stair-step). Finally, based on the pixel’s distance from the nearest edge endpoint, its color is adjusted to create a gradual blur that runs along the edge, smoothing the jagged appearance of the rasterized edge.
+ </p>
+ <h2>
+  FXAA Settings
+ </h2>
+ <p>
+  FXAA is disabled by default in ParaView, but can be enabled in the ParaView Settings dialog under Render View &gt;&gt; Antialiasing Options. The default settings for FXAA balance quality with performance, but these can be adjusted to achieve a desired result. Each option has a brief description that explains its effect on the final image:
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15927" style="width: 550px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/09/settings.png">
+   <img alt="Configuration Options for tweaking FXAA in ParaView." class="size-full wp-image-15927" height="668" sizes="(max-width: 540px) 100vw, 540px" src="https://blog.kitware.com/wp-content/uploads/2016/09/settings.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/09/settings.png 540w, https://blog.kitware.com/wp-content/uploads/2016/09/settings-243x300.png 243w, https://blog.kitware.com/wp-content/uploads/2016/09/settings-220x272.png 220w, https://blog.kitware.com/wp-content/uploads/2016/09/settings-250x309.png 250w, https://blog.kitware.com/wp-content/uploads/2016/09/settings-355x439.png 355w, https://blog.kitware.com/wp-content/uploads/2016/09/settings-90x111.png 90w" width="540"/>
+  </a>
+  <p class="wp-caption-text">
+   Configuration Options for tweaking FXAA in ParaView.
+  </p>
+ </div>
+ <h2>
+  Acknowledgements
+ </h2>
+ <p>
+  The addition of this feature was made possible by Timothy Lottes of NVIDIA, who designed the original FXAA algorithm, and the VTK/ParaView implementation was funded by Sandia National Laboratories.
+ </p>
+</div>

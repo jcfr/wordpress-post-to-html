@@ -1,0 +1,2273 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <i>
+   This is a continuation of our series of posts about
+   <a href="http://resonant.kitware.com/">
+    Resonant
+   </a>
+   , a data analytics and visualization platform for the web.
+  </i>
+ </p>
+ <blockquote>
+  <p>
+   <span style="font-size: 10pt">
+    <strong>
+     Posts in this series:
+    </strong>
+   </span>
+   <br/>
+   <span style="font-size: 10pt">
+    <a href="https://blog.kitware.com/the-resonant-platform/">
+     Understanding the Resonant Platform
+     <br/>
+    </a>
+    <a href="https://blog.kitware.com/girder-applications-an-inside-look/">
+     Girder Applications: An Inside Look
+    </a>
+   </span>
+   <br/>
+   <span style="font-size: 10pt">
+    <a href="https://blog.kitware.com/girder-worker-and-the-covalic-grand-challenge/">
+     Girder Worker and the COVALIC Grand Challenge
+    </a>
+   </span>
+   <br/>
+   <span style="font-size: 10pt">
+    <a href="https://blog.kitware.com/geospatial-visualizations-in-geojs/">
+     Geospatial Visualization with GeoJS
+    </a>
+   </span>
+   <br/>
+   <span style="font-size: 10pt">
+    <strong>
+     Resonant Visualization with Candela
+     <br/>
+    </strong>
+    <a href="https://blog.kitware.com/recapping-resonant/">
+     Recapping Resonant
+    </a>
+    <strong>
+     <br/>
+    </strong>
+   </span>
+  </p>
+ </blockquote>
+ <p>
+  <span style="font-weight: 400">
+   Visualization is an integral part of the data science pipeline, offering images that can unlock understanding and insight from often large batches of raw or processed data. Previous posts in this series have highlighted some of the various ways we can perform visualization within the Resonant platform. In this article, we’ll be taking a close look at
+  </span>
+  <b>
+   Candela
+  </b>
+  <span style="font-weight: 400">
+   , Resonant’s API and toolkit library for constructing, adapting, publishing, and using powerful visualization components.
+  </span>
+ </p>
+ <h1>
+  <span style="font-weight: 400">
+   What is Candela?
+  </span>
+ </h1>
+ <p>
+  <span style="font-weight: 400">
+   Candela, in short, is a JavaScript library that provides
+  </span>
+  <i>
+   <span style="font-weight: 400">
+    reusable visualization components for the web
+   </span>
+  </i>
+  <span style="font-weight: 400">
+   . Let’s break this down a bit:
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <i>
+    <i>
+     <span style="font-weight: 400">
+      Reusable
+     </span>
+    </i>
+    <span style="font-weight: 400">
+     – following some of the oldest principles of software engineering, Candela provides a general API not tied to any particular framework or library, so the components you create with it can be ported from application to application very easily.
+    </span>
+   </i>
+  </li>
+  <li style="font-weight: 400">
+   <i>
+    <span style="font-weight: 400">
+     Visualization
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    – that general API does not provide many constraints; the main one is that you must implement a function called
+   </span>
+   <i>
+    <span style="font-weight: 400">
+     render()
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    which will carry out your visualization semantics, whatever they may be.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <i>
+    <span style="font-weight: 400">
+     Components
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    – we use object-oriented concepts to implement the notion of a visualization component; the general API means these components can be instantiated almost anywhere: in a standalone webpage, online documentation, a dynamic web application, an R Studio session, a Jupyter notebook session, or even in a Node script.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <i>
+    <span style="font-weight: 400">
+     For the web
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    – Candela uses modern JavaScript, taking advantage of ES2015 features and modern tooling (Webpack, NPM with semantic-release, and specially exported bindings to ease integrating into your own Webpack builds) to produce a library that can be used to do visualization almost anywhere on the web.
+   </span>
+  </li>
+ </ul>
+ <p>
+  <span style="font-weight: 400">
+   This article will demonstrate how to use Candela to construct a basic visualization, and hint at some of the more advanced options Candela offers as well.
+  </span>
+ </p>
+ <h1>
+  <span style="font-weight: 400">
+   Making a Line Chart
+  </span>
+ </h1>
+ <p>
+  <span style="font-weight: 400">
+   Candela ships with several general-purpose visualization components that are ready to use. To try one out, we’ll need to set up a short HTML document that imports the library, reads in some data, establishes a place to put a component, and then hooks everything together.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The data we will use is a short CSV file containing various data about
+  </span>
+  <i>
+   <span style="font-weight: 400">
+    Star Trek: The Next Generation
+   </span>
+  </i>
+  <span style="font-weight: 400">
+   episodes. To get started, create a directory somewhere, move into it, and then download the data:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e841873ec233185160" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ curl -O https://blog.kitware.com/wp-content/uploads/2016/10/episodes.csv</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e841873ec233185160-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e841873ec233185160-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         curl
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         O
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         https
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         blog
+        </span>
+        <span class="crayon-e">
+         .kitware
+        </span>
+        <span class="crayon-e">
+         .com
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         wp
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         content
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         uploads
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-cn">
+         2016
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-cn">
+         10
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         episodes
+        </span>
+        <span class="crayon-e">
+         .csv
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   Among other things, this dataset contains information about both the real-world airdate, and the in-universe “stardate” of each episode. Maybe there’s an interesting correlation between these values.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Now let’s create a webpage to do the visualization. Just to keep things simple, we’ll do everything in a single HTML file. You can copy this into an index.html file; here it is:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e841873f4931631777" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&lt;!doctype html&gt;
+&lt;title&gt;Candela - Star Trek: TNG Star Dates&lt;/title&gt;
+&lt;script src="https://unpkg.com/candela@0.6.2"&gt;&lt;/script&gt;
+&lt;script src="https://d3js.org/d3.v3.min.js"&gt;&lt;/script&gt;
+
+&lt;div id="vis"&gt;&lt;/div&gt;
+
+&lt;script&gt;
+var row = function (d) {
+  return {
+    airdate: d.Airdate,
+    stardate: +d.Stardate,
+    title: d.Title
+  };
+};
+
+var data = d3.csv('episodes.csv', row, function (episodes) {
+  episodes.forEach(function (d, i) {
+    if (d.stardate === 0) {
+      d.stardate = episodes[i - 1].stardate;
+    }
+  });
+
+  console.log(episodes);
+
+  var el = document.getElementById('vis');
+
+  console.log(el);
+
+  var vis = new candela.components.LineChart(el, {
+    data: episodes,
+    x: 'airdate',
+    y: ['stardate'],
+    hover: ['title', 'airdate', 'stardate'],
+    width: 700,
+    height: 400
+  });
+  vis.render();
+});
+&lt;/script&gt;</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e841873f4931631777-40">
+        40
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-1">
+        <span class="crayon-n">
+         &lt;!doctype html&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-2">
+        <span class="crayon-r ">
+         &lt;title&gt;
+        </span>
+        <span class="crayon-i ">
+         Candela - Star Trek: TNG Star Dates
+        </span>
+        <span class="crayon-r ">
+         &lt;/title&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-3">
+        <span class="crayon-i ">
+         <span class="crayon-ta">
+          &lt;script
+         </span>
+         <span class="crayon-e ">
+          src
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "https://unpkg.com/candela@0.6.2"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-ta">
+          &lt;/script&gt;
+         </span>
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-4">
+        <span class="crayon-i ">
+         <span class="crayon-ta">
+          &lt;script
+         </span>
+         <span class="crayon-e ">
+          src
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "https://d3js.org/d3.v3.min.js"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-ta">
+          &lt;/script&gt;
+         </span>
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-6">
+        <span class="crayon-r ">
+         &lt;div
+        </span>
+        <span class="crayon-e ">
+         id
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "vis"
+        </span>
+        <span class="crayon-r ">
+         &gt;
+        </span>
+        <span class="crayon-r ">
+         &lt;/div&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-7">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-8">
+        <span class="crayon-ta">
+         &lt;script&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-9">
+        <span class="crayon-t">
+         var
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         row
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         function
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         d
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         airdate
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         d
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Airdate
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         stardate
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-v">
+         d
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Stardate
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         title
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         d
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-i">
+         Title
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-15">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-16">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-17">
+        <span class="crayon-t">
+         var
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         data
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         d3
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         csv
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'episodes.csv'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         row
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         function
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         episodes
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         episodes
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-st">
+         forEach
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         function
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         d
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         d
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         stardate
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ===
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         d
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         stardate
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         episodes
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         stardate
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-23">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         console
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         log
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         episodes
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-25">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         var
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         el
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         document
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         getElementById
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'vis'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-27">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-28">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         console
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         log
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         el
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-29">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-30">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         var
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vis
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         candela
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         components
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         LineChart
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         el
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         data
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         episodes
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-32">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'airdate'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-33">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         y
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'stardate'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-34">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         hover
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'title'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'airdate'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'stardate'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-35">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         width
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         700
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-36">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         height
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         400
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-37">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-38">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vis
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         render
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-39">
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e841873f4931631777-40">
+        <span class="crayon-ta">
+         &lt;/script&gt;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0014 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   Here is a line-by-line explanation of what this code does:
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e841873f8649948221" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&lt;script src="https://unpkg.com/candela@0.6.2"&gt;&lt;/script&gt;</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e841873f8649948221-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e841873f8649948221-1">
+          <span class="crayon-ta">
+           &lt;script
+          </span>
+          <span class="crayon-e ">
+           src
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-s">
+           "https://unpkg.com/candela@0.6.2"
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+          <span class="crayon-ta">
+           &lt;/script&gt;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <br/>
+   <i>
+    <i>
+     <span style="font-weight: 400">
+      Line 3:
+     </span>
+    </i>
+   </i>
+   <span style="font-weight: 400">
+    This imports the Candela library file using the Unpkg CDN, which serves content directly from the NPM registry.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e841873fa048236607" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&lt;script src="https://d3js.org/d3.v3.min.js"&gt;&lt;/script&gt;</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e841873fa048236607-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e841873fa048236607-1">
+          <span class="crayon-ta">
+           &lt;script
+          </span>
+          <span class="crayon-e ">
+           src
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-s">
+           "https://d3js.org/d3.v3.min.js"
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+          <span class="crayon-ta">
+           &lt;/script&gt;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <br/>
+   <i>
+    <span style="font-weight: 400">
+     Line 4:
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    We will be using D3’s handy functions for retrieving and parsing CSV data.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e841873fc455698659" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&lt;div id="vis"&gt;&lt;/div&gt;</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e841873fc455698659-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e841873fc455698659-1">
+          <span class="crayon-o">
+           &lt;
+          </span>
+          <span class="crayon-e">
+           div
+          </span>
+          <span class="crayon-v">
+           id
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-s">
+           "vis"
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+          <span class="crayon-o">
+           &lt;
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           div
+          </span>
+          <span class="crayon-o">
+           &gt;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <br/>
+   <i>
+    <span style="font-weight: 400">
+     Line 6:
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    This div element will be where we place our Candela visualization component.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e841873fe037598949" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+var row = function (d) {
+  return {
+    airdate: d.Airdate,
+    stardate: +d.Stardate,
+    title: d.Title
+  };
+};</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e841873fe037598949-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e841873fe037598949-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e841873fe037598949-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e841873fe037598949-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e841873fe037598949-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e841873fe037598949-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e841873fe037598949-7">
+          7
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e841873fe037598949-1">
+          <span class="crayon-t">
+           var
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           row
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-t">
+           function
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           d
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e841873fe037598949-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           return
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e841873fe037598949-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           airdate
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           d
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           Airdate
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e841873fe037598949-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           stardate
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           +
+          </span>
+          <span class="crayon-v">
+           d
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           Stardate
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e841873fe037598949-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           title
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           d
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-i">
+           Title
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e841873fe037598949-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e841873fe037598949-7">
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0002 seconds] -->
+   <br/>
+   <i>
+    <span style="font-weight: 400">
+     Lines 9-15:
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    This function will be used by D3 to transform the CSV results – we want to convert the “stardate” to a floating point number, while leaving everything else as is.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e84187400213680677" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+var data = d3.csv('episodes.csv', row, function (episodes) {</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e84187400213680677-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e84187400213680677-1">
+          <span class="crayon-t">
+           var
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           data
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           d3
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-e">
+           csv
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-s">
+           'episodes.csv'
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           row
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-t">
+           function
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           episodes
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <br/>
+   <i>
+    <span style="font-weight: 400">
+     Line 17:
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    Here, we are using d3’s CSV function to issue an ajax request for the data, passing along the “row” function to postprocess it, and a callback function to execute when the data becomes available.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e84187402746537856" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+  episodes.forEach(function (d, i) {
+    if (d.stardate === 0) {
+      d.stardate = episodes[i - 1].stardate;
+    }
+  });</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e84187402746537856-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187402746537856-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187402746537856-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187402746537856-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187402746537856-5">
+          5
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e84187402746537856-1">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           episodes
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-st">
+           forEach
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-t">
+           function
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           d
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           i
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187402746537856-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-st">
+           if
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           d
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           stardate
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ===
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-cn">
+           0
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187402746537856-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           d
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           stardate
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           episodes
+          </span>
+          <span class="crayon-sy">
+           [
+          </span>
+          <span class="crayon-v">
+           i
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-cn">
+           1
+          </span>
+          <span class="crayon-sy">
+           ]
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           stardate
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187402746537856-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187402746537856-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0003 seconds] -->
+   <br/>
+   <i>
+    <span style="font-weight: 400">
+     Lines 18-22:
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    We need to “patch” our data a bit – some episodes never mention a stardate, so to avoid seeing spurious “stardate 0” values we simply assign such episodes to have the same stardate as the episode preceding.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e84187404630075373" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+  var el = document.getElementById('vis');</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e84187404630075373-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e84187404630075373-1">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-t">
+           var
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           el
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           document
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-e">
+           getElementById
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-s">
+           'vis'
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <br/>
+   <i>
+    <span style="font-weight: 400">
+     Line 26:
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    This gets a reference to the div element we prepared earlier to house the visualization.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-mac print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e84187406138803972" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+  var vis = new candela.components.LineChart(el, {
+    data: episodes,
+    x: 'airdate',
+    y: ['stardate'],
+    hover: ['title', 'airdate', 'stardate'],
+    width: 700,
+    height: 400
+  });</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e84187406138803972-8">
+          8
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-1">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-t">
+           var
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           vis
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-r">
+           new
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           candela
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           components
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-e">
+           LineChart
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           el
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           data
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           episodes
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           x
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           'airdate'
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           y
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           [
+          </span>
+          <span class="crayon-s">
+           'stardate'
+          </span>
+          <span class="crayon-sy">
+           ]
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           hover
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           [
+          </span>
+          <span class="crayon-s">
+           'title'
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           'airdate'
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-s">
+           'stardate'
+          </span>
+          <span class="crayon-sy">
+           ]
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           width
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-cn">
+           700
+          </span>
+          <span class="crayon-sy">
+           ,
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-7">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           height
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-cn">
+           400
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e84187406138803972-8">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-sy">
+           ;
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0004 seconds] -->
+   <br/>
+   <i>
+    <span style="font-weight: 400">
+     Line 30:
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    This instantiates the visualization component. We want to plot a line chart of the episode stardates as a function of the episode air dates. Further detail about this function call follows.
+   </span>
+  </li>
+ </ul>
+</div>

@@ -1,0 +1,113 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Korg Italy, the company where I work, is the leader in the production of electronic musical instruments. It was founded in 1996 as a subsidiary company of Korg Inc. (Tokyo). Its mission is very clear: use the latest technologies to create the finest electronic musical instruments and allow musicians to sound their very best. Such an approach to electronic and software technologies led us to CMake and so we started thinking whether it would be a good replacement for our old build system and work-flow. First, let me briefly explain the way we work and the tools we use.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Proprietary Hardware Platform &amp; OS
+    </span>
+   </strong>
+  </span>
+  <br/>
+  We develop the whole instrument, from the embedded hardware design to the production of sounds. In particular, I’m a member of the software development team where we develop a proprietary, real-time OS. We have always put a lot of effort into writing easily portable code. This effort allows us to run our OS in an emulated environment on a host Windows machine, so we can develop and debug almost all of our code without needing to use a real hardware target. Furthermore, debugging the code on Windows is much easier than doing it on a custom hardware.
+ </p>
+ <p>
+  Before using CMake, a colleague of mine devised a sort of “hook” that was able to catch the commands between Visual Studio 6 and its compiler, and translate them in order to redirect them to the specific tool-chain of the target. This way we could use Visual Studio to build both the emulated version and the target one.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Why We Chose CMake
+    </span>
+   </strong>
+  </span>
+  <br/>
+  As you can imagine, the “hook” program is very complex and requires modification every time the team needs to change the IDE or the tool-chain. This additional work always discouraged us from changing or upgrading the IDE, so we started investigating a different ways of managing our whole software product line. The first thing we did was set some features that would make a build system suitable for our needs. Below I summarize the key-points:
+ </p>
+ <ul>
+  <li>
+   CMake is an easy way to manage multiple projects containing a lot of dependencies from other modules and libraries.
+  </li>
+  <li>
+   It provides flexibility for changing the IDE and build system in a short time without having any problems with setting all the parameters every time.
+  </li>
+  <li>
+   The system manages the cross-compilation as any other build system would, without needing particular customization except for the tool-chain specification.
+  </li>
+  <li>
+   Developers can keep working with the same tools that they generally use, but they must be able to share the modifications made to the project using our version control system in a way that permits replication of any modifications to all others automatically.
+  </li>
+ </ul>
+ <p>
+  Its cross-compilation support and ability to generate native projects for several build systems, makes CMake the ideal build candidate.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     The System Migration Process
+    </span>
+   </strong>
+  </span>
+  <br/>
+  After an “investigative phase,” I dove into implementation.
+ </p>
+ <p>
+  At that time we were developing the Pa3X: the arranger flagship among the Pa Series (Pa is an acronym for Professional Arranger). This product is ideal for testing the capability of CMake; being the top level of its series, the build system of Pa3X is the most complex project within our product line. If CMake worked well for Pa3X, it would work for the rest of our products; that being the case, I started to convert all our old projects to CMakeLists.txt.
+ </p>
+ <p>
+  Due to the huge number of projects and their configuration parameters, I decided to develop a program that can explore the root of our sources and create a CMakeLists.txt for each VS6 project found. Such a program is made up of two components: one is a parser of a Visual Studio 6 project, and the other is a “CMake persiter” that can serialize the project into a CMakeLists.txt according to CMake syntax.
+ </p>
+ <p>
+  Obviously this cannot be accomplished entirely with an automatic system, so I had to check each CMakeList.txt generated and modify them when needed. Fortunately, this allowed me to avoid the longest and most tedious part of the task.
+ </p>
+ <p>
+  As soon as I finished this work, I tried to generate my first Visual Studio 2008 (a very long step from VS6). After upgrading some old compiler options to the new ones, I finally completed a build of our OS! The next step was to integrate our ARM toolchain and generate a Makefile. This phase took just a bit longer than the previous one, mainly because of some odd linker configurations. After struggling with some problems of toolchain parameters, I was able to build the executable for our platform target too! It was a great satisfaction to listen to our arranger Pa3X playing.
+ </p>
+ <p>
+  <a href="/source/files/28_1697906110.png" rel="noopener" target="_blank">
+   <img alt="" height="300" src="https://blog.kitware.com/source/files/Small.28_1697906110.png" style="display: block; margin-left: auto; margin-right: auto;" width="450"/>
+  </a>
+  <br/>
+  The final step was to integrate the post build process, which deals with the creation of the packages available on the Korg website to upgrade the old operative system. I have to say, I was very impressed with how CMake allows for decoupling of the build of an executable and the post-build steps by adding several custom targets.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     CMake Makes the Changes as Gradual as Necessary
+    </span>
+   </strong>
+  </span>
+  <br/>
+  Once I completed the migration on my workstation, one of our biggest concerns was the learning curve needed to get all the other members of the software development team comfortable working with it. That’s one of the most interesting things about CMake: when a project is set up, a developer needs only a little knowledge about CMake because their main activity is working with the native build system or IDE. I implemented a batch script to generate all native projects, which the team needed in order to let every developer work with their own system. Now the only thing that a developer needs to remember is to add the new source files into CMakeList.txt.
+ </p>
+ <p>
+  Immediately after we started using CMake as our official build system, we received a request from some our distributors asking if it’d be possible to make some software customizations focused on their specific market macro zone.
+ </p>
+ <p>
+  That was actually the first time we needed to change our product line relying on CMake, in order to fit the new requirements we faced. On this occasion I really appreciated the flexibility of CMake; all I had to do was to write a function with signature parameters matching the variation points that every customization needs.
+ </p>
+ <p>
+  In conclusion, the use of CMake allowed us to make our build system, and our product line in general, much more flexible and it improved our time-to-market. For all these reasons I became a dyed-in-the-wool CMake user!
+ </p>
+ <p>
+  <a href="/source/files/28_2107186124.png" rel="noopener" target="_blank">
+   <img alt="" height="126" src="https://blog.kitware.com/source/files/Small.28_2107186124.png" style="float: left;" width="101"/>
+  </a>
+  <em>
+   <strong>
+    Andrea Galeazzi
+   </strong>
+   graduated in Electronic Engineering at Università Politecnica delle Marche. Andrea works as software architect and build system manager in the R&amp;D Software department at Korg Italy S.p.A.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

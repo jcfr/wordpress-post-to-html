@@ -1,0 +1,170 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Multi-modal virtual surgical trainers and planners that are equipped with interactive physics-based simulations are becoming common in curricula for medical training. They help to hone procedural and broader skills, thereby improving overall surgical outcomes. These simulators demand high frame rates and high-fidelity simulations [1]. To improve medical training, a team aimed to increase the fidelity of surgical simulations [1].
+ </p>
+ <p>
+  In medical training, adhesive contact may be observed between surgical tools and internal organs [1]. This contact is caused by adhesive forces [2]. Adhesive forces tend to oppose the relative motion of bodies under contact and result from material damage that occurs on a microscopic scale [3].
+ </p>
+ <p>
+  To observe the evolution of adhesive forces over time, the team modeled an elastic block as it fell under gravity from a preset height onto a rigid plane. Figure 1 plots the evolution of adhesive forces over time for different levels of adhesion stiffness. As the figure indicates, the forces fluctuated in response to the cycling of the internal energy of the block between potential (elastic) energy and kinetic energy. For lower adhesion stiffness, the elastic block did not detach from the plane upon initial contact. For higher adhesion stiffness, the adhesive forces did not prevent the block from detaching from the plane upon first impact.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_19319" style="width: 910px">
+  <img alt="" class="size-full wp-image-19319" height="601" sizes="(max-width: 900px) 100vw, 900px" src="https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion.png 900w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-235x156.png 235w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-300x200.png 300w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-768x513.png 768w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-220x147.png 220w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-250x167.png 250w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-355x237.png 355w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-730x487.png 730w, https://blog.kitware.com/wp-content/uploads/2017/09/Forces-of-Adhesion-90x60.png 90w" width="900"/>
+  <p class="wp-caption-text">
+   Figure 1. Forces of adhesion (normalized with body weight) evolve over time for an elastic block that falls on an adhesive plane.
+  </p>
+ </div>
+ <p>
+  Figure 2 shows various stages of detachment for the same block under the influence of its own weight over time. Modeling such simulations with adhesion in real time involves formulating non-contiguous, regime-based, physical phenomena, which generally produces the mixed linear complementarity problem (MLCP) [4]. Numerical methods that formulate these phenomena combine traditional ideas for solving linear algebraic systems (e.g., fixed-point iteration and pivoting [5]) with a decision-making step. This step implements a metaphorical “if-else” to find the solution to the MLCP [6].
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_19341" style="width: 714px">
+  <img alt="" class="size-full wp-image-19341" height="2442" sizes="(max-width: 704px) 100vw, 704px" src="https://blog.kitware.com/wp-content/uploads/2017/09/Blocks.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/Blocks.jpg 704w, https://blog.kitware.com/wp-content/uploads/2017/09/Blocks-295x1024.jpg 295w, https://blog.kitware.com/wp-content/uploads/2017/09/Blocks-220x763.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/Blocks-250x867.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/Blocks-355x1231.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/Blocks-90x312.jpg 90w" width="704"/>
+  <p class="wp-caption-text">
+   Figure 2. An elastic block undergoes various stages of detachment from an adhesive plane.
+  </p>
+ </div>
+ <p>
+  The team built on a modified version of a previously known solver for the MLCP: iterative constraint anticipation (ICA) [6]. ICA can be employed in real time. The modified version on which the team built is described in Arikatla et al. [7]. For its work, the team proposed a new algorithm: iterative adhesive contact solver (IACS) [1]. Figure 3 outlines IACS.
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19320" style="width: 1191px">
+   <img alt="" class="wp-image-19320 size-full" height="489" sizes="(max-width: 1181px) 100vw, 1181px" src="https://blog.kitware.com/wp-content/uploads/2017/09/IACS.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/IACS.png 1181w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-300x124.png 300w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-768x318.png 768w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-1024x424.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-220x91.png 220w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-250x104.png 250w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-355x147.png 355w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-730x302.png 730w, https://blog.kitware.com/wp-content/uploads/2017/09/IACS-90x37.png 90w" width="1181"/>
+   <p class="wp-caption-text">
+    Figure 3. Steps highlight IACS. Arikatla et al. [1] explains what the symbols represent. Source: Arikatla et al. [1].
+   </p>
+  </div>
+  IACS can adapt to various models of adhesion, and it can be applied to real-time simulations [1]. As an example, the team chose a model of adhesion proposed by Raous, Cangémi and Cocu [8]. In this model, the two states of bodies under contact, bonding (adhesion) and debonding (detachment), are characterized by a rate-dependent adhesion intensity (β) [8]. Gascón, Zurdo and Otaduy [9] simulated this model in a mechanical system. The approach in Gascón, Zurdo and Otaduy [9] treats adhesive forces in three orthonormal directions in the local contact frame of reference as unknowns at each contact point. At each time step, the inverse of the coefficient matrix of the system gets computed [9]. This results in a bottleneck with
+  <img alt="" class="wp-image-19318 alignnone" height="19" sizes="(max-width: 27px) 100vw, 27px" src="https://blog.kitware.com/wp-content/uploads/2017/09/Computational-Complexity.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/Computational-Complexity.png 57w, https://blog.kitware.com/wp-content/uploads/2017/09/Computational-Complexity-50x37.png 50w" width="27"/>
+  computational complexity. Thus, the approach has limitations when applied to real-time simulations [1].
+ </p>
+ <p>
+  Alternatively, to refrain from inverting the system matrix, IACS splits the unknowns into contact states (bonding or debonding), contact forces (adhesive and normal) and displacements [1]. This allows the adhesive forces to be treated explicitly. In addition, whereas the approach in Arikatla et al. [7] first estimates the states/forces in an approximate solver and then solves for the final state, IACS continually updates the states and forces until it undergoes convergence [1]. According to the convergence criteria, IACS stops when the change in the displacement field between consecutive iterations is less than a preset threshold.
+ </p>
+ <p>
+  It is important to note that the converged solution that is based on this criteria is not guaranteed to be the solution to the MLCP. The fact that the unknown contact states and adhesive forces are not implicitly formulated as part of the MLCP system makes it difficult to establish practical residual-based convergence criteria.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Testing and Future Work
+   </span>
+  </strong>
+ </p>
+ <p>
+  As Figure 4 depicts, the team tested IACS on a case in which a rigid tool interacted with a liver [1]. The testing focused on adhesive forces; it did not consider frictional forces, which are generally coupled with adhesive forces.
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19321" style="width: 955px">
+   <img alt="" class="size-full wp-image-19321" height="711" sizes="(max-width: 945px) 100vw, 945px" src="https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1.png 945w, https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1-300x226.png 300w, https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1-768x578.png 768w, https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1-220x166.png 220w, https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1-250x188.png 250w, https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1-355x267.png 355w, https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1-730x549.png 730w, https://blog.kitware.com/wp-content/uploads/2017/09/ss2-1-90x68.png 90w" width="945"/>
+   <p class="wp-caption-text">
+    Figure 4: “Interaction of a rigid tool surface with liver tissue.” Source: Arikatla et al. [1].
+   </p>
+  </div>
+  Figure 5 graphs some of the team’s preliminary results. These results were presented at the 2017 International Conference on Computational and Mathematical Biomedical Engineering (CMBE) [1].
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19322" style="width: 1810px">
+   <img alt="" class="size-full wp-image-19322" height="1200" sizes="(max-width: 1800px) 100vw, 1800px" src="https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1.png 1800w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-235x156.png 235w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-300x200.png 300w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-768x512.png 768w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-1024x683.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-220x147.png 220w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-250x167.png 250w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-355x237.png 355w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-730x487.png 730w, https://blog.kitware.com/wp-content/uploads/2017/09/AdhesionICA-SolverConv-1-90x60.png 90w" width="1800"/>
+   <p class="wp-caption-text">
+    Figure 5: “Convergence of the iterative adhesive contact solver.”
+    <br/>
+    Source: Arikatla et al. [1].
+   </p>
+  </div>
+  Frictional forces can be incorporated in future work without discounting the present approach, as IACS can extend to models of friction. The team not only plans to incorporate frictional forces in future work, but it seeks to understand the theoretical guarantees that IACS can provide for convergence under certain assumptions of models of adhesion.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    References
+   </strong>
+  </span>
+ </p>
+ <ol>
+  <li>
+   Arikatla, Venkata S., Mohit Tyagi, Xinyu G. Chen, Suvranu De and Andinet Enquobahrie. “An iterative approach for modeling adhesion in surgical simulations.” CMBE 2017 Proceedings 2 (2017): 810-813.
+  </li>
+  <li>
+   Kenneth R. Shull. “Contact mechanics and the adhesion of soft solids.” Materials Science and Engineering: R: Reports 36 (2002): 1-45.
+  </li>
+  <li>
+   Sacco, Elio, and Frédéric Lebon. “A damage–friction interface model derived from micromechanical approach.” International Journal of Solids and Structures 49 (2012): 3666-3680.
+  </li>
+  <li>
+   Cottle, Richard W., Jong-Shi Pang and Richard E. Stone. The Linear Complementarity Problem. Society for Industrial and Applied Mathematics, 2009.
+  </li>
+  <li>
+   Saad, Yousef. Iterative methods for Sparse Linear Systems Second Edition. Society for Industrial and Applied Mathematics, 2003.
+  </li>
+  <li>
+   Otaduy, Miguel A., Rasmus Tamstorf, Dennis Steinemann and Markus Gross. “Implicit Contact Handling for Deformable Objects.” Computer Graphics Forum 28 (2009): 559-568.
+  </li>
+  <li>
+   Arikatla, Venkata S., and Suvranu De. “An iterative predictor–corrector approach for modeling static and kinetic friction in interactive simulations.” Graphical Models, 82 (2015): 29-42.
+  </li>
+  <li>
+   Raous, Michel, Laurent Cangémi and Marius Cocu. “A consistent model coupling adhesion, friction, and unilateral contact.” Computer Methods in Applied Mechanics and Engineering 177 (1999): 389-399.
+  </li>
+  <li>
+   Gascón, Jorge, Javier S. Zurdo and Miguel A. Otaduy. “Constraint-Based Simulation of Adhesive Contact.” Proceedings of the 2010 ACM SIGGRAPH/Eurographics Symposium on Computer Animation (2010): 39-44.
+  </li>
+ </ol>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Acknowledgement
+   </strong>
+  </span>
+ </p>
+ <p>
+  This material is based upon work supported by the United States Army Medical Research Acquisition Activity (USAMRAA) under Contract No. W81XWH-16-C-0094. Any opinions, findings and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the USAMRAA.
+ </p>
+ <p>
+  Research reported in this publication was supported by the Office Of The Director, National Institutes Of Health of the National Institutes of Health under Award Number R44OD018334. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.
+ </p>
+ <p>
+  <img alt="" class="size-full wp-image-15210 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/sreekanth_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/sreekanth_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/sreekanth_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Sreekanth Arikatla
+  </strong>
+  is a senior research and development engineer at Kitware. His interests include numerical methods, computational mechanics, computer graphics and virtual reality.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" class="alignleft wp-image-19325" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/09/mohit_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/mohit_headshot.jpg 240w, https://blog.kitware.com/wp-content/uploads/2017/09/mohit_headshot-220x275.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/mohit_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Mohit Tyagi
+  </strong>
+  completed a research and development internship on the medical computing team at Kitware. He currently works at Altair Engineering, India, as a solver development engineer. His interests include inverse problems, computational mechanics and numerical methods.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" class="size-full wp-image-15209 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/andinet_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/andinet_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/andinet_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Andinet Enquobahrie
+  </strong>
+  is the director of medical computing at Kitware, where he manages projects for image-guided intervention, quantitative imaging and surgical simulation.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" class="alignleft wp-image-19326" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/09/grace_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/grace_headshot.jpg 240w, https://blog.kitware.com/wp-content/uploads/2017/09/grace_headshot-220x275.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/grace_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Grace Chen
+  </strong>
+  is a senior project engineer of computational medicine and biology at CFD Research Corporation. Her research focuses on computational biomechanics, injury prevention and mitigation as well as composite damage and failure modeling.
+ </p>
+</div>

@@ -1,0 +1,53 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  Introduction
+ </h1>
+ <p>
+  In my
+  <a href="http://blog.kitware.com/rethinking-debian-packaging-for-vtk-and-other-cmake-projects-part-2/">
+   last post
+  </a>
+  in this series, I went into the finer technical points of our new software package, dh-cmake. I also discussed the challenges we faced in our efforts to package the Visualization Toolkit (VTK) on Debian. Here, I explain how we integrated CTest and CPack into the Debian packaging process. I also review the value that the integration adds for distribution maintainers.
+ </p>
+ <h1>
+  Integrating CTest Into the Debian Packaging Process
+ </h1>
+ <p>
+  As I mentioned in part two of the series, we used to build the nightly .debs and perform the nightly testing for VTK in separate build processes. This worked for a while, but we eventually sought to combine the processes into a single build in order to get a more accurate picture of how well the actual .deb build functioned. More specifically, we wanted to capture the output of the configure, build, and test steps in a similar manner to CTest dashboard scripts but inside the dpkg-buildpackage process.
+ </p>
+ <p>
+  We weren’t sure how we were going to accomplish this. Both CTest and the Debian packaging system wanted to control the build process from end to end, and neither one of them wanted to give up that control. Luckily, we found that both debhelper and CTest had just enough flexibility to merge with third-party software. The flexibility of debhelper, for example, allows you to add new commands to the build sequence and replace existing ones. As for CTest, its ctest_start() command accepts an APPEND parameter, which allows you to break up the dashboard testing process into multiple Unix processes. We utilized these capabilities and added new commands to debhelper that (1) capture the output of the existing debhelper commands and (2) submit the output to a CDash dashboard server (such as the
+  <a href="https://open.cdash.org/index.php?project=VTK">
+   VTK dashboard
+  </a>
+  ). Internally, the commands use a CTest dashboard script to make this happen. (When CTest’s dashboard script feature was originally written, I don’t think anyone ever imagined it would be used this way. It is a testament to the power and flexibility of the CMake ecosystem: The scripting capabilities enable use cases that nobody could have envisioned.)
+ </p>
+ <p>
+  What we have done here is something that’s never been done before. We have unified the Kitware software development process of continuous integration and nightly testing with the Debian packaging process. Now that these processes have been combined, the nightly tests that get submitted to CDash give a much more accurate picture of how well the Debian package works.
+ </p>
+ <h1>
+  CPack
+ </h1>
+ <p>
+  To meet the Debian Science team’s request to break up the output package of VTK into smaller packages, we wanted to utilize some of CPack’s functionality. In particular, we wanted to install CPack components into Debian binary packages and retain the dependency graph that was already encoded into CPack.
+ </p>
+ <p>
+  Unfortunately, we couldn’t use CPack’s DEB generator for packages that go into Debian proper, and CPack didn’t give us an easy way to extract metadata. So, we added a new generator to CPack, the “CPack External” generator. It simply writes all of the metadata to a .json file for external software to use. This new generator will be available in CMake 3.13.
+ </p>
+ <p>
+  We then added three new commands to dh-cmake: dh_cpack_generate, dh_cpack_substvars, and dh_cpack_install. The generate command produces the .json file, the substvars command writes the dependency information into Debian’s *.substvars files for use in the binary packages, and the dh_cpack_install command acts as a more advanced version of the dh_cmake_install command by installing CPack components or component groups into a package.
+ </p>
+ <p>
+  As for the dependency graph mentioned above, it proves to be especially useful. In the debian/control file, you can now declare “Depends: ${cpack:Depends}” for each output package instead of having to duplicate this information manually. The process uses the same substvars mechanism as ${shlibs:Depends}, which automatically adds the proper package dependencies for shared libraries to which the package has linked.
+ </p>
+ <h1>
+  Wrapping Up
+ </h1>
+ <p>
+  The final step was to tie all of our efforts together. To do so, we set up our own Kitware-hosted, unofficial, third-party APT repository to host dh-cmake and the nightly VTK builds. We generated our own GNU Privacy Guard (GPG) keys to sign the repository, and we even mimicked the debian-archive-keyring package to allow us to easily push new keys, so we can rotate them out regularly.
+ </p>
+ <p>
+  We are very excited about our foray into Debian development, and there is still a lot of work ahead!
+ </p>
+</div>

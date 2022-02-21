@@ -1,0 +1,41 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Historically, the biggest barrier to using ParaView for most beginners is getting their data into ParaView. While ParaView supports a wide variety of file formats, new formats are created all the time. Additionally, existing formats may become popular enough that they warrant the development of customized readers in order to load the data into ParaView. One of the easiest ways to get these currently unsupported formats into ParaView is through the development of a
+  <a href="http://paraview.org/Wiki/Plugin_HowTo" target="_blank">
+   customized plugin
+  </a>
+  . While this lowered the barrier to adding functionality to ParaView, there were still some shortcomings:
+ </p>
+ <ul>
+  <li>
+   For reader and writer plugins, the plugin needed to always be loaded on the client in order to have the file extensions be associated with the reader or writer in the GUI.
+  </li>
+  <li>
+   For plugins that used direct MPI calls, typically due to using MPI-IO, they depended on the client connecting to a separate server in order to ensure that MPI was initialized.
+  </li>
+ </ul>
+ <p>
+  These issues often confused new ParaView users. For experienced ParaView users, these issues were easily manageable but still caused annoyance that things weren’t as easy as they ought to be. As someone that has worked on several ParaView readers, including ones that rely on MPI-IO, it became clear that the ParaView community has skirted around these issues long enough. With the upcoming release of ParaView 4.1, there are two separate changes that will improve the ease of use for ParaView parallel reader and writer plugins.
+ </p>
+ <p>
+  The first improvement is that for reader and writer plugins, the server-side XML now specifies all needed information for the client to use it properly. Because of this, when the client connects to a separate server the reader and writer plugins need only be loaded on the server. Before, the client-side XML specified what extensions to associate with available readers which created the requirement that the client-side plugin also needed to be loaded in order to generate this association. Besides saving a couple of clicks when loading a plugin on an external server, it also means that any client, of the same version of ParaView, can be used as well. Thus, the client from the standard ParaView installers available
+  <a href="http://www.paraview.org/paraview/resources/software.php" target="_blank">
+   online
+  </a>
+  will work perfectly fine when connecting to any server that may have customized plugins built on it.
+ </p>
+ <p>
+  The second improvement is now the client can be run with MPI initialized, if it was built with MPI support. This is available for both the ParaView GUI as well as the pvpython executable by using the –mpi command line argument. In this case, a filter that requires parts of the MPI API that haven’t been abstracted in
+  <a href="http://www.vtk.org/doc/nightly/html/classvtkMPIController.html" target="_blank">
+   vtkMPIController
+  </a>
+  can still be used without having to connect to a server that has been run with MPI initialized. Typically these types of filters are specialized readers that require MPI-IO. Now, in the server-manager XML description the mpi_required=”true” flag can be added specifying that MPI must be initialized in order for the filter to be available.
+ </p>
+ <p>
+  One of the main drivers for this work was better support for the Nektar reader plugin in ParaView. The plugin code shares some code parts with the Nektar CFD solver package. This introduces dependencies on MPI-IO, BLAS, LAPACK and Fortran. Additionally, the code has not been properly declspec’d in order to work on Windows and because of this it isn’t appropriate to be included in VTK or the core parts of ParaView. With these improvements to ParaView it is now much simpler for the end-users to utilize this reader plugin. A screenshot is shown below for a simple test problem where using the built-in server can easily handle the data set.
+ </p>
+ <p>
+  This work was supported, principally, by the Scientific Discovery through Advanced Computing (SciDAC) program funded by U.S. Department of Energy, Office of Science, Advanced Scientific Computing Research under award number DE-FC02-12ER26070.
+ </p>
+</div>

@@ -1,0 +1,87 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400;">
+   As Andy Bauer described a long while back in the Kitware
+  </span>
+  <a href="https://blog.kitware.com/spatio-temporal-parallelism-with-paraview/">
+   <span style="font-weight: 400;">
+    blog
+   </span>
+  </a>
+  ,
+  <span style="font-weight: 400;">
+   ParaView provides a way to generate more efficient batch scripts for temporal data processing. The strategy is to make the temporal domain the primary axis of parallel decomposition in an MPI job. That is, groups of nodes in a cluster simultaneously process different time steps. For tasks like generating movies, where you make sequences of thousands of more or less independent images, this can cut wait times down substantially.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   There hasn’t been a lot of development on this feature since its introduction, but we’ve had a chance to revisit it recently. What we’ve done is to promote this spatio-temporal batch parallel capability out of the dusty non-default plugin dungeon to mainstream ParaView and to revamp the user interface. The new and improved version just barely missed ParaView 5.6, but it is available in master and the nightly binaries today. The work extends upon the new and improved Catalyst Script generation that is in ParaView 5.6.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   To create a spatio-temporal script, create a visualization pipeline with some representative input and then use the
+  </span>
+  <b>
+   Catalyst Export Inspector
+  </b>
+  <span style="font-weight: 400;">
+   to define the image and data captures that the batch script should produce at run time. This much is common to both Catalyst and temporal scripts. In fact, the process differs only in that there are two additional choices to make and that you pick
+  </span>
+  <b>
+   Export Temporal Script
+  </b>
+  <span style="font-weight: 400;">
+   from the
+  </span>
+  <b>
+   Catalyst
+  </b>
+  <span style="font-weight: 400;">
+   menu rather than
+  </span>
+  <b>
+   Export Catalyst Script
+  </b>
+  <span style="font-weight: 400;">
+   when you are ready to save out the python script. The two additional choices are in the
+  </span>
+  <b>
+   Spatio-Temporal Controls
+  </b>
+  <span style="font-weight: 400;">
+   section at the bottom of the export inspector. The options are advanced so use search or the gear icon to see them. In
+  </span>
+  <b>
+   Time Compartment Size
+  </b>
+  <span style="font-weight: 400;">
+   tell the script how many nodes on the cluster you need to process a single time step. Tell the script what files the compartments should read with the
+  </span>
+  <b>
+   Input File Pattern
+  </b>
+  <span style="font-weight: 400;">
+   , where the “*” will be replaced at run time by a step number.
+  </span>
+ </p>
+ <p>
+  <img alt="" class="size-full wp-image-23585" height="823" sizes="(max-width: 856px) 100vw, 856px" src="http://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38.png 856w, https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38-300x288.png 300w, https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38-768x738.png 768w, https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38-220x212.png 220w, https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38-250x240.png 250w, https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38-355x341.png 355w, https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38-730x702.png 730w, https://blog.kitware.com/wp-content/uploads/2018/09/Screenshot-from-2018-09-21-12-59-38-90x87.png 90w" width="856"/>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   After you export the script, run it through your cluster’s MPI with some variation of the following.
+  </span>
+ </p>
+ <blockquote>
+  <p>
+   mpiexec -np N pvbatch –symmetric my_saved_temporal_script.py
+  </p>
+ </blockquote>
+ <p>
+  <span style="font-weight: 400;">
+   Where N is any multiple of the time compartment size. The run will give you the same results as a normal ParaView batch script would but potentially much faster.
+  </span>
+ </p>
+</div>

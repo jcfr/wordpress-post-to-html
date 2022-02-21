@@ -1,0 +1,426 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Allegorithmic makes applications for texturing. Texturing is a virtual process that helps make a three-dimensional (3D) model appear realistic. With texturing, a 3D model of a wall can look like it is made of concrete. Sébastien Deguy, the CEO of Allegorithmic, describes texturing as “touching with the eyes.”
+ </p>
+ <p>
+  Four years ago, Allegorithmic launched the development of Substance Painter, which is shown in Figure 1. Substance Painter is an application that has helped Allegorithmic become a leader of the texturing industry. Major game studios now use the application. When Allegorithmic first created Substance Painter, the company only had a small team of software developers. They focused on a tool called Substance Designer. Substance Designer was originally developed in C++, using the Qt framework. It was built with QMake, which comes with Qt. The build process for Substance Designer was tailored over 10 years. Yet, it had a number of problems:
+ </p>
+ <ul>
+  <li>
+   Code was stored in a single, monolithic Subversion (SVN) repository that had a mix of libraries, in-house tools and application sources.
+  </li>
+  <li>
+   Many handcrafted scripts were used to set up environment variables to specify items such as dependency locations, platform types and compilers.
+  </li>
+  <li>
+   The build process required third-party libraries, which were manually maintained in a zipped file that each developer had to store on his or her computer. When the process incorporated a new dependency or compiler, the updated zipped file was manually deployed to all of the computers.
+  </li>
+  <li>
+   Without a link between the source code and the various versions of third-party libraries, it was difficult to revert to earlier versions of the project build.
+  </li>
+  <li>
+   The setup scripts were not cross-platform scripts. They required separate build and packaging processes for Windows and Mac OS X.
+  </li>
+  <li>
+   Setting up new workstations—from code checkout to successful build—was a complex procedure that often took more than a day. This procedure heavily relied on detailed knowledge from developers.
+  </li>
+ </ul>
+ <div class="wp-caption aligncenter" id="attachment_19314" style="width: 2260px">
+  <img alt="" class="wp-image-19314 size-full" height="1270" sizes="(max-width: 2250px) 100vw, 2250px" src="https://blog.kitware.com/wp-content/uploads/2017/09/hydrant.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/hydrant.jpg 2250w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-300x169.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-768x433.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-1024x578.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-220x124.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-250x141.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-355x200.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-730x412.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/hydrant-90x51.jpg 90w" width="2250"/>
+  <p class="wp-caption-text">
+   Figure 1: Substance Painter adds texture to a 3D model of a fire hydrant.
+  </p>
+ </div>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Designing a Better Build Process
+   </strong>
+  </span>
+ </p>
+ <p>
+  With the introduction of Substance Painter and the potential introduction of additional applications, Allegorithmic acknowledged that its cumbersome build process was a risk for the company. Looking toward the future, the company chose to form a new, more sustainable build process that could support new applications.
+ </p>
+ <p>
+  Developers at Allegorithmic wanted to easily check out source code, configure it, compile it and run it on their favorite platforms with their favorite integrated development environments (IDEs). They also wanted to maintain only one build file. Thus, the new build process needed to incorporate a fully reproducible and cross-platform build environment that could support Windows, Mac OS X and Linux without maintaining handcrafted, platform-specific scripts. The build process also needed to produce a stand-alone package that could be distributed without worrying about dependencies. The process had to be customizable, and it had to be able to generate documentation from source code, copy files at build time and use external pre-processing tools. In addition, the process had to easily handle third-party libraries. To accomplish this, the build system had to contain the correct versions of the libraries.
+ </p>
+ <p>
+  Since the software that Allegorithmic planned to develop would depend on Qt, QMake was initially implemented to achieve these objectives. Unfortunately, QMake did not suit the requirements due to its poor documentation and slow performance. Allegorithmic developers were unable to find a satisfactory way to use QMake to manage dependencies.
+ </p>
+ <p>
+  Allegorithmic next considered CMake as a candidate. Many of the third-party libraries that the company used were already compiled with CMake, and/or they provided CMake configuration files. Additionally, some of the developers at Allegorithmic had experience with CMake, and they were happy with the results. Allegorithmic found that CMake was able to fulfill all of its requirements. The company successfully implemented a new build process that used CMake.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Managing Third-party Libraries
+   </span>
+  </strong>
+ </p>
+ <p>
+  Managing third-party libraries for a cross-platform project is a nightmare in C++. Each project uses different versions of compilers, different compilation options and different versions of libraries, which makes it complicated to maintain binary packages for each permutation. The solution is to build the libraries as part of a project to guarantee that the binaries are fully compatible with the project. These library sources are directly referenced in the source tree of the project, which ensures the availability of any given version of the project.
+ </p>
+ <p>
+  To link the library sources to a particular version of Substance Painter, Allegorithmic relies on the
+  <span style="font-family: 'courier new', courier;">
+   ExternalProject
+  </span>
+  function of CMake. This function defines the necessary steps to download, configure, build, install and test external libraries. Allegorithmic only uses the steps to build and install the libraries. It employs Git submodules to download the appropriate versions of third-party sources.
+ </p>
+ <p>
+  It is not always possible to build third-party libraries as part of the project. Some libraries are proprietary, and they do not have source code available. Others cannot be integrated with the project source tree because of their respective sizes; these large libraries take too long to build. For such libraries, Allegorithmic employs a simple internal tool that allows pre-compiled binaries to be uploaded and downloaded from internal servers. This tool is used within CMake files. It downloads the appropriate version of each library. The tool enables Allegorithmic to directly keep track of binary dependencies in the project source tree as it would any other source dependencies.
+ </p>
+ <p>
+  As a result of its flexibility, CMake can wrap calls to make their syntax similar to that of
+  <span style="font-family: 'courier new', courier;">
+   ExternalProject
+  </span>
+  . The following call, for example, downloads the appropriate version of Qt for the target platform and adds its location to the path in CMake, where it can be found when needed.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41d50f53ea7594729520" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+alg_add_external_archive(ALG_QT 
+
+  WIN32 qt-5.7.1-p2 
+
+  APPLE qt-5.7.1-p1-c++11 
+
+  CENTOS qt-5.7.1-centos-p1 
+
+  UBUNTU qt-5.7.1-ubuntu-p1 
+
+  )</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d50f53ea7594729520-11">
+        11
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-1">
+        <span class="crayon-e">
+         alg_add_external_archive
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         ALG_QT
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-3">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         WIN32
+        </span>
+        <span class="crayon-v">
+         qt
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         5.7.1
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         p2
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-5">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         APPLE
+        </span>
+        <span class="crayon-v">
+         qt
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         5.7.1
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         p1
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         c
+        </span>
+        <span class="crayon-o">
+         ++
+        </span>
+        <span class="crayon-cn">
+         11
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         CENTOS
+        </span>
+        <span class="crayon-v">
+         qt
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         5.7.1
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         centos
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         p1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-9">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         UBUNTU
+        </span>
+        <span class="crayon-v">
+         qt
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         5.7.1
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         ubuntu
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-i">
+         p1
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-10">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d50f53ea7594729520-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-family: 'courier new', courier;">
+   ExternalProject
+  </span>
+  can also download pre-compiled binaries through HTTPS or common source control options. The downside is that CMake installs
+  <span style="font-family: 'courier new', courier;">
+   ExternalProject
+  </span>
+  at build time and not at the time that CMake is configured. This timing prevents the use of the
+  <span style="font-family: 'courier new', courier;">
+   find_library()
+  </span>
+  feature in CMake. Accordingly, all third-party management occurs in a separate
+  <span style="font-family: 'courier new', courier;">
+   CMakeLists.txt
+  </span>
+  file, which must be built and configured before the actual project is built and configured.
+ </p>
+ <p>
+  An alternative is to provide a superbuild whose last
+  <span style="font-family: 'courier new', courier;">
+   ExternalProject
+  </span>
+  step is the real project. This way,
+  <span style="font-family: 'courier new', courier;">
+   ExternalProject
+  </span>
+  downloads and builds the third-party libraries before the project itself, allowing the project to properly reference the libraries.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Managing Dependencies
+   </strong>
+  </span>
+ </p>
+ <p>
+  The target system of CMake manages dependencies. Every executable or library that is built in a CMake project is a target. Each target defines the
+  <span style="font-family: 'courier new', courier;">
+   include
+  </span>
+  paths, compilation options and libraries that CMake needs for a project build. Each target also defines the instructions for any other target dependencies. CMake can treat external libraries as targets, using the
+  <span style="font-family: 'courier new', courier;">
+   IMPORTED
+  </span>
+  target feature. The ability to work only with targets makes
+  <span style="font-family: 'courier new', courier;">
+   CMakeLists.txt
+  </span>
+  files clean and easy to follow.
+ </p>
+ <p>
+  The CMake approach to dependency management is less prone to error than the previous approach that Allegorithmic used. Since the details of a particular external library are hidden inside of a target definition, developers do not need to worry if they forget a compile flag or an include path. The target system has proved important for Windows builds, and it has helped mitigate the limitations of the original build procedure.
+ </p>
+ <p>
+  On Windows, unlike on Mac OS X and Linux, it is not possible to specify a file location in the executable for dynamically linked libraries (DLLs). This means that a successfully compiled executable that relies on several DLLs cannot run unless those DLLs are either copied to the same directory as the executable or their locations are added to the PATH environment variable.
+ </p>
+ <p>
+  Allegorithmic solved this issue by writing its own introspection method, which uses properties on CMake targets. The introspection functions return the paths to the corresponding DLLs. A final post-build step was added to the executable target, which copies the DLLs to the same directory as the executable. While creating multiple copies of each DLL is not ideal, it serves as an acceptable compromise, as symlinks in Windows do not always work properly for certain levels of user permission.
+ </p>
+ <p>
+  Introspection is also used to generate stand-alone packages for projects with
+  <span style="font-family: 'courier new', courier;">
+   install()
+  </span>
+  in CMake. The only issue with
+  <span style="font-family: 'courier new', courier;">
+   install()
+  </span>
+  is that it cannot be used for
+  <span style="font-family: 'courier new', courier;">
+   IMPORTED
+  </span>
+  targets. So, Allegorithmic had to create a workaround. Instead of directly calling
+  <span style="font-family: 'courier new', courier;">
+   install()
+  </span>
+  , Allegorithmic created a custom command that can introspect a target as described above and generate the appropriate
+  <span style="font-family: 'courier new', courier;">
+   install()
+  </span>
+  for each dependency. Thus, it takes only a single command to install a target and generate a stand-alone installation for that target. Since the install process in CMake is flexible, the custom command allows additional processes to run. Such processes fix
+  <span style="font-family: 'courier new', courier;">
+   RPATH
+  </span>
+  on Mac OS X and Linux or generate symbol information for the crash reporting system.
+ </p>
+ <p>
+  CMake also provides a
+  <span style="font-family: 'courier new', courier;">
+   BundleUtilities
+  </span>
+  module that can help generate a standalone installation of an executable. Allegorithmic has not tried to use this module yet.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Looking Back at the Move to CMake
+   </strong>
+  </span>
+ </p>
+ <p>
+  The move from QMake to CMake initially faced resistance from some developers at Allegorithmic. In retrospect, it was the correct move. After Allegorithmic developed the framework for Substance Painter, it successfully ported Substance Designer to that framework, which allowed the development team for Substance Designer to grow. The framework also enabled the rapid startup of new products and teams that focus on software rather than on technical details of infrastructure.
+ </p>
+ <p>
+  Today, Allegorithmic has many software development teams, all of whom use the new framework. Developers are happy with the build system, as they no longer have to bother with the messy details of building and packaging C++ applications. The maintainable framework allows developers to continue to tackle challenges in the build environment, while they dedicate most of their time to improving their software products.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Acknowledgements
+   </strong>
+  </span>
+ </p>
+ <p>
+  Thanks go to Allegorithmic (
+  <a href="https://www.allegorithmic.com" rel="noopener" target="_blank">
+   https://www.allegorithmic.com
+  </a>
+  ), which allowed this look at behind-the-scenes work. Thanks also go to colleagues, who worked on the efforts discussed in this article. Finally, thanks go to Stephane Guy and Eric Batut, who reviewed this article.
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="alignleft wp-image-19313" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/09/chassany_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/chassany_headshot.jpg 240w, https://blog.kitware.com/wp-content/uploads/2017/09/chassany_headshot-220x275.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/chassany_headshot-90x113.jpg 90w" width="100"/>
+   Alexandre Chassany
+  </strong>
+  is a senior software developer at Allegorithmic, where he has worked for seven years. He is highly versatile, and he is passionate about every aspect of software development—from software architecture to release processes. He is active on LinkedIn at
+  <a href="https://www.linkedin.com/in/achassany" rel="noopener" target="_blank">
+   https://www.linkedin.com/in/achassany
+  </a>
+  and on Twitter through the handle @achassany.
+ </p>
+</div>

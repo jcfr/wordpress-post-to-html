@@ -1,0 +1,862 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p dir="ltr" id="docs-internal-guid-af9789bb-24c6-8848-f9cc-c4a911a16f2b" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;text-indent: 36pt;">
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   When performing continuous integration (CI) testing of a project, it is undesirable to spend time building and configuring a project's dependencies. For dependencies that take a long time to build and are highly configurable, like the Insight Segmentation and Registration toolkit (
+  </span>
+  <a href="http://itk.org/" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    ITK
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   ), a cached version of a unique build environment greatly accelerates CI testing.
+  </span>
+  <a href="https://www.docker.com/" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    Docker
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   is an ideally suited tool for this task.
+  </span>
+  <br/>
+ </p>
+ <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;text-indent: 36pt;">
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   My name is Lucas Gandel, and I am an intern in the Kitware North Carolina office. In this tutorial, I will explain how to run
+  </span>
+  <a href="https://github.com/" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    GitHub
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   CI tests using
+  </span>
+  <a href="https://circleci.com/" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    CircleCI
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   and a Docker container. The aim is to have tests run each time a new commit is pushed to a GitHub repository. The test result
+  </span>
+  <span id="docs-internal-guid-af9789bb-2a0c-f3b6-395d-bfd30ef78bb4" style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   will be submitted to
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   CDash
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   and a summary will be directly shown in the
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   README
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   section of the GitHub project. For example, lately, while working on
+  </span>
+  <a href="http://tubetk.org/" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+    TubeTk
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   , I set up the testing infrastructure associated with the  ITK
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+    MinimalPathExtraction
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   remote module.
+  </span>
+ </p>
+ <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;text-indent: 36pt;">
+ </p>
+ <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;text-indent: 36pt;">
+  <span id="docs-internal-guid-af9789bb-2a0d-eeff-1abb-55fa160e13cc" style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   If you are not familiar with
+  </span>
+  <a href="http://www.cdash.org/" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+    CDash
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   , it provides a convenient way to aggregates, analyzes and displays results of software testing processes submitted from clients around the world. In this tutorial, the client is the build machine provided by CircleCI service.
+  </span>
+  <br/>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-22381" height="276" sizes="(max-width: 803px) 100vw, 803px" src="http://blog.kitware.com/wp-content/uploads/2015/10/automated_1.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/10/automated_1.png 803w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_1-300x103.png 300w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_1-768x264.png 768w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_1-220x76.png 220w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_1-250x86.png 250w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_1-355x122.png 355w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_1-730x251.png 730w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_1-90x31.png 90w" width="803"/>
+ </p>
+ <p>
+ </p>
+ <ol style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:21.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <h1 dir="ltr" style="line-height:1.2;margin-top:12pt;margin-bottom:3pt;">
+    <span style="font-size:21.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Setup Docker Hub
+    </span>
+   </h1>
+  </li>
+  <li dir="ltr" style="list-style-type:decimal;font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <h3 dir="ltr" style="line-height:1.2;margin-top:12pt;margin-bottom:0pt;">
+    <span style="font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Populate your project repository with the four following files located in the directory
+    </span>
+    <span style="font-size:17.333333333333332px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     test/Docker
+    </span>
+    <span style="font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     :
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </h3>
+  </li>
+ </ol>
+ <p style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+ </p>
+ <p style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" id="docs-internal-guid-4359adc8-2a0f-e06a-26fc-77012bb14d8b" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    Note that the
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   t
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    e
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   s
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    t
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   .
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    s
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   h
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    script also
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    i
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   n
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    v
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   o
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    k
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   e
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   </span>
+  </a>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    CT
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   e
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    s
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   t
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   e
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    x
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   e
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    c
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   u
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    t
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   a
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    b
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   l
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    e
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    t
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   o
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   r
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    e
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   p
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    o
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   r
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    t
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    b
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   u
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    i
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   l
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    d
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    a
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   n
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    d
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    t
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   e
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    s
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   t
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   r
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    e
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   s
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    u
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   l
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    t
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   s
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   o
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    n
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    C
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   D
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    a
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   s
+  </span>
+  <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+   <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    h
+   </span>
+  </a>
+  <span style="font-size:16px;font-family:Verdana;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   .
+  </span>
+ </p>
+ <p style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+ </p>
+ <ul style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Dockerfile
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     : Provides instructions to Docker in order to build the image. It corresponds to the user command line instructions needed to set up the project. (Package install, Prerequisite Libraries … )
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     build.sh
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     : Build script to perform a build of the Docker image locally. Contains the
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     docker build
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     command.  See
+    </span>
+    <a href="https://docs.docker.com/reference/commandline/build/" style="text-decoration:none;">
+     <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+      https://docs.docker.com/reference/commandline/build/
+     </span>
+    </a>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     run.sh
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     : Run script to execute locally. Provides instructions to control the image run steps. See
+    </span>
+    <a href="https://docs.docker.com/reference/run/" style="text-decoration:none;">
+     <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+      https://docs.docker.com/reference/run/
+     </span>
+    </a>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     test.sh
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     : Test script to be executed by the run command on every automated build.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+    <br class="kix-line-break"/>
+    <br/>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     An example of these files can be found here :
+    </span>
+    <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker" style="text-decoration:none;">
+     <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+      https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/tree/master/test/Docker
+     </span>
+    </a>
+   </p>
+  </li>
+ </ul>
+ <p>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-22382" height="273" sizes="(max-width: 927px) 100vw, 927px" src="http://blog.kitware.com/wp-content/uploads/2015/10/automated_2.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/10/automated_2.png 927w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_2-300x88.png 300w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_2-768x226.png 768w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_2-220x65.png 220w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_2-250x74.png 250w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_2-355x105.png 355w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_2-730x215.png 730w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_2-90x27.png 90w" width="927"/>
+ </p>
+ <p>
+ </p>
+ <ol start="2" style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <h3 dir="ltr" style="line-height:1.2;margin-top:12pt;margin-bottom:3pt;">
+    <span style="font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Configure Docker for automated builds :
+    </span>
+   </h3>
+  </li>
+ </ol>
+ <p>
+ </p>
+ <ul style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Log in to
+    </span>
+    <a href="https://hub.docker.com/" style="text-decoration:none;">
+     <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+      DockerHub
+     </span>
+    </a>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     using your GitHub account. This should automatically link Docker to your GitHub repositories.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Next to your username, choose Create-&gt;Create Automated Build.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     You should see all the GitHub repositories that are accessible for your Docker account. Click on the repository for which you want to add tests.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Fill the automated build parameters by providing a Description and the Dockerfile Location (
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     test/Docker
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     ).
+    </span>
+   </p>
+  </li>
+ </ul>
+ <p>
+ </p>
+ <ul style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     If the build times out, the image can be built locally and pushed up to DockerHub.
+    </span>
+   </p>
+  </li>
+ </ul>
+ <p>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-22383" height="577" sizes="(max-width: 717px) 100vw, 717px" src="http://blog.kitware.com/wp-content/uploads/2015/10/automated_3.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/10/automated_3.png 717w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_3-300x241.png 300w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_3-220x177.png 220w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_3-250x201.png 250w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_3-355x286.png 355w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_3-90x72.png 90w" width="717"/>
+ </p>
+ <p>
+ </p>
+ <ol start="2" style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:21.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <h1 dir="ltr" style="line-height:1.2;margin-top:12pt;margin-bottom:3pt;">
+    <span style="font-size:21.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Set up CircleCI
+    </span>
+   </h1>
+  </li>
+ </ol>
+ <p>
+ </p>
+ <ol style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <h3 dir="ltr" style="line-height:1.2;margin-top:12pt;margin-bottom:3pt;">
+    <span style="font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Populate your GitHub project repository with the two following files located in the root directory.
+    </span>
+   </h3>
+  </li>
+ </ol>
+ <p>
+ </p>
+ <ul style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     circle.yml
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     : This file is used to override the default CircleCI configuration in order to point at the Docker image we created.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+    <br class="kix-line-break"/>
+    <br/>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     An example for this file can be found at
+    </span>
+    <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/blob/master/circle.yml" style="text-decoration:none;">
+     <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+      https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/blob/master/circle.yml
+     </span>
+    </a>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     .
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+    <br class="kix-line-break"/>
+    <br/>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Documentation for this file can be found at
+    </span>
+    <a href="https://circleci.com/docs/config-sample" style="text-decoration:none;">
+     <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+      https://circleci.com/docs/config-sample
+     </span>
+    </a>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     .
+    </span>
+   </p>
+  </li>
+ </ul>
+ <p>
+ </p>
+ <ul style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     CTestConfig.cmake
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     : Used by CircleCI to submit files using HTTP protocol to
+     <a href="http://www.cdash.org/">
+      CDash
+     </a>
+     . The CTEST_DROP_METHOD parameter in this file has to be set as “http”.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+    <br class="kix-line-break"/>
+    <br/>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     An example can be found at
+    </span>
+    <a href="https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/blob/master/CTestConfig.cmake" style="text-decoration:none;">
+     <span style="font-size:16px;font-family:Arial;color:#1155cc;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:underline;vertical-align:baseline;">
+      https://github.com/InsightSoftwareConsortium/ITKMinimalPathExtraction/blob/master/CTestConfig.cmake
+     </span>
+    </a>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     .
+    </span>
+   </p>
+  </li>
+ </ul>
+ <p>
+ </p>
+ <ol start="2" style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <h3 dir="ltr" style="line-height:1.2;margin-top:12pt;margin-bottom:3pt;">
+    <span style="font-size:17.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Configure CircleCI
+    </span>
+   </h3>
+  </li>
+ </ol>
+ <p>
+ </p>
+ <ul style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Log in to CircleCI using your GitHub account.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Click on
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Add Projects
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     , select your user account or an organization name, and choose the GitHub repository for which you want to add tests.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+    <br class="kix-line-break"/>
+    <br/>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     If no repositories are shown in the list, you may want to check the “Show forks” parameter on the right of the screen.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:disc;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Click on
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Build project
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     to add CircleCI verification to your project.
+    </span>
+   </p>
+  </li>
+ </ul>
+ <p>
+  <!--/p-->
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-22384" height="838" sizes="(max-width: 1565px) 100vw, 1565px" src="http://blog.kitware.com/wp-content/uploads/2015/10/automated_4.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/10/automated_4.png 1565w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-300x161.png 300w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-768x411.png 768w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-1024x548.png 1024w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-220x118.png 220w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-250x134.png 250w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-355x190.png 355w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-730x391.png 730w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_4-90x48.png 90w" width="1565"/>
+ </p>
+ <ol start="3" style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:21.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <h1 dir="ltr" style="line-height:1.2;margin-top:12pt;margin-bottom:3pt;">
+    <span style="font-size:21.333333333333332px;font-family:Arial;color:#000000;background-color:transparent;font-weight:700;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Add CircleCI status badge and report link on GitHub
+    </span>
+   </h1>
+  </li>
+ </ol>
+ <p>
+ </p>
+ <ol style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Populate your GitHub project repository with a
+    </span>
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     README.rst
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     file located in the root directory.
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type:decimal;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;">
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     Add status badge image and link at the beginning of the
+    </span>
+    <span style="font-size:16px;font-family:'Courier New';color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     README.rst
+    </span>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     file to point at CircleCI test results:
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+    <br class="kix-line-break"/>
+    <br/>
+    <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+     For reStructuredText file, the text to add will be similar to this one:
+    </span>
+    <br class="kix-line-break"/>
+    <br/>
+    <br class="kix-line-break"/>
+    <br/>
+    <span style="font-size:10px;">
+     <span style='font-family: "Courier New"; color: rgb(0, 0, 0); background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline;'>
+      .. image:: https://circleci.com/gh/InsightSoftwareConsortium/ITKMinimalPathExtraction.svg?style=svg
+     </span>
+     <br class="kix-line-break"/>
+     <br/>
+     <span style='font-family: "Courier New"; color: rgb(0, 0, 0); background-color: transparent; font-weight: 400; font-style: normal; font-variant: normal; text-decoration: none; vertical-align: baseline;'>
+      :target: https://circleci.com/gh/InsightSoftwareConsortium/ITKMinimalPathExtraction
+     </span>
+    </span>
+   </p>
+  </li>
+ </ol>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;margin-left: 36pt;">
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   Instead of composing the text yourself, CircleCI provided a very convenient way to directly generate it based on the type of README file (markdown, reStructuredText, …).
+  </span>
+  <br class="kix-line-break"/>
+  <br/>
+  <br class="kix-line-break"/>
+  <br/>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   In the Project Settings menu, choose the “
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   Status Badges
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   “ tab located in the “
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   Notifications
+  </span>
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   “ menu on the left of your screen.
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-22385" height="212" sizes="(max-width: 580px) 100vw, 580px" src="http://blog.kitware.com/wp-content/uploads/2015/10/automated_5.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/10/automated_5.png 580w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_5-300x110.png 300w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_5-220x80.png 220w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_5-250x91.png 250w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_5-355x130.png 355w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_5-90x33.png 90w" width="580"/>
+ </p>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;margin-left: 36pt;">
+  <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   In the “Embed Code” section, select Image URL, and copy the image link to your README.rst file.
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-22386" sizes="(max-width: 1081px) 100vw, 1081px" src="http://blog.kitware.com/wp-content/uploads/2015/10/automated_6.png" srcset="https://blog.kitware.com/wp-content/uploads/2015/10/automated_6.png 1081w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-300x173.png 300w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-768x442.png 768w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-1024x589.png 1024w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-220x127.png 220w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-250x144.png 250w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-355x204.png 355w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-730x420.png 730w, https://blog.kitware.com/wp-content/uploads/2015/10/automated_6-90x52.png 90w" width="580"/>
+ </p>
+ <p>
+ </p>
+ <ol start="3" style="margin-top:0pt;margin-bottom:0pt;">
+  <li dir="ltr" style="list-style-type:decimal;font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+   <span style="font-size:16px;font-family:Arial;color:#000000;background-color:transparent;font-weight:400;font-style:normal;font-variant:normal;text-decoration:none;vertical-align:baseline;">
+    Push the README.rst file to your GitHub repository to trigger verification.
+   </span>
+  </li>
+ </ol>
+</div>

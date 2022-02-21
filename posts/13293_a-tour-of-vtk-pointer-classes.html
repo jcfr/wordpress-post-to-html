@@ -1,0 +1,342 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  One way in which VTK’s API differs from that of other libraries is that all vtkObjectBase-derived classes must be allocated from the heap. This means that we tend to deal with raw pointers a lot more often than those developing code using other libraries and frameworks, such as the standard template library, Boost and Qt. This has led to the addition of several templated classes to make pointer management, along with allocation and deallocation, easier.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     vtkNew
+    </strong>
+   </span>
+   <br/>
+  </span>
+  The newest addition to the set of pointer classes is vtkNew, which is designed to allocate and hold a VTK object. Due to the nature of VTK constructors (no arguments), it is a very simple class; on construction it allocates a new VTK object of the type specified, and on destruction it will call the Delete() method of the class.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      vtkNew&lt;vtkPoints&gt; points;
+      <br/>
+      points-&gt;SetDataTypeToDouble();
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  This class effectively maintains ownership of the object, provides a very compact way of allocating VTK objects, and assures that they will be deleted when the pointer goes out of scope in much the same way as stack allocated objects. The class is new in VTK 5.8.0. To pass the raw pointer to other classes it is necessary to use the GetPointer() method,
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      myObject-&gt;SetPoints(points.GetPointer());
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  This class can also be used as a member variable in classes where the class contains instances of other VTK classes that should be allocated on construction, and deallocated on destruction. It is not necessary to include the header of the class the vtkNew pointer will use in the header, just the implementation file containing the constructor definition.
+  <br/>
+  If the member variable can be changed in the API of the class (for example through a Set…() method), vtkSmartPointer would be a better choice.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: small;">
+     vtkSmartPointer
+    </span>
+   </strong>
+  </span>
+  <br/>
+  This is the oldest of the pointer classes, providing a container that holds a reference to a vtkObjectBase reference.
+  <br/>
+  The vtkSmartPointer class is templated and derived from vtkSmartPointerBase. It adds automatic casting for objects held by its superclass. To allocate a new VTK object and store it in a vtkSmartPointer use
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      vtkSmartPointer&lt;vtkPoints&gt; points =
+      <br/>
+      vtkSmartPointer&lt;vtkPoints&gt;::New();
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Using the contained object works in much the same way as using vtkNew.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      points-&gt;SetDataTypeToDouble();
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  This pointer class also allows implicit casts to the underlying pointer, and so to pass the instance to another class is a little simpler as it looks just like a normal pointer to the function, for example,
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      myObject-&gt;SetPoints(
+     </span>
+     points);
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The vtkSmartPointer class can also be used as a member variable. It is more suitable for the case where the class has API to set what the member variable is pointing to, while maintaining ownership of that class. On assignment, the smart pointer will increment the reference count of the object, and on destruction (or allocation of a different instance to the smart pointer) the reference count will be decremented.This can be especially helpful in the case of things such as input data, where the user of a class can set vtkImageData, for example, as the input, which is stored by the class in a member variable of type vtkSmartPointer&lt;vtkImageData&gt; and can then be used later. If the image that was passed in is later deleted the smart pointer assures that the reference count is still non-zero and the object remains valid. It can cause issues with reference loops in some cases, and there are also situations where it is more helpful to simply hold on to a pointer that will become null should the instance be deleted. The vtkWeakPointer class addresses these use cases.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: small;">
+     vtkWeakPointer
+    </span>
+   </strong>
+   <br/>
+  </span>
+  The vtkWeakPointer class is the third of our pointer classes, providing a weak reference to a vtkObject. This means that assigning to the vtkWeakPointer does not increase the reference count of the instance. When the instance being pointed to is destroyed, the vtkWeakPointer being held on to gets set to null, avoiding issues with dangling pointers. It is especially useful in cases where you need to hold on to a pointer for an instance, but there is no need to keep it around should it be deleted. This often makes it far easier to avoid any reference loops as well.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      vtkTable *table = vtkTable::New();
+      <br/>
+      vtkWeakPointer&lt;vtkTable&gt; weakTable = table;
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The weakTable will remain valid until Delete() is called, so in the following code weakTable will never evaluate to true.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      table-&gt;Delete();
+      <br/>
+      if (weakTable)
+      <br/>
+      {
+      <br/>
+      // We’ll never get here, as table was deleted.
+      <br/>
+      vtkIdType num = weakTable-&gt;GetNumberOfColumns();
+      <br/>
+      }
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  This makes it very easy to check for null before doing anything with the pointer. It is again useful for member variables of classes, in the case where there is no need to maintain ownership of the instance being pointed to.
+  <br/>
+  It should be noted that the above code is not thread safe.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: small;">
+     Use of Classes
+    </span>
+   </strong>
+  </span>
+  <br/>
+  As mentioned previously, each of the pointer classes can be used for member variables in classes. They have different attributes, and so the intended API around the data being pointed to should be considered.
+ </p>
+ <p>
+  <strong>
+   vtkNew:
+  </strong>
+  Strong ownership, where the class instantiates an object which it owns for the lifetime of the class.
+  <br/>
+  The member cannot be changed in place (much like stack variables).
+ </p>
+ <p>
+  <strong>
+   vtkSmartPointer:
+  </strong>
+  Ownership of the instance is maintained. The class may or may not instantiate the initial object
+  <br/>
+  and the instance being pointed to can be changed.
+ </p>
+ <p>
+  <strong>
+   vtkWeakPointer:
+  </strong>
+  Weak ownership, where the class does not instantiate an object. If the object instance is deleted, then the weak pointer is null, which avoids dangling pointers without ownership.
+ </p>
+ <p>
+  A simplified class definition might look like,
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      #include “vtkObject.h”
+      <br/>
+      #include “vtkNew.h”
+      <br/>
+      #include “vtkSmartPointer.h”
+      <br/>
+      #include “vtkWeakPointer.h”
+      <br/>
+      class vtkTable;
+      <br/>
+      class vtkExample
+      <br/>
+      {
+      <br/>
+      static vtkExample * New();
+      <br/>
+      void SetInputTable(vtkTable *table);
+      <br/>
+      vtkTable * GetInputTable();
+      <br/>
+      void SetColorTable(vtkTable *table);
+      <br/>
+      vtkTable * GetColorTable();
+      <br/>
+      vtkTable * GetTableCache();
+      <br/>
+      protected:
+      <br/>
+      vtkExample();
+      <br/>
+      ~vtkExample();
+      <br/>
+      vtkNew&lt;vtkTable&gt; TableCache;
+      <br/>
+      vtkSmartPointer&lt;vtkTable&gt; InputTable;
+      <br/>
+      vtkWeakPointer&lt;vtkTable&gt; ColorTable;
+      <br/>
+      };
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The corresponding implementation file would contain,
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      #include “vtkExample.h”
+      <br/>
+      #include “vtkObjectFactory.h”
+      <br/>
+      #include “vtkTable.h”
+      <br/>
+      vtkStandardNewMacro(vtkExample)
+      <br/>
+      vtkExample::vtkExample()
+      <br/>
+      {
+      <br/>
+      this-&gt;InputTable =
+      <br/>
+      vtkSmartPointer&lt;vtkTable&gt;::New();
+      <br/>
+      }
+      <br/>
+      vtkExample::~vtkExample() { }
+      <br/>
+      void vtkExample::SetInputTable(vtkTable *table)
+      <br/>
+      {
+      <br/>
+      this-&gt;InputTable = table;
+      <br/>
+      }
+      <br/>
+      vtkTable * vtkExample::GetInputTable()
+      <br/>
+      {
+      <br/>
+      return this-&gt;InputTable.GetPointer();
+      <br/>
+      }
+      <br/>
+      void vtkExample::SetColorTable(vtkTable *table)
+      <br/>
+      {
+      <br/>
+      this-&gt;ColorTable = table;
+      <br/>
+      }
+      <br/>
+      vtkTable * vtkExample::GetColorTable()
+      <br/>
+      {
+      <br/>
+      return this-&gt;ColorTable.GetPointer();
+      <br/>
+      }
+      <br/>
+      vtkTable * vtkExample::GetTableCache()
+      <br/>
+      {
+      <br/>
+      return this-&gt;TableCache.GetPointer();
+      <br/>
+      }
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Note that there was no need to call Delete() on any of the member variables. The vtkNew class allocates the vtkTable on construction, and that instance cannot be replaced over the lifetime of the class instance. When the class is destructed, the vtkNew object calls delete on the table. Next, vtkSmartPointer allocates an initial instance of vtkTable, which can later be replaced using SetInputTable. Finally vtkWeakPointer may be set using SetColorTabl; if it is, it will point to that instance until it is destroyed.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Pointer Class Interaction
+    </span>
+   </strong>
+  </span>
+  <br/>
+  The pointer classes all work with each other. The vtkNew class is ideal for allocation of new objects in a very concise form. Since it just decrements the reference count when it goes out of scope, it works as expected when used with the other two pointer classes.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      vtkNew&lt;vtkTable&gt; nTable; // Reference count of 1
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+</div>

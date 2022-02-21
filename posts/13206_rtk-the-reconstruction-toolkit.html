@@ -1,0 +1,390 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Tomographic reconstruction is at the core of medical imaging and has been an active field of research of the past fifty years. It aims at solving an inverse problem that requires the efficient implementation of algorithms based on mathematical solutions. A large part of the research is done by companies that not only protect their source code, but also the access to projection data. The cone-beam CT scanners installed in radiotherapy rooms are notable exceptions since access to raw X-ray transmission data is granted to the customers. This has triggered many developments in the past decade but, to our knowledge, there was no open-source software platform that would allow sharing of developments. The purpose of the Reconstruction Toolkit (RTK) is to answer this need.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Purpose
+   </strong>
+  </span>
+  <br/>
+  The RTK consortium aims at developing a community-supported open-source and cross-platform toolkit, RTK (
+  <a href="http://www.openrtk.org">
+   http://www.openrtk.org
+  </a>
+  ), for fast tomographic reconstruction based on the Insight Toolkit (ITK). RTK is developed under the same Apache 2.0 license as ITK v4, approved by the Open Source Initiative.  The RTK consortium is composed of CREATIS [
+  <a href="http://www.creatis.insa-lyon.fr">
+   1
+  </a>
+  ], the Massachusetts General Hospital [
+  <a href="http://www.mgh.harvard.edu">
+   2
+  </a>
+  ], the Université Catholique de Louvain\footnote [
+  <a href="http://www.uclouvain.be">
+   3
+  </a>
+  ], and IBA [
+  <a href="http://www.iba-protontherapy.com">
+   4
+  </a>
+  ].
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Features
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   3D Circular Geometry:
+  </strong>
+  RTK has been developed for circular geometries, i.e., a source and a flat panel rotating along a circle. Deviations from this strict geometry can be described for each projection image by means of nine degrees of freedom: 3 coordinates for the point source position, 3 coordinates for the flat panel position, and 3 angles for the flat panel orientation. RTK provides classes to write and read the geometry in its own XML file format as well as readers for the geometry of commercial scanners, e.g., Elekta Synergy [
+  <a href="http://www.elekta.com/">
+   5
+  </a>
+  ] and Varian OBI [
+  <a href="http://www.varian.com/">
+   6
+  </a>
+  ].
+ </p>
+ <p>
+  <strong>
+   Input-Output:
+  </strong>
+  RTK uses the ITK factories for the input/output of projection images. As for the geometry, we also provide new readers for Elekta Synergy and Varian OBI raw data (Figure 1). Simple conversion from raw data to linear attenuation is provided, and we aim to improve it in the future with calibration, beam hardening correction and scatter correction to reach quantitative CT, i.e., pixel values in Hounsfield units.
+ </p>
+ <p>
+  <strong>
+   Forward- and Back-Projectors:
+  </strong>
+  At the core of tomographic reconstruction are forward- and back-projectors. They have been designed in a typical object-oriented fashion to allow testing of various implementations. GPU versions are also provided for faster reconstruction.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_212090269.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_212090269.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="50%"/>
+  </a>
+  <strong>
+   <em>
+    Figure 1: Axial slice of cone-beam CT images of the CTP 528 resolution module of the Catphan phantom, reconstructed with FDK from raw data acquired on an Elekta Synergy at the Léon Bérard center in Lyon, France (left), on a Varian OBI at the MGH in Boston, USA (middle), and on an IBA cone-beam CT mounted on a test bench (right). Raw datasets are publicly-available on the MIDAS instance for the RTK community
+    <a href="http://midas.openrtk.org">
+     http://midas.openrtk.org
+    </a>
+   </em>
+   .
+  </strong>
+ </p>
+ <p>
+  <strong>
+   Reconstruction Algorithms:
+  </strong>
+  The main reconstruction algorithm currently implemented is the Feldkamp-David-Kress (FDK) algorithm [7]. Preprocessing of the projection images is available to handle short scans [8] and displaced detectors for the reconstruction of larger field-of-views [9], two possible scanning modes of existing scanners. There is also an implementation of the Simultaneous Algebraic Reconstruction Technique (SART) [10], and other iterative algorithms should follow.
+ </p>
+ <p>
+  <strong>
+   Numerical Phantoms:
+  </strong>
+  RTK can simulate projection images and reference CT images of geometric numerical phantoms such as the Shepp-Logan phantom (Figure 2). These phantoms are the most commonly used to validate tomographic reconstruction algorithms. They are also used in RTK functional tests that are nightly run on the dashboard [
+  <a href="http://my.cdash.org/index.php?project=RTK">
+   11
+  </a>
+  ].
+ </p>
+ <p>
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_845833929.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_845833929.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="50%"/>
+  </a>
+  <strong>
+   <em>
+    Figure 2: Generated sinogram (left) and reconstructed CT image (right) of the Shepp-Logan phantom obtained with RTK using the following script. The file SheppLogan.txt is available on the MIDAS RTK community.
+   </em>
+  </strong>
+ </p>
+ <p>
+  <span style="font-size: small; font-family: courier new,courier;">
+   # Command lines used to generate these two images:
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   rtksimulatedgeometry –output geometry –nproj 720
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   rtkprojectgeometricphantom –geometry geometry \
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   –output proj.mha –phantomfile SheppLogan.txt
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   –dimension 512
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   rtkfdk –path . –regexp proj.mha
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   –geometry geometry \
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   –output fdk.mha –dimension 512 –spacing 0.5
+  </span>
+  <br/>
+  <span style="font-size: small; font-family: courier new,courier;">
+   –hardware cuda
+  </span>
+  <strong>
+   <em>
+    <br/>
+   </em>
+  </strong>
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Development Tools
+   </strong>
+  </span>
+  <br/>
+  RTK is developed in collaboration with Kitware and uses the software process suite: CMake, CDash, CTest, and CPack. The source repository is hosted on GitHub. The user’s documentation is available on the main wiki and developer’s documentation via Doxygen. Test and example data are hosted on MIDAS. The links to these tools are available on the RTK website.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Third-Party Software
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   Insight Toolkit (ITK):
+  </strong>
+  RTK is based on ITK [
+  <a href="http://itk.org">
+   12
+  </a>
+  ] v3.20 or v4.3, which is its only mandatory dependency. Many ITK features are essential to the functioning of RTK: input-output factories, filters pipelining, streaming, mini-pipelines, multi-threading, smart pointers, FFTW wrapping, etc. Every RTK filter is meant to be ITK compliant and RTK can be thought of as an ITK module.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_1855305241.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1855305241.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="50%"/>
+  </a>
+  <strong>
+   <em>
+    Table 1: Multi-threaded CPU vs. CUDA GPU timing of several RTK filters. The measurement excludes hard drive input/output but includes the required transfers between the RAM and the graphics card. The tests have been performed with 48 threads on a cluster node equipped with two Intel Xeon E5-2630L CPUs and one Nvidia Tesla M2090 GPU.
+   </em>
+  </strong>
+ </p>
+ <p>
+  <strong>
+   Gengetopt:
+  </strong>
+  RTK also provides a set of command-line applications that use Gengetopt to define their options (Figure 2). Gengetopt [
+  <a href="http://www.gnu.org/software/gengetopt/gengetopt.html">
+   13
+  </a>
+  ] is a tool for writing command line options for parsing code for C programs. The code is generated from a configuration file, named with a .ggo extension in RTK. We have developed the CMake module file FindGengetopt.cmake to automatically create the gengetopt compilation rules. Note that Gengetopt source code is distributed along with RTK, without modification, to automatically compile it if the Gengetopt binary is not available in the system path.
+ </p>
+ <p>
+  <strong>
+   GPU:
+  </strong>
+  CUDA and Open CL: RTK proposes the use of a CUDA [
+  <a href="http://www.nvidia.com/object/CUDA_home_new.html%20">
+   14
+  </a>
+  ] implementation of a few filters that are essential to fast tomographic reconstruction: forward- and back-projection and ramp filtering. Part of the code has been taken and adapted from Plastimatch [
+  <a href="http://www.plastimatch.org/">
+   15
+  </a>
+  ] and NiftyRec [
+  <a href="http://%20sourceforge.net/projects/niftyrec/">
+   16
+  </a>
+  ], two other open-source tomographic packages. It is worth noting that ITK is not compatible with the CUDA compiler, nvcc so the CUDA code is in separate functions defined in .cu file, which are not members of itk::ImageToImageFilter daughters. RTK also proposes the use of an OpenCL [
+  <a href="http://www.khronos.org/opencl/">
+   17
+  </a>
+  ] implementation of one filter, but so far less effort has been put into using OpenCL. Table 1 compares the processing of filters that exist in multi-threaded CPU and CUDA/GPU versions.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Future Works
+   </strong>
+  </span>
+  <br/>
+  <strong>
+   New Developments:
+  </strong>
+  At this time, RTK still has a limited number of capabilities compared to the numerous algorithms available in the literature. We will be complementing it with new forward- and back-projectors, iterative reconstruction algorithms, etc. Other geometries could also be added, including the handling of parallel beams, which is currently being developed. Other modalities could also be considered, such as nuclear imaging.
+ </p>
+ <p>
+  <strong>
+   External Use:
+  </strong>
+  RTK is a software toolkit that is meant to be used in other medical computing and imaging platforms. We have already developed a proton CT reconstruction algorithm that uses RTK [18]. We will also use RTK in Gate [19] to enhance its X-ray simulation capabilities.
+ </p>
+ <p>
+  <strong>
+   IBA Cone-Beam CT Scanner:
+  </strong>
+  RTK has been supported by the IBA company, a part of the consortium, which is currently developing the first cone-beam CT scanner developed for proton therapy rooms, in partnership with the Université Catholique de Louvain. RTK will be used in the scanner software for the reconstruction and the 2D/3D registration.
+ </p>
+ <p>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    Conclusions
+   </strong>
+  </span>
+  <br/>
+  We have developed a cone-beam CT reconstruction platform based on ITK. We aim at extending the current set of features with new preprocessing and reconstruction algorithms to improve image quality. We also want to handle other geometries and modalities. RTK is open to new users and developers and those who have made a significant contribution to the platform can join the RTK consortium. You can join the project by visiting
+  <a href="http://openrtk.org">
+   http://openrtk.org
+  </a>
+  .
+ </p>
+ <p>
+  <a href="/source/files/28_2038144898.jpg" rel="noopener" target="_blank">
+   <img alt="" height="125" src="https://blog.kitware.com/source/files/Small.28_2038144898.jpg" style="float: left;" width="100"/>
+  </a>
+  <em>
+   <strong>
+    Simon Rit
+   </strong>
+   received his PhD from the Lumière University (Lyon, France) in 2007 on respiratory motion correction in cone-beam CT for image-guided radiotherapy. His 2-year postdoctoral fellowship on the same topic at the Netherlands Cancer Institute (Amsterdam) led to the clinical use of motion-compensated cone-beam CT. Since 2010, he is a CNRS research associate at CREATIS (CNRS 5220, INSERM U1044, INSA Lyon, Université de Lyon) and the Léon Bérard cancer center.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+  </em>
+ </p>
+ <p>
+  <a href="/source/files/28_1119048817.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1119048817.jpg" style="float: left;" width="15%"/>
+  </a>
+  <em>
+   <strong>
+    Marc Vila Oliva
+   </strong>
+   received his Master’s degree on image/signal processing from the Universitat Politecnica de Catalunya (Barcelona, Spain) in 2011. Since 2012, he is a research engineer at CREATIS (CNRS 5220, INSERM U1044, INSA Lyon, Université de Lyon) and the Léon Bérard cancer center.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/28_1690988379.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_1690988379.jpg" style="float: left;" width="15%"/>
+  </a>
+  <em>
+   <strong>
+    Julien Jomier
+   </strong>
+   is currently directing Kitware’s European subsidiary in Lyon, France where he focuses on European business development. He holds a Master’s degree in electrical engineering and information processing from the ESCPE-Lyon in France, and another in computer science from the University of North Carolina at Chapel Hill.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    References
+   </span>
+  </strong>
+  <br/>
+  [1]
+  <a href="http://www.creatis.insa-lyon.fr">
+   http://www.creatis.insa-lyon.fr
+  </a>
+  <br/>
+  [2]
+  <a href="http://www.mgh.harvard.edu">
+   http://www.mgh.harvard.edu
+  </a>
+  <br/>
+  [3]
+  <a href="http://www.uclouvain.be">
+   http://www.uclouvain.be
+   <br/>
+  </a>
+  [4]
+  <a href="http://www.iba-protontherapy.com">
+   http://www.iba-protontherapy.com
+  </a>
+  <br/>
+  [5]
+  <a href="http://www.elekta.com/">
+   http://www.elekta.com/
+  </a>
+  <br/>
+  [6]
+  <a href="http://www.varian.com/">
+   http://www.varian.com/
+  </a>
+  <br/>
+  [7]  L.A. Feldkamp, L.C. Davis, and J.W. Kress. Practical cone-beam algorithm. J Opt Soc Am A, 1(6):612–619, 1984.
+  <br/>
+  [8]   D.L. Parker. Optimal short scan convolution reconstruction for fanbeam CT. Med Phys, 9(2):254–257, 1982.
+  <br/>
+  [9]   G. Wang. X-ray micro-CT with a displaced detector array. Med Phys, 29(7):1634–1636, Jul 2002.
+  <br/>
+  [10]  A.H. Andersen and A.C. Kak. Simultaneous algebraic reconstruction technique (SART): a superior implementation of the art algorithm. Ultrason Imaging, 6(1):81–94, Jan 1984.
+  <br/>
+  [11]
+  <a href="http://my.cdash.org/index.php?project=RTK">
+   http://my.cdash.org/index.php?project=RTK
+  </a>
+  <br/>
+  [12]
+  <a href="http://itk.org">
+   http://itk.org
+  </a>
+  <br/>
+  [13]
+  <a href="http://www.gnu.org/software/gengetopt/gengetopt.html">
+   http://www.gnu.org/software/gengetopt/gengetopt.html
+  </a>
+  <br/>
+  [14]
+  <a href="http://www.nvidia.com/object/CUDA_home_new.html%20">
+   http://www.nvidia.com/object/CUDA_home_new.html
+  </a>
+  <br/>
+  [15]
+  <a href="http://www.plastimatch.org/">
+   http://www.plastimatch.org/
+  </a>
+  <br/>
+  [16]
+  <a href="http://%20sourceforge.net/projects/niftyrec/">
+   http:// sourceforge.net/projects/niftyrec/
+  </a>
+  <br/>
+  [17]
+  <a href="http://www.khronos.org/opencl/">
+   http://www.khronos.org/opencl/
+  </a>
+  <br/>
+  [18] S. Rit, G. Dedes, N. Freud, D. Sarrut, and J.M. Létang. Filtered ely paths. Med Phys, 40(3):031103, 2013.
+  <br/>
+  [19] S. Jan, D. Benoit, E. Becheva, T. Carlier, F. Cassol, P. Descourt, T. Frisson, L. Grevillot, L. Guigues, L. Maigne, C. Morel, Y. Perrot, N. Rehfeld, D. Sarrut, D.R. Schaart, S. Stute, U. Pietrzyk, D. Visvikis, N. Zahra, and I. Buvat. GATE V6: a major enhancement of the GATE simulation platform enabling modelling of CT and radiotherapy. Phys Med Biol, 56(4):881–901, Feb 2011.
+ </p>
+</div>

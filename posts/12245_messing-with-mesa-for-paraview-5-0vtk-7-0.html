@@ -1,0 +1,380 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ParaView 5.0 / VTK 7.0 changes the default rendering engine that is a totally new, rewritten implementation that uses newer OpenGL features for improved rendering performance on modern devices. That does mean, however, that older OpenGL implementations including old graphics cards/drivers builds will no longer work.
+ </p>
+ <p>
+  On several Linux systems, including major super-computers, Mesa3D has been the way to get OpenGL support on nodes without GPUs. With the new rendering engine totally abandoning fixed OpenGL pipeline and heavily relying on OpenGL 3.2 core features, it’s easy to get a Mesa build that will either perform poorly or worst case, just not work. With this blog, I describe ways get “good” Mesa builds for various configurations. Note, this is not an exhaustive list. I am sure there are other ways of getting this going. These are just ways that I’ve tried and tested with that may be useful to the ParaView community. Feel free to email me (or use the comments sections) to provide additions or edits.
+ </p>
+ <p>
+  First things first, we’ll limit this discussion to Mesa 11.1. Also, we will ignore hardware accelerated builds of Mesa and stick with software rendering. Given that ParaView/VTK now heavily uses GLSL shaders, for optimal performance, it’s highly recommended that you use Gallium with LLVM support when building Mesa. This renderer is called
+  <a href="http://www.mesa3d.org/llvmpipe.html">
+   <em>
+    <strong>
+     llvmpipe
+    </strong>
+   </em>
+  </a>
+ </p>
+ <p>
+  <strong style="line-height: 1.6em;">
+   <span style="line-height: 1.6em;">
+    Off-screen Mesa (OSMesa)
+   </span>
+  </strong>
+ </p>
+ <hr/>
+ <p>
+  OSMesa is used for ParaView builds on systems that do not have an X server available/accessible. ParaView builds with OSMesa will only include command line executables, like
+  <em>
+   pvserver, pvbatch, pvpython,
+  </em>
+  etc. that do not have a GUI.
+ </p>
+ <p>
+  Here’s how I built my OSMesa:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41d58416bb1397642254" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+./configure \
+    --disable-xvmc \
+    --disable-glx \
+    --disable-dri \
+    --with-dri-drivers= \
+    --with-gallium-drivers=swrast \
+    --enable-texture-float \
+    --disable-egl \
+    --with-egl-platforms= \
+    --enable-gallium-osmesa \
+    --enable-gallium-llvm=yes \
+    --prefix=&lt;install prefix&gt;</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bb1397642254-12">
+        12
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-1">
+        ./configure \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-2">
+        --disable-xvmc \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-3">
+        --disable-glx \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-4">
+        --disable-dri \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-5">
+        --with-dri-drivers= \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-6">
+        --with-gallium-drivers=swrast \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-7">
+        --enable-texture-float \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-8">
+        --disable-egl \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-9">
+        --with-egl-platforms= \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-10">
+        --enable-gallium-osmesa \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-11">
+        --enable-gallium-llvm=yes \
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bb1397642254-12">
+        --prefix=&lt;install prefix&gt;
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   With Mesa 11.1 or earlier, unfortunately there is no way to get a OpenGL 3.2 rendering context. A workaround to set an environment variable that fakes the version for the context created i.e. set
+  </span>
+  <em>
+   <strong>
+    MESA_GL_VERSION_OVERRIDE​
+   </strong>
+  </em>
+  to
+  <em>
+   <strong>
+    3.2
+   </strong>
+  </em>
+  . This, however is more of a hack and things will fail miserable if any of the rendering code attempted to use a 3.2 feature not supported by the true context provided.
+ </p>
+ <p>
+  Thanks to Brian Paul, a fix for this is planned for Mesa 11.2 (and potentially, Mesa 11.1.1). Alternatively, use the attached patch for Mesa (mesa.patch). This adds a new osmesa API that allows VTK to create a OpenGL 3.2 context when using OSMesa.
+ </p>
+ <p>
+  <strong>
+   Onscreen Mesa (Mesa + llvmpipe)
+  </strong>
+ </p>
+ <hr/>
+ <p>
+  For onscreen use-cases, you’d need a build of Mesa with X support. I haven’t been able to get a Mesa+X build that uses llvmpipe renderer using configure. I had to use scons. Here’s how I built that.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41d58416bb9042437070" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+scons build=release texture_float=yes libgl-xlib</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41d58416bb9042437070-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41d58416bb9042437070-1">
+        scons build=release texture_float=yes libgl-xlib
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  That builds a collection of
+  <em>
+   <strong>
+    libGL.so*
+   </strong>
+  </em>
+  libraries under linux-x86_64/gallium/targets/libgl-xlib/. These are the GL libraries you need.
+ </p>
+ <p>
+  <strong>
+   Onscreen Mesa (Mesa + openswr)
+  </strong>
+ </p>
+ <hr/>
+ <p>
+  Another alternative to using llvmpipe is using Intel’s
+  <a href="http://openswr.org">
+   OpenSWR
+  </a>
+  . While it’s still in Alpha stage, it’s fairly easy to build and try out. Just checkout the latest (which at the time of this post was the branch
+  <strong>
+   11.0-openswr
+  </strong>
+  ) from the
+  <a href="https://github.com/OpenSWR/openswr-mesa">
+   OpenSWR-Mesa Github
+  </a>
+  , and build as follows:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41d58416bbc329621714" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+# For AVX capable systems
+scons build=release texture_float=yes swr_arch=avx libgl-xlib
+
+# For AVX2 capable systems
+scons build=release texture_float=yes swr_arch=core-avx2 libgl-xlib</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41d58416bbc329621714-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbc329621714-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbc329621714-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbc329621714-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbc329621714-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41d58416bbc329621714-1">
+        # For AVX capable systems
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbc329621714-2">
+        scons build=release texture_float=yes swr_arch=avx libgl-xlib
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbc329621714-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbc329621714-4">
+        # For AVX2 capable systems
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbc329621714-5">
+        scons build=release texture_float=yes swr_arch=core-avx2 libgl-xlib
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  Either of these will produce
+  <em>
+   <strong>
+    libGL.so*
+   </strong>
+  </em>
+  as earlier.
+ </p>
+ <hr/>
+ <p>
+  ParaView 5.0 Linux binaries distributed from
+  <a href="http://paraview.org/download">
+   paraview.org
+  </a>
+  (including the release candidates) already package binaries for the  3 variants of Onscreen Mesa: Mesa+llvmpipe, Mesa+openswr+avx, Mesa+openswr+avx2. To launch ParaView to use any of these OpenGL implementations instead of the native OpenGL drivers, use the following:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41d58416bbf219479667" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+# To use Mesa+llvmpipe
+./paraview --mesa-llvm
+
+# To use Mesa+openswr-avx
+./paraview --mesa-swr-avx
+
+# To use Mesa+openswr-avx2
+./paraview --mesa-swr-avx2</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41d58416bbf219479667-8">
+        8
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-1">
+        # To use Mesa+llvmpipe
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-2">
+        ./paraview --mesa-llvm
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-4">
+        # To use Mesa+openswr-avx
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-5">
+        ./paraview --mesa-swr-avx
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-7">
+        # To use Mesa+openswr-avx2
+       </div>
+       <div class="crayon-line" id="crayon-5c41d58416bbf219479667-8">
+        ./paraview --mesa-swr-avx2
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+</div>

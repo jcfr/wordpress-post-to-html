@@ -1,0 +1,204 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Advanced simulation workflows often require the application of several tools to aid in constructing geometric domains, in generating meshes, in modeling simulation information such as boundary conditions and material properties, in employing numerical solvers, and in post-processing results. Such application forces engineers and scientists to generate appropriate input files, understand different command-line tools, and develop code. In addition, many engineers and scientists need access to high-performance computational resources. As the July 2015 issue of the “Kitware Source” [3] describes, a team of developers at Kitware created the Computational Model Builder (CMB) framework [1] and the ModelBuilder application [2] to remove many of the obstacles that engineers and scientists face when they employ advanced simulation workflows.
+ </p>
+ <p>
+  ModelBuilder can create or load geometric domains, interface with various meshing technologies, model the information that simulations require, and generate—and in some cases, submit—the necessary files to run the simulations. However, to post-process results, ModelBuilder needs to access functionality from an additional tool such as ParaView. As part of a Phase I Department of Energy Small Business Innovation Research project to support multiphysics workflows for particle accelerator simulations, the team created a prototype of a custom version of ModelBuilder that completes the simulation workflow cycle. This version of ModelBuilder exposes some of the underlying post-processing capabilities that the ParaView architecture provides.
+ </p>
+ <p>
+  To test the new capabilities, the team modeled two electromagnetic workflows that have roots in the Omega3P module in the Advanced Computational Electromagnetics 3D Parallel (ACE3P) system at the SLAC National Accelerator Laboratory. For the tests, ModelBuilder generated a pillbox model and a crab cavity model. This article presents the results from the tests.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Adding Multiple Render Views
+   </strong>
+  </span>
+ </p>
+ <p>
+  The latest major release of ModelBuilder is version 4.0. This version provides a single three-dimensional (3D) view that displays geometric domains and meshes.  In order to support additional post-processing functionality, ModelBuilder needed a second 3D view. The development team created this second view for ModelBuilder to use not only to post-process results but to enable side-by-side comparison of geometric domains and their respective analysis meshes.
+ </p>
+ <p>
+  Since only one view can be active at any time, the Info, Properties, and ColorMap components in the prototype user interface (UI) update to reflect the active source in the active view. The eyeball icons in the pipeline tree view also update to show the visibility status of the sources and filters in the active view.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15181" style="width: 560px">
+  <img alt="model_fig1" class="wp-image-15181 size-full" height="283" sizes="(max-width: 550px) 100vw, 550px" src="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig1.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig1.jpg 550w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig1-300x154.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig1-220x113.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig1-250x129.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig1-355x183.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig1-90x46.jpg 90w" width="550"/>
+  <p class="wp-caption-text">
+   The prototype UI in ModelBuilder shows a scalar field color map of an electric field.
+  </p>
+ </div>
+ <p>
+  In addition, the development team added a camera link between the two render views. This link allows ModelBuilder to exhibit the same camera setup in both views when changes occur in one view or the other.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Accessing Post-Processing Capabilities
+   </strong>
+  </span>
+ </p>
+ <p>
+  ParaView is an open-source platform for analyzing and visualizing data [4].  It serves as the underlying foundation of CMB. To expose the functionality of ParaView in ModelBuilder, the development team added a Post Processing panel to the prototype UI. These capabilities allow ModelBuilder to display mesh readers and filters in a manner that is identical to the pipeline browser in ParaView.
+ </p>
+ <p>
+  The Post Processing panel in the ModelBuilder prototype contains Properties, Display, and View components. The Properties component exposes parameters for the readers and filters, the Display component controls properties for the mesh representations, and the View component customizes the visualizations. For example, the View section changes the background color.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15182" style="width: 298px">
+  <img alt="The ModelBuilder prototype exposes the Properties component in the Post Processing panel." class="wp-image-15182 size-full" height="336" sizes="(max-width: 288px) 100vw, 288px" src="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig2.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig2.jpg 288w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig2-257x300.jpg 257w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig2-220x257.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig2-250x292.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig2-90x105.jpg 90w" width="288"/>
+  <p class="wp-caption-text">
+   The ModelBuilder prototype exposes the Properties component in the Post Processing panel.
+  </p>
+ </div>
+ <p>
+  The ModelBuilder prototype exposes the Properties component in the Post Processing panel.
+  <br/>
+  In future efforts, the team aims to further extend ModelBuilder to support more views to analyze post-processed results. These views are available in ParaView and include Chart view, Histogram view, and Spreadsheet view. The team also looks to extend the Properties component to support additional filters.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Testing New Capabilities
+   </strong>
+  </span>
+ </p>
+ <p>
+  To test the capabilities of the prototype with distinct and relevant examples of particle accelerator simulations, the development team selected two models.
+ </p>
+ <p>
+  The first model is the Gaussian pillbox. The Gaussian pillbox is a simple model that scientists use to perform electromagnetic accelerator simulations. The model contains a central cylinder, which makes up its geometry and represents the accelerator cavity. The model also contains two cylindrical beam pipes. During simulation, the central cylinder becomes excited. A charged particle beam enters the cylinder from the end of the upstream beam pipe. The particle beam accelerates along the cylinder and exits at the end of the downstream beam pipe.
+ </p>
+ <p>
+  The second model is a crab cavity model for the high-luminosity Large Hadron Collider (LHC) [5]. This model offers a more complex and realistic example. In particle colliders such as the high-luminosity LHC, two particle beams with opposing charges travel in different directions. They generally come toward each other at an angle, which reduces the chance that they will collide. The introduction of a crabbing scheme increases luminosity and rotates the beams so that they meet head-on.
+ </p>
+ <p>
+  The crab cavity model consists of a square tank and two rigid deflecting poles. During simulation, the model attaches to a fundamental power coupler. A radio-frequency power source drives power into the cavity, and dampers remove unwanted higher-order modes.
+ </p>
+ <p>
+  As part of the tests, ModelBuilder defined the pillbox model and the crab cavity model on both Linux and Mac OS desktops. ModelBuilder then submitted the simulations to run on Edison and Cori supercomputers at the National Energy Research Scientific Computing Center (NERSC). Once ModelBuilder received the results, it visualized them in its 3D views.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15183" style="width: 517px">
+  <img alt=" ModelBuilder prepares the crab cavity example by editing simulation attributes." class="wp-image-15183" height="322" sizes="(max-width: 507px) 100vw, 507px" src="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig3.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig3.jpg 550w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig3-300x190.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig3-220x140.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig3-250x159.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig3-355x225.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig3-90x57.jpg 90w" width="507"/>
+  <p class="wp-caption-text">
+   ModelBuilder prepares the crab cavity example by editing simulation attributes.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_15184" style="width: 517px">
+  <img alt="ModelBuilder executes a slice operation through the crab cavity model and visualizes the magnitude of the electric field." class="size-full wp-image-15184" height="249" sizes="(max-width: 507px) 100vw, 507px" src="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig4.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig4.jpg 507w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig4-300x147.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig4-220x108.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig4-250x123.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig4-355x174.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig4-90x44.jpg 90w" width="507"/>
+  <p class="wp-caption-text">
+   ModelBuilder executes a slice operation through the crab cavity model and visualizes the magnitude of the electric field.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_15185" style="width: 517px">
+  <img alt="model_fig5" class="wp-image-15185 size-full" height="228" sizes="(max-width: 507px) 100vw, 507px" src="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig5.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/model_fig5.jpg 507w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig5-300x135.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig5-220x99.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig5-250x112.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig5-355x160.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/model_fig5-90x40.jpg 90w" width="507"/>
+  <p class="wp-caption-text">
+   ModelBuilder performs glyphing on the pillbox model.
+  </p>
+ </div>
+ <p>
+ </p>
+ <p>
+  With the capabilities that the development team added, ModelBuilder took less time to define the simulations and offered more visual feedback. For example, ModelBuilder displayed the model geometries as the application assigned material and boundary condition information. The capabilities also streamlined the process of submitting simulation jobs to the NERSC supercomputers.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Customizing ModelBuilder
+   </strong>
+  </span>
+ </p>
+ <p>
+  Beyond high-energy particle accelerator workflows, the team has developed workflows in CMB for hydrology and nuclear energy. The team has also developed workflows for casting and modeling muliscale materials. To further tailor ModelBuilder to specific workflows, Kitware offers consulting and support services. Kitware also provides training courses on CMB and ModelBuilder. For more information, please e-mail kitware@kitware.com.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Acknowledgement
+   </strong>
+  </span>
+ </p>
+ <p>
+  Tests on the ModelBuilder prototype implemented ACE3P and Omega3P from the SLAC National Accelerator Laboratory. Kitware would like to thank the SLAC National Accelerator Laboratory for its support throughout the development of the ModelBuilder application.
+ </p>
+ <p>
+  This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of Acquisition and Assistance, under Award Number DE-SC0013884. This report was prepared as an account of work sponsored by an agency of the United States Government. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights. Reference herein to any specific commercial product, process, or service by trade name, trademark, manufacturer, or otherwise does not necessarily constitute or imply its endorsement, recommendation, or favoring by the United States Government or any agency thereof. The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    References
+   </strong>
+  </span>
+ </p>
+ <p>
+  [1] Kitware, Inc. “ModelBuilder.”
+  <a href="http://www.computationalmodelbuilder.org/modelbuilder">
+   http://www.computationalmodelbuilder.org/modelbuilder
+  </a>
+  .
+ </p>
+ <p>
+  [2] Kitware, Inc. “Introducing the Computational Model Builder.”
+  <a href="http://www.computationalmodelbuilder.org">
+   http://www.computationalmodelbuilder.org
+  </a>
+  .
+ </p>
+ <p>
+  [3] Thompson, David, Bob O’Bara, and Yumin Yuan. “Representing Geometric Models with SMTK.” Kitware Source, October 14, 2015.
+  <a href="https://blog.kitware.com/representing-geometric-models-with-smtk">
+   https://blog.kitware.com/representing-geometric-models-with-smtk
+  </a>
+  .
+ </p>
+ <p>
+  [4] Kitware, Inc. “Welcome to ParaView.”
+  <a href="http://www.paraview.org">
+   http://www.paraview.org
+  </a>
+  .
+ </p>
+ <p>
+  [5] Li, Zenghai, J. R. Delayen, S. U. De Silva, HyeKyoung Park, and R. G. Olave, “FPC and Hi‐Pass Filter HOM Coupler Design for the RF Dipole Crab Cavity for the LHC HiLumi Upgrade.” Paper presented at the sixth International Particle Accelerator Conference, Richmond, Virginia, May 3‐8, 2015.
+ </p>
+ <p>
+  <img alt="bob_headshot" class="size-full wp-image-15186 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/bob_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/bob_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/bob_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Bob O’Bara
+  </strong>
+  is an assistant director of scientific computing at Kitware. His main areas of interest are geometric modeling, mesh generation, model and mesh visualization, and general scientific visualization.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="yuan_headshot" class="size-full wp-image-15187 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/yuan_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/yuan_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/yuan_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Yumin Yuan
+  </strong>
+  is a staff research and development engineer on the scientific computing team at Kitware. He is the main software architect of the suite of CMB applications that model, mesh, analyze, and visualize geometries.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="john_headshot" class="size-full wp-image-15189 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/john_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/john_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/john_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   John Tourtellot
+  </strong>
+  is a senior research and development engineer at Kitware. His areas of focus in scientific computing include digital map visualization and user interface design.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="harris_headshot" class="size-full wp-image-15188 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/harris_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/harris_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/harris_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Chris Harris
+  </strong>
+  is a staff research and development engineer who joined Kitware in 2011. Throughout his career, his efforts have pertained to high-performance, mission-critical systems.
+ </p>
+</div>

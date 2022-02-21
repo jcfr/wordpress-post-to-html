@@ -1,0 +1,265 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  It is well known that transfer function specification is a crucial task for quality volume rendering, given that transfer functions map original data values to properties such as color and opacity.  Unfortunately, their specification can prove a challenging task.
+ </p>
+ <p>
+  Volume mappers in VTK have always supported specifying color and opacity based on two independent characteristics of the scalar field to render: scalar value and gradient magnitude.   Currently, these two parameters are used to map color and opacity using three independent 1D functions:  scalar value to color,  scalar value to opacity and  gradient magnitude to opacity.  This method has a clear advantage: its simplicity.  A single parameter per function normally keeps things straightforward enough for a user to find a relatively good transfer function.
+ </p>
+ <p>
+  In some cases however, it is advantageous to increase the number of parameters in a function in order to improve discrimination between structures in the volume data.  This, given that the combined parametric information allows to disambiguate areas that fall within a given range for those parameters simultaneously.  Thanks to recent developments in
+  <a href="https://blog.kitware.com/tomviz-1-1-0-released/">
+   tomviz
+  </a>
+  under DOE Office of Science contract DE-SC0011385, it was possible to add support for 2D transfer functions in the GPU mapper (scalar value vs. gradient magnitude).  This will enable users to choose between either the legacy 1D transfer functions or a single 2D transfer function, depending on their needs.  vtkVolumeProperty holds references to all of the transfer functions so it is possible to switch between the two modes by setting the appropriate flags.  The legacy 1D triad will be used by default so 2D mode needs to be enabled explicitly.
+ </p>
+ <h3>
+  Additions to vtkVolumeProperty
+ </h3>
+ <p>
+  A 2D transfer function is defined as a 4-component-float vtkImageData object.  The property keeps track of these instances and exposes them to the volume mapper at render time.  Only vtkGPUVolumeRayCastMapper supports this functionality (OpenGL2 backend).
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c384e1e18530996689" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+vtkNew&lt;vtkImagData&gt; transferFunc;
+
+// Fill up transferFunc with meaningful information
+...
+
+vtkNew&lt;vtkVolumeProperty&gt; property;
+property-&gt;SetTransfer2D(transferFunc);
+
+// Switch between 1D transfers and 2D
+property-&gt;SetTransferMode(vtkVolumeProperty::TF_1D);
+property-&gt;SetTransferMode(vtkVolumeProperty::TF_2D);</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c384e1e18530996689-11">
+        11
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-1">
+        <span class="crayon-v">
+         vtkNew
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-v">
+         vtkImagData
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         transferFunc
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-3">
+        <span class="crayon-c">
+         // Fill up transferFunc with meaningful information
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-4">
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-6">
+        <span class="crayon-v">
+         vtkNew
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-v">
+         vtkVolumeProperty
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-m">
+         property
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-7">
+        <span class="crayon-m">
+         property
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTransfer2D
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         transferFunc
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-9">
+        <span class="crayon-c">
+         // Switch between 1D transfers and 2D
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-10">
+        <span class="crayon-m">
+         property
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTransferMode
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtkVolumeProperty
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         TF_1D
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c384e1e18530996689-11">
+        <span class="crayon-m">
+         property
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         SetTransferMode
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtkVolumeProperty
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         TF_2D
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+  More information can be found in
+  <a href="https://gitlab.kitware.com/vtk/vtk/blob/master/Rendering/Volume/Testing/Cxx/TestGPURayCastTransfer2D.cxx">
+   TestGPURayCastTransfer2D
+  </a>
+  .
+ </p>
+ <h3>
+  In progress
+ </h3>
+ <p>
+  Although mapper support for this feature is already available in VTK, widgets to aid the definition of these functions is work-in-progress.  An initial version of a widget for this purpose (based on the vtkContextItem framework) with basic functionality is currently available only in
+  <a href="http://www.tomviz.org">
+   tomviz
+  </a>
+  and will be ported to VTK in the future.
+ </p>
+ <div class="wp-video" style="width: 1472px;">
+  <!--[if lt IE 9]><script>document.createElement('video');</script><![endif]-->
+  <video class="wp-video-shortcode" controls="controls" height="1152" id="video-18329-1" preload="metadata" width="1472">
+   <source src="https://blog.kitware.com/wp-content/uploads/2017/09/volume_TF2d_tooth.mp4?_=1" type="video/mp4"/>
+   <a href="https://blog.kitware.com/wp-content/uploads/2017/09/volume_TF2d_tooth.mp4">
+    https://blog.kitware.com/wp-content/uploads/2017/09/volume_TF2d_tooth.mp4
+   </a>
+  </video>
+ </div>
+</div>

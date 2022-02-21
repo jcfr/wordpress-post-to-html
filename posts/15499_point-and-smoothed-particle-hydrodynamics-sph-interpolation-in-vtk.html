@@ -1,0 +1,973 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <em>
+   (This is the first article in a two part series. It provides background and VTK implementation details. The
+   <a href="https://blog.kitware.com/point-and-smoothed-particle-hydrodynamics-sph-interpolation-in-paraview/">
+    next article
+   </a>
+   describes how to use this technology with ParaView.)
+  </em>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   Introduction
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   A common operation in visualization and scientific computing applications is determining data values at a particular location in a domain. For example, a dataset may be probed to determine stress, pressure, and/or temperature at key design locations; or data may be resampled onto a plane or volume for the purposes of 3D visualization. However in the digital world, data is typically measured or calculated at discrete positions, and in general a query will not occur precisely at these discrete positions, meaning that some form of interpolation is required to determine values inbetween data positions.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Interpolation may take many forms. On occasion a nearest neighbor approach is used (e.g., find the data point nearest a probe point and use its data values). More commonly, a dataset is represented by a tessellation of cells such as voxels in a 3D volume, triangles in a mesh, or 3D polyhedral forms in an unstructured grid including tetrahedra and hexahedra. These cells are defined by vertices which are located at the dataset points; and an interpolation function is applied within the cell to interpolate from the dataset points to an arbitrary position within the cell. Tri-linear interpolation across a voxel is commonly used, as well as isoparametric shape functions found in finite element formulations. Even more sophisticated interpolation functions are possible, often with increased polynomial order or constraints on function or derivative continuity.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   However, this situation is changing dramatically as data representations are increasingly represented by point clouds, without explicit topological representations such as cells. There are many reasons for this, including the increased adoption of point sampling processes such as LiDAR; 3D mapping using phones as in
+   <a href="https://en.wikipedia.org/wiki/Kinect">
+    Microsoft Kinect
+   </a>
+   and Google’s
+   <a href="https://en.wikipedia.org/wiki/Project_Tango">
+    Project Tango
+   </a>
+   ; and advanced simulation methods such as
+   <a href="https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics">
+    smoothed-particle hydrodynamics
+   </a>
+   to perform fluids, materials or astrophysics analysis. The simplicity of point cloud representations is appealing as well, they are generally easy to represent, compute on, and render.
+  </span>
+ </p>
+ <p>
+  Despite their inherent simplicity, however, processing point clouds poses significant challenges. For example, simply rendering a few million points (with associated data such as colors) can be less than a satisfying visualization experience. Unless the cloud is extremely dense, a “screen door” effect can be produced and it can be hard to discern the shape of objects. Further, without explicit topological representation, many common operations such as identifying features or segmenting objects is extremely difficult since it is not readily obvious what subset of points constitute an object or feature. In point clouds, topological relationships are typically implied by the proximity of points to their neighboring points, using local geometric analysis to characterize the situation. Surface reconstruction is another important challenge, as digitizing laser scanners are increasingly used to capture objects, with the end goal to represent objects with triangular or polygonal meshes.
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   VTK/ParaView and Point Clouds
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   The
+   <a href="http://vtk.org">
+    Visualization Toolkit
+   </a>
+   has long been used to visualize point clouds, and recent efforts have taken VTK and the ParaView application to a whole new level. Some of this work is as follows.
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Recently an overhaul of VTK’s rendering has been made (thanks to the generosity of an NIH grant NIH R01EB014955 “Accelerating Community-Driven Medical Innovation with VTK”) [
+    <a href="https://blog.kitware.com/rendering-engine-improvements-in-vtk/">
+     4
+    </a>
+    ][
+    <a href="https://blog.kitware.com/volume-rendering-improvements-in-vtk/">
+     5
+    </a>
+    ][
+    <a href="https://blog.kitware.com/new-opengl-rendering-in-vtk/">
+     6
+    </a>
+    ]. While this effort is focused on improvements to VTK for medical applications and health care delivery, a side effect of this work is that point cloud rendering is orders of magnitude faster.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Development efforts are proceeding apace in VTK’s
+    <a href="http://www.vtk.org/Wiki/VTK/Remote_Modules">
+     remote modules
+    </a>
+    repositories. While these are exploratory R&amp;D efforts (user be warned!) they are indicative of the strong interest we at Kitware and in the VTK and other open source communities in all things point cloud. Ken Martin, who was the driver in the VTK rendering system overhaul, has been exploring high performance rendering of extremely large point clouds. His remote module,
+    <span style="font-family: courier">
+     vtkLODPointCloudMapper
+    </span>
+    [
+    <a href="https://gitlab.kitware.com/ken-martin/vtkLODPointCloudMapper">
+     8
+    </a>
+    ] has been comfortable used to render 250 million points, with the ultimate goal of rendering 1 billion points interactively. Will Schroeder is working in the
+    <span style="font-family: courier">
+     vtkPointCloud
+    </span>
+    remote module [
+    <a href="https://gitlab.kitware.com/vtk/point-cloud.git">
+     9
+    </a>
+    ] which is a collection of useful point cloud algorithms for segmenting, extracting, fitting, binning, and surface extraction.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Finally, in VTK proper with associated ParaVIew filters and GUI, methods for point interpolation and SPH interpolation have been added in VTK/Filters/Points/. These tools provide the ability to interpolate data from a point cloud to an arbitrary point (or a collection of points), and are the subject of the remainder of this article.
+   </span>
+  </li>
+ </ul>
+ <h2>
+  <span style="font-weight: 400">
+   Interpolating Point Data
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   There are two basic approaches to point interpolation as implemented in the
+   <span style="font-family: courier">
+    vtkPointInterpolator
+   </span>
+   and
+   <span style="font-family: courier">
+    vtkSPHInterpolator
+   </span>
+   classes. Both of these classes provide a framework for interpolation using different computational kernels, and both are implemented in multi-threaded form via
+   <a href="https://blog.kitware.com/simple-parallel-computing-with-vtksmptools/">
+    vtkSMPTools
+   </a>
+   so are quite fast on multi-core computing systems. The basic usage pattern of these filters is depicted in the diagram below. Typically the user supplies an input data set onto which s/he wishes to interpolate data from a source point cloud. A computational kernel is specified (in this example a quintic-order SPH kernel) and a point locator is optionally supplied (by default a
+   <span style="font-family: courier">
+    vtkStaticPointLocator
+   </span>
+   is used, more on this in a moment). The kernel is invoked repeatedly on multiple threads, and simply interpolates data from nearby points onto each probe point of the input dataset.
+  </span>
+ </p>
+ <p>
+  <img alt="SPHInterpolator" class="wp-image-15509 aligncenter" height="341" sizes="(max-width: 691px) 100vw, 691px" src="https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-300x148.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-300x148.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-768x379.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-1024x505.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-220x108.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-250x123.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-355x175.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-730x360.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/08/SPHInterpolator-90x44.jpg 90w" width="691"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Given a probe point, the locator plays the critical role of identifying nearby points (which is computationally expensive) and must be chosen and configured properly for maximum performance. As mentioned, a
+   <span style="font-family: courier">
+    vtkStaticPointLocator
+   </span>
+   is used by default, which is a threaded, uniform binning locator that is very fast in most applications. However, in some situations with extreme variation in point density, other hierarchical locators such as KD-tree (
+   <span style="font-family: courier">
+    vtkKdTreePointLocator
+   </span>
+   ) and octree (
+   <span style="font-family: courier">
+    vtkOctreePointLocator
+   </span>
+   ) may perform better.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The meat of the algorithm can be found in the kernels. The
+   <span style="font-family: courier">
+    vtkSPHInterpolator
+   </span>
+   uses kernels of subclass
+   <span style="font-family: courier">
+    vtkSPHKernel
+   </span>
+   ; while the
+   <span style="font-family: courier">
+    vtkPointInterpolator
+   </span>
+   uses kernels of type
+   <span style="font-family: courier">
+    vtkGeneralizedKernel
+   </span>
+   . These types of interpolation vary in that the SPH process corresponds to physical processes and require a density array, with an optional mass array and cutoff distance array possible. (The cutoff distance specifies a sphere in which the local probe neighborhood is defined.) On the other hand, the
+   <span style="font-family: courier">
+    vtkPointInterpolator
+   </span>
+   supports a variety of general kernels including
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Linear — average the values of the neighborhood points
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Voroni — interpolate from the closest point
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Shepard — use a Shepard weighting function (the exponent order can be defined)
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Gaussian — use a weighted Gaussian function
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Elliptical Gaussian — a Gaussian function weighted in the direction of the normal
+   </span>
+  </li>
+ </ul>
+ <p>
+  <span style="font-weight: 400">
+   The kernels have methods to define the local neighborhood. In the SPH formulation, a cutoff radius is defined.
+   <span style="font-family: courier">
+    vtkGeneralizedKernels
+   </span>
+   neighborhoods may be defined as all points within a radius, or as the
+  </span>
+  <i>
+   <span style="font-weight: 400">
+    N
+   </span>
+  </i>
+  <span style="font-weight: 400">
+   closest points.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   A variety of SPH kernels are defined as well. These are spline formulations ranging from cubic to quintic, with new kernels in the process of being added (e.g., the Wendland 5th order kernel was contributed to VTK in September). See this reference [11] for the details of the SPH interpolation formulation.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In VTK using Python, the use of these kernels is demonstrated below. For a SPH kernel using the default locator:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8541302c496266466" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+
+  sphKernel = vtk.vtkSPHQuinticKernel()
+  sphKernel.SetSpatialStep(0.1)
+
+  interpolator = vtk.vtkSPHInterpolator()
+  interpolator.SetInputConnection(plane.GetOutputPort())
+  interpolator.SetSourceConnection(input.GetOutputPort())
+  interpolator.SetKernel(sphKernel)
+  interpolator.Update()
+</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8541302c496266466-10">
+        10
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-1">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sphKernel
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkSPHQuinticKernel
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sphKernel
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetSpatialStep
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0.1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkSPHInterpolator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         plane
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetSourceConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         input
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetKernel
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sphKernel
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8541302c496266466-10">
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0004 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   Similarly for generalized interpolation manually specifying a locator and an input point cloud:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e85413039976697927" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+
+  locator = vtk.vtkStaticPointLocator()
+  locator.SetDataSet(output)
+  locator.BuildLocator()
+
+  gaussianKernel = vtk.vtkGaussianKernel()
+  gaussianKernel.SetSharpness(4)
+  gaussianKernel.SetRadius(0.5)
+
+  interpolator = vtk.vtkPointInterpolator()
+  interpolator.SetInputConnection(plane.GetOutputPort())
+  interpolator.SetSourceData(output)
+  interpolator.SetKernel(gaussianKernel)
+  interpolator.SetLocator(locator)
+  interpolator.SetNullPointsStrategyToNullValue()
+</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85413039976697927-16">
+        16
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-1">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         locator
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkStaticPointLocator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         locator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetDataSet
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         output
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         locator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         BuildLocator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gaussianKernel
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkGaussianKernel
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gaussianKernel
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetSharpness
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gaussianKernel
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetRadius
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0.5
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkPointInterpolator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         plane
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetSourceData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         output
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetKernel
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         gaussianKernel
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetLocator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         locator
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         interpolator
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNullPointsStrategyToNullValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85413039976697927-16">
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   The figures below, courtesy of Altar Engineering / FluiDyna GmbH (who by the way supported much of this work) are examples of SPH interpolation in computational fluid dynamics. Typically the approach is to simulate complex flow on high-performance computing systems, and then resample the results onto a 3D volume, plane or line probe to better visualize the results.
+  </span>
+ </p>
+ <p>
+  <img alt="GearBox" class="wp-image-15511 aligncenter" height="309" sizes="(max-width: 545px) 100vw, 545px" src="https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-300x170.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-300x170.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-768x435.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-1024x580.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-220x125.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-250x142.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-355x201.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-730x414.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox-90x51.jpg 90w, https://blog.kitware.com/wp-content/uploads/2016/08/GearBox.jpg 1500w" width="545"/>
+ </p>
+ <p>
+  <img alt="Pistons" class="alignnone wp-image-15512 aligncenter" height="366" src="https://blog.kitware.com/wp-content/uploads/2016/08/Pistons-300x169.jpg" width="625"/>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   Making It Easy With ParaView
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Of course developing an application with VTK takes work and this is where
+   <a href="http://paraview.org">
+    ParaView
+   </a>
+   comes in. As most of you know, ParaView is a premiere visualization application built on VTK developed for large-scale computing challenges. And the good news here is that point interpolation has been added to ParaView with the recent 5.1 release. In ParaView, it is possible to use interactive widgets to define volumes, planes, and polylines to resample point clouds and rapidly display them using volume rendering or other standard visualization techniques. These topics are covered in the
+   <a href="https://blog.kitware.com/point-and-smoothed-particle-hydrodynamics-sph-interpolation-in-paraview/">
+    next article
+   </a>
+   in this series.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   References
+  </span>
+ </h2>
+ <ol>
+  <li>
+   <a href="https://en.wikipedia.org/wiki/Project_Tango">
+    https://en.wikipedia.org/wiki/Project_Tango
+   </a>
+  </li>
+  <li>
+   <a href="https://en.wikipedia.org/wiki/Kinect">
+    https://en.wikipedia.org/wiki/Kinect
+   </a>
+  </li>
+  <li>
+   <a href="https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics#Uses_in_fluid_simulation">
+    https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics#Uses_in_fluid_simulation
+   </a>
+  </li>
+  <li>
+   <a href="https://blog.kitware.com/rendering-engine-improvements-in-vtk/">
+    https://blog.kitware.com/rendering-engine-improvements-in-vtk/
+   </a>
+  </li>
+  <li>
+   <a href="https://blog.kitware.com/volume-rendering-improvements-in-vtk/">
+    https://blog.kitware.com/volume-rendering-improvements-in-vtk/
+   </a>
+  </li>
+  <li>
+   <a href="https://blog.kitware.com/new-opengl-rendering-in-vtk/">
+    https://blog.kitware.com/new-opengl-rendering-in-vtk/
+   </a>
+  </li>
+  <li>
+   <a href="http://www.vtk.org/Wiki/VTK/Remote_Modules">
+    http://www.vtk.org/Wiki/VTK/Remote_Modules
+   </a>
+  </li>
+  <li>
+   <a href="https://gitlab.kitware.com/ken-martin/vtkLODPointCloudMapper">
+    https://gitlab.kitware.com/ken-martin/vtkLODPointCloudMapper
+   </a>
+  </li>
+  <li>
+   <a href="https://gitlab.kitware.com/vtk/point-cloud.git">
+    https://gitlab.kitware.com/vtk/point-cloud.git
+   </a>
+  </li>
+  <li>
+   <a href="https://blog.kitware.com/simple-parallel-computing-with-vtksmptools/">
+    https://blog.kitware.com/simple-parallel-computing-with-vtksmptools/
+   </a>
+  </li>
+  <li>
+   D.J. Price, Smoothed particle hydrodynamics and magnetohydrodynamics,
+   <em>
+    J. Comput. Phys
+   </em>
+   . 231:759-794, 2012. Especially  equation 49.
+  </li>
+ </ol>
+</div>

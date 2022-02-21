@@ -1,0 +1,447 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Fully coupled multi-component and multi-scale modeling systems such as Regional Earth System Model (RegESM) are used to represent and analyze complex interactions among physical processes. A typical application of RegESM can produce tens of terabytes of raw data. This data determines the resolution of the spatial grid, the length of the simulation and the number of represented model components. The increased complexity of multi-component modeling systems results in extra overhead in disk input/output and network bandwidth. Thus, the systems require extensive resources for computation and storage.
+ </p>
+ <p>
+  Due to the increased complexity of multi-component modeling systems, the conventional post-processing approach has become insufficient to analyze and understand in detail fast-moving processes and interactions among model components [1]. In situ visualization has been used to overcome the limitations of the conventional approach. When compared to the conventional approach, in situ visualization can analyze key information that multi-component Earth system models generate in a higher temporal resolution. In addition, in situ visualization does not entail extensive code development and restructuring.
+ </p>
+ <p>
+  This article discusses in situ visualization and highlights work that tested its integration with RegESM. This work was presented in “Towards in situ visualization integrated model coupling framework for earth system science” at the Fourth Workshop on Coupling Technologies for Earth System Models [2].
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Co-processing as part of RegESM
+   </span>
+  </strong>
+ </p>
+ <p>
+  In a conventional simulation system (Figure 1), ParaView Catalyst integrates a visualization pipeline with simulation code through an adaptor. This adaptor acts as an abstraction layer or a wrapper layer. Custom adaptor code is developed in the C++ programming language. It transfers information from the simulation code to ParaView Catalyst.
+ </p>
+ <p>
+  The new approach (Figure 2) aims to create a more generic and standardized co-processing environment for Earth system science. The approach integrates in situ visualization. In addition, the approach couples existing Earth system models with the Earth System Modeling Framework (ESMF) library [4] and the interface of the National Unified Operational Prediction Capability (NUOPC) Layer [5]. In the new approach, an adaptor interacts with an ESMF driver, which synchronizes the model components, the data exchange and the spatial interpolation that occurs among the computational grids of the model components.
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19347" style="width: 885px">
+   <img alt="" class="wp-image-19347 size-full" height="464" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1-300x159.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1-768x407.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1-220x117.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1-250x133.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1-355x188.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1-730x387.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig1-90x48.jpg 90w" width="875"/>
+   <p class="wp-caption-text">
+    Figure 1: A conventional simulation system shows the flow of simulation code through an adaptor to ParaView Catalyst. Graphic adapted from Turuncoglu [2].
+   </p>
+  </div>
+  Adaptor code defines the underlying numerical grid (structured or unstructured) and the associated multi-dimensional fields, using the Visualization Toolkit (VTK) [3]. ParaView Catalyst processes the data, performs co-processing and creates the desired final products. These products include rendered images, derived fields and added value statistics such as spatial and temporal averages.
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19348" style="width: 885px">
+   <img alt="" class="size-full wp-image-19348" height="464" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2-300x159.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2-768x407.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2-220x117.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2-250x133.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2-355x188.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2-730x387.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig2-90x48.jpg 90w" width="875"/>
+   <p class="wp-caption-text">
+    Figure 2: The ESMF library integrates with a simulation system. Chart adapted from Turuncoglu [2].
+   </p>
+  </div>
+  The ESMF driver transfers the underlying numerical grid of each model component, or each source, to the co-processing component (Figure 3), or the destination. The transfer is facilitated by the ESMF library [4] and the interface of the NUOPC Layer [5]. The model components in Figure 3 are atmosphere (ATM) and ocean (OCN). While these individual components cannot interact directly with the adaptor, the adaptor code provides a seamless interface. It maps the ESMF field object (
+  <span style="font-family: 'courier new', courier;">
+   ESMF_Field
+  </span>
+  ) and the grid object (
+  <span style="font-family: 'courier new', courier;">
+   ESMF_Grid
+  </span>
+  ) to their VTK equivalents. To do so, it uses application programming interfaces (APIs), which are supplied by ParaView Catalyst and VTK.
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19349" style="width: 1885px">
+   <img alt="" class="size-full wp-image-19349" height="481" sizes="(max-width: 1875px) 100vw, 1875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3.jpg 1875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-300x77.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-768x197.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-1024x263.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-220x56.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-250x64.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-355x91.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-730x187.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig3-90x23.jpg 90w" width="1875"/>
+   <p class="wp-caption-text">
+    Figure 3: A representation of an atmosphere model component and an ocean model component shows grid transfer. Representation adapted from Turuncoglu [2].
+   </p>
+  </div>
+  <strong>
+   <span style="color: #000080;">
+    Transferring Computational Grids and Mapping Two-dimensional Decompositions
+   </span>
+  </strong>
+ </p>
+ <p>
+  Due to the nature of Earth system modeling and its demand for extensive computational resources, Earth system models are designed to take advantage of parallel programming through Message Passing Interface (MPI). Based on the parallelization of model components, Earth system models use two-dimensional (2D) domain decomposition to solve a set of equations such as a set of Navier-Stokes equations. The computational grid of an individual model component and its 2D decomposition configuration are represented by
+  <span style="font-family: 'courier new', courier;">
+   vtkMultiBlockDataSet
+  </span>
+  and
+  <span style="font-family: 'courier new', courier;">
+   vtkStructuredGrid
+  </span>
+  , respectively.
+ </p>
+ <p>
+  A problem arises when loosely coupled visualization and modeling systems are considered. The model components and the co-processing component may run on different computational resources or in different MPI communicators (e.g.,
+  <span style="font-family: 'courier new', courier;">
+   MPI_COMM_WORLD
+  </span>
+  ). As Figure 3 indicates, in ESMF convention, computational resources are assigned Persistent Execution Threads (PETs). As Figure 3 also demonstrates, the number of MPI processes in the model components and the number of MPI processes in the co-processing component may differ. If this is the case, the 2D decomposition configurations will need to be restructured. The co-processing component is responsible for modifying the 2D decomposition configurations of the numerical grids (Figure 4).
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19350" style="width: 885px">
+   <img alt="" class="size-full wp-image-19350" height="203" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4-300x70.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4-768x178.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4-220x51.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4-250x58.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4-355x82.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4-730x169.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig4-90x21.jpg 90w" width="875"/>
+   <p class="wp-caption-text">
+    Figure 4: Computational grids become remapped. Images adapted from Turuncoglu [2].
+   </p>
+  </div>
+  To allow the co-processing component to run in a specific MPI communicator, the
+  <span style="font-family: 'courier new', courier;">
+   coprocessorinitializewithpython
+  </span>
+  function includes support for the
+  <span style="font-family: 'courier new', courier;">
+   int *fcomm
+  </span>
+  argument. The following Fortran code provides this argument.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e879eedc0684186271" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+g_coprocessor = vtkCPProcessor::New();
+MPI_Comm handle = MPI_Comm_f2c(*fcomm);
+vtkMPICommunicatorOpaqueComm*Comm = new 
+vtkMPICommunicatorOpaqueComm(&amp;amp;handle);
+g_coprocessor-&amp;gt;Initialize(*Comm);</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e879eedc0684186271-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e879eedc0684186271-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e879eedc0684186271-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e879eedc0684186271-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e879eedc0684186271-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e879eedc0684186271-1">
+        <span class="crayon-v">
+         g_coprocessor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkCPProcessor
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e879eedc0684186271-2">
+        <span class="crayon-e">
+         MPI_Comm
+        </span>
+        <span class="crayon-v">
+         handle
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         MPI_Comm_f2c
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         fcomm
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e879eedc0684186271-3">
+        <span class="crayon-e ">
+         vtkMPICommunicatorOpaqueComm*
+        </span>
+        <span class="crayon-v">
+         Comm
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e879eedc0684186271-4">
+        <span class="crayon-e">
+         vtkMPICommunicatorOpaqueComm
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         amp
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         handle
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e879eedc0684186271-5">
+        <span class="crayon-v">
+         g_coprocessor
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Initialize
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         Comm
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  After the co-processing component modifies the 2D decomposition configurations of the numerical grids, it passes them to the adaptor.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Using an Integrated System to Analyze Hurricane Katrina
+   </span>
+  </strong>
+ </p>
+ <p>
+  To test the co-processing approach, ParaView Catalyst was integrated with version 1.1 of RegESM [6]. The state-of-the-art driver that is responsible for the orchestration of RegESM and the data exchange among the model components is mainly developed by Istanbul Techical University (ITU). RegESM can incorporate four different model components: atmosphere, ocean, wave and river routing. The test used two of these model components, atmosphere and ocean, to analyze Hurricane Katrina.
+ </p>
+ <p>
+  Hurricane Katrina was the costliest natural disaster and one of the five deadliest hurricanes in the history of the U.S. The storm is currently ranked as the third most intense landfalling tropical cyclone in the U.S. Hurricane Katrina was established on the coast of southern Florida as a Category 1 storm on August 25, 2005. It entered the central Gulf of Mexico and strengthened to a Category 5 storm on August 28, 2005.
+ </p>
+ <p>
+  To observe the evolution of Hurricane Katrina, a simulation was performed between August 27 and August 30, 2005. The atmosphere model component (from Regional Climate Model (RegCM)) was configured to have a horizontal resolution of 27 kilometers (170 latitude x 235 longitude) and 23 vertical sigma layers, which established almost one million grid points (Figure 5). The ocean model component (from Regional Ocean Modeling System (ROMS)) had a spatial resolution of three kilometers (655 latitude x 489 longitude) and 60 vertical layers, which established 19 million grid points (Figure 5). To exchange data between the model components and the co-processing component, a coupling interval of six minutes was selected. The coupling time step was set to three hours.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_19351" style="width: 885px">
+  <img alt="" class="size-full wp-image-19351" height="605" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5-300x207.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5-768x531.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5-220x152.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5-250x173.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5-355x245.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5-730x505.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig5-90x62.jpg 90w" width="875"/>
+  <p class="wp-caption-text">
+   Figure 5: ParaView represents atmosphere and ocean model domains along with information about topography and depth.
+  </p>
+ </div>
+ <p>
+  Figure 6 shows an snapshot of the integrated analysis of Hurricane Katrina. Surface wind vectors (in meters per second) were provided by the atmosphere model component. They are indicated as solid arrows. They reveal large-scale circulation in the region. In addition to surface wind vectors, clouds were retrieved using a three-dimensional relative humidity field and a direct volume rendering technique. Measurements of the surface height of the ocean (in meters) and surface currents (in meters per second) were provided by the ocean model component. They show the response of the surface of the ocean to the hurricane.
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19352" style="width: 885px">
+   <img alt="" class="size-full wp-image-19352" height="573" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6-300x196.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6-768x503.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6-220x144.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6-250x164.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6-355x232.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6-730x478.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig6-90x59.jpg 90w" width="875"/>
+   <p class="wp-caption-text">
+    Figure 6: An integrated in situ visualization of Hurricane Katrina uses results from an atmosphere model component and an ocean model component. Results were taken every six minutes. Source: Turuncoglu [7].
+   </p>
+  </div>
+  The complex and non-linear nature of the hurricane requires advanced integration of the high volumes of data that come from the model components. Thus, the hurricane is challenging to analyze and study. Detailed representation of the hurricane necessitates the use of model components with very high spatial resolution. Although the low spatial resolution of the atmosphere model component gives insight into the formation and the evolution of Hurricane Katrina, it lacks detail of the vertical structure of the hurricane.
+ </p>
+ <p>
+  Due to the issue of numerical stability in the atmosphere model component, it is not possible to perform the simulation at a resolution greater than three kilometers. An additional non-hydrostatic atmosphere model component such as the Weather Research and Forecasting model, which is developed by the National Center for Atmospheric Research, can give a more detailed representation of the hurricane and its interaction with the ocean.
+ </p>
+ <p>
+  In addition to a general overview of the region, it is possible to analyze individual model components and features in greater detail. It is possible, for example, to extract the backward stream field from Hurricane Katrina (Figure 7).
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19353" style="width: 885px">
+   <img alt="" class="size-full wp-image-19353" height="375" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7-300x129.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7-768x329.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7-220x94.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7-250x107.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7-355x152.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7-730x313.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig7-90x39.jpg 90w" width="875"/>
+   <p class="wp-caption-text">
+    Figure 7: Wind speed determines the colors of features and stream tracers. Image adapted from Turuncoglu [2].
+   </p>
+  </div>
+  It is also possible to analyze the evolution of the state of the surface of the ocean (Figure 8).
+ </p>
+ <p>
+  <div class="wp-caption aligncenter" id="attachment_19354" style="width: 885px">
+   <img alt="" class="size-full wp-image-19354" height="573" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8-300x196.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8-768x503.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8-220x144.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8-250x164.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8-355x232.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8-730x478.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig8-90x59.jpg 90w" width="875"/>
+   <p class="wp-caption-text">
+    Figure 8: ParaView Catalyst displays measurements of the surface height of the ocean in meters and surface current vectors in meters per second. Image adapted from Turuncoglu [2].
+   </p>
+  </div>
+  Furthermore, it is possible to investigate the vertical structure of the core of the hurricane (Figure 9).
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_19355" style="width: 885px">
+  <img alt="" class="size-full wp-image-19355" height="509" sizes="(max-width: 875px) 100vw, 875px" src="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9.jpg 875w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9-300x175.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9-768x447.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9-220x128.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9-250x145.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9-355x207.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9-730x425.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/09/catalyst_fig9-90x52.jpg 90w" width="875"/>
+  <p class="wp-caption-text">
+   Figure 9: A direct volume rendering of Hurricane Katrina shows results from cloud liquid water content in kilograms per kilogram, a stream tracer and the vertical cross-section of wind speed in meters per second.
+  </p>
+ </div>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Continuing Development
+   </strong>
+  </span>
+ </p>
+ <p>
+  The new approach enhances and standardizes the interoperability between simulation code and an in situ visualization system. The model-coupling framework that the approach employs analyzes the high volumes of data that come from multi-component Earth system models. The ability to analyze data in a higher temporal resolution will open new possibilities, enhancing knowledge of non-linear interactions and feedback mechanisms among model components.
+ </p>
+ <p>
+  The plan is to make the interface of the ESMF library more generic. This will allow adaptor code to be used by coupled modeling systems other than RegESM. The overhead of the in situ visualization component of RegESM is another important topic of future development. It will be investigated in a series of standalone and coupled model simulations and in various visualization pipelines. The results of the benchmark simulations will be used to improve the overall performance of RegESM.
+ </p>
+ <p>
+  In addition, future work will investigate a way to automatically assign the PETs that are used by the co-processing component to graphical processing unit (GPU) resources. This work will increase efficiency in hybrid computing systems that are configured with nodes, with and without acceleration support.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Acknowledgments
+   </span>
+  </strong>
+ </p>
+ <p>
+  This work was supported by a research grant (116Y136) from The Scientific and Technological Research Council of Turkey. The computing resources used in this work were provided by the National Center for High Performance Computing of Turkey under grant number 5003082013. The Quadro K5200 used to develop the prototype version of the system was donated by NVIDIA Corporation as part of its Hardware Donation Program.
+ </p>
+ <p>
+  Thanks go to Rocky Dunlap and Robert Oehmke from the National Oceanic and Atmospheric Administration (NOAA) Earth System Research Laboratory (ESRL) and Cooperative Institute for Research in Environmental Sciences (CIRES), Gerhard Theurich from Science Applications International Corporation and Andrew Bauer from Kitware for their very useful suggestions, comments and support.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    References
+   </span>
+  </strong>
+ </p>
+ <ol>
+  <li>
+   Ahrens, James, Sébastien Jourdain, Patrick O’Leary, John Patchett, David H. Rogers, Patricia Fasel, Andrew Bauer, Mark Petersen, Francesca Samsel, and Benjamin Boeckel. “In Situ MPAS-Ocean Image-Based Visualization.” Paper presented at The International Conference for High Performance Computing, Networking, Storage and Analysis, New Orleans, Louisiana, November 16-21, 2014.
+  </li>
+  <li>
+   Turuncoglu, Ufuk Utku. “Towards in situ visualization integrated model coupling framework for earth system science.” Presented at the The Fourth Workshop on Coupling Technologies for Earth System Models, Princeton, New Jersey, March 20-22, 2017.
+  </li>
+  <li>
+   Kitware, Inc. “Visualize Your Data With VTK.”
+   <a href="https://www.vtk.org" rel="noopener" target="_blank">
+    https://www.vtk.org
+   </a>
+   .
+  </li>
+  <li>
+   Collins, Nandy, Gerhard Theurich, Cecelia DeLuca, Max Suarez, Atanas Trayanov, V. Balaji, Peggy Li, Weiyu Yang, Chris Hill, and Arlindo da Silva. “Design and Implementation of Components in the Earth System Modeling Framework.” The International Journal of High Performance Computing Applications 19 (2005): 341-350;
+   <br/>
+   Hill, Chris, Cecelia DeLuca, V. Balaji, Max Suarez, and Arlindo da Silva. “The Architecture of the Earth System Modeling Framework. Computing in Science and Engineering 6 (2004): 18-28. doi: 10.1109/MCISE.2004.1255817;
+   <br/>
+   University of Colorado Boulder. “ESMF.”
+   <a href="https://www.earthsystemcog.org/projects/esmf" rel="noopener" target="_blank">
+    https://www.earthsystemcog.org/projects/esmf
+   </a>
+   .
+  </li>
+  <li>
+   University of Colorado Boulder. “NUOPC.”
+   <a href="https://www.earthsystemcog.org/projects/nuopc" rel="noopener" target="_blank">
+    https://www.earthsystemcog.org/projects/nuopc
+   </a>
+   .
+  </li>
+  <li>
+   Turuncoglu, Ufuk Utku, and Sannino, Gianmaria. “Validation of newly designed regional earth system model (RegESM) for Mediterranean Basin.” Climate Dynamics 48 (2017): 2919–2947. doi: 10.1007/s00382-016-3241-1;
+   <br/>
+   GitHub, Inc. “uturuncoglu / RegESM.” 2017.
+   <a href="https://github.com/uturuncoglu/RegESM" rel="noopener" target="_blank">
+    https://github.com/uturuncoglu/RegESM
+   </a>
+   .
+  </li>
+  <li>
+   Turuncoglu, Ufuk Utku, “Visualization of Fully Coupled Regional Earth System Model (RegESM) Simulation of Hurricane Katrina,” Vimeo video, 1:01, posted by “Ufuk Turuncoglu,” March 15, 2017,
+   <a href="https://vimeo.com/208454979" rel="noopener" target="_blank">
+    https://vimeo.com/208454979
+   </a>
+   .
+  </li>
+ </ol>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-19361 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/09/Ufuk-Utku-Turuncoglu.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/09/Ufuk-Utku-Turuncoglu.png 100w, https://blog.kitware.com/wp-content/uploads/2017/09/Ufuk-Utku-Turuncoglu-90x113.png 90w" width="100"/>
+   Ufuk Utku Turuncoglu
+  </strong>
+  is an associate professor at Informatics Institute at ITU in Turkey. His main areas of interest are computational simulation of atmosphere and ocean model components, visualization with in situ techniques, process automation with scientific workflow systems and climate science. He is also interested in the design and development of coupled Earth system models.
+ </p>
+</div>

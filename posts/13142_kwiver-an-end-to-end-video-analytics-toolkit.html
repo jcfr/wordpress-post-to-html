@@ -1,0 +1,976 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="/source/files/134_1054557739.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1054557739.jpg" width="100%"/>
+  </a>
+ </p>
+ <p>
+  A little over a year ago at Kitware, we released the Kitware Interactive Video Exploitation and Retrieval (KWIVER) toolkit [1]. The goal of our Computer Vision team in developing KWIVER is to create a complete end-to-end video exploitation toolkit. When fully realized, KWIVER will provide tools to ingest video, stabilize it, detect movers in it, and link those motion detections into tracks. KWIVER will also provide a framework for developing analytics based on those core capabilities, leveraging a wide variety of open-source computer vision and machine learning toolkits. Currently, KWIVER’s strength lies in offering the tools required to develop analytics for video from moving cameras such as those mounted on a pan/tilt gimbal or, even more challengingly, those mounted on moving platforms such as aerial drones.
+ </p>
+ <p>
+  For over seven years, our efforts have focused on developing analytics for video from moving cameras. Our primary customers for this time frame include clients associated with the U.S. Department of Defense. Until just a few years ago, the U.S. military primarily owned aerial video platforms. In the last few years, however, aerial video platforms went from the subject of congressional appropriations to a hot Christmas present. We believe that KWIVER can leverage these new, exciting, and inexpensive platforms to help develop leading-edge capabilities across a wide variety of domains including agriculture, wildlife management, surveying and mapping, traffic analysis, and many others.
+ </p>
+ <p>
+  KWIVER faces some unique challenges. While we are dedicated to the value and utility of open-source software, government customers are understandably careful about how the technologies they fund become available to the public at large. Although they are open and sympathetic to the idea of advancing the state-of-the-art by making the results of our research available as open source, they implement a formal process in doing so. The time required to work through this process can vary dramatically, and we found that patience and cooperation generally produce the desired results.
+ </p>
+ <p>
+  Due in part to the time and the work required to follow this process, the KWIVER project may have seemed quiet this year. With the exception of the Motion-imagery Aerial Photogrammetry Toolkit (MAP-Tk) [2], which had a number of releases and a tutorial at the IEEE Conference on Computer Vision and Pattern Recognition (CVPR), and the Social Multimedia Query Toolkit (SMQTK) [3], which is under heavy development, most of KWIVER remains as it stood when released—a largely read-only repository of interesting code with limited immediate utility.
+ </p>
+ <p>
+  Recently, we received permission to release a number of key pieces of KWIVER including the Video and Image-Based Retrieval and Analysis Toolkit (VIBRANT) [4], which is a detection and tracking library and framework, and the Kitware Analytics Toolkit (KWant) [5], which is an analytic data federation and quantification library. This permission allows us to, for the first time, demonstrate an end-to-end analytic capability. While some of the pieces do not yet work together as smoothly as they ultimately will, they allow us to fully demonstrate some critical capabilities of KWIVER.
+ </p>
+ <p>
+  We will improve KWIVER over the course of the next year. We expect to add more documentation, examples, and code that will allow use of KWIVER in a more refined fashion. Watch the KWIVER website, read the Kitware blog [6], and join the kwiver-users mailing list [7] to keep fully abreast of developments.
+ </p>
+ <p>
+  In the meantime, we will take this opportunity to reintroduce some of KWIVER’s capabilities; demonstrate how to build the various parts of KWIVER; and illustrate how to use them to stabilize sample video, detect and track movers in that video, and review results using a graphical user interface (GUI) application. Hopefully, this will spark interest in KWIVER, provide an introduction to its capabilities, inspire its utilization in projects, and increase participation in its development.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     KWIVER Components
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Unlike other open-source projects, KWIVER does not have a single repository that contains all of the code for the project. Rather, the KWIVER repository located on GitHub [8] serves as a central location for KWIVER’s documentation. It contains sample code, utilities, tests, and other tools for the KWIVER community.
+ </p>
+ <p>
+  The bulk of the repository, however, consists of a CMake [9]  “superbuild” that builds many members of the KWIVER family of projects. Each of these members typically has its own source code repository. In cases such as MAP-Tk, CMake builds and deals with members as single stand-alone projects. The KWIVER repository handles each of the sub-projects as a Git sub-module. KWIVER serves to combine all of its components in a way that makes their use together as convenient as possible.
+ </p>
+ <p>
+  Currently, the KWIVER superbuild handles the following repositories:
+ </p>
+ <p>
+  <strong>
+   MAP-Tk
+  </strong>
+  <br/>
+  MAP-Tk is an open-source C++ collection of libraries and tools for making measurements from aerial video. Its initial capabilities focus on estimating the camera flight trajectory and a sparse three-dimensional point cloud of a scene.
+ </p>
+ <p>
+  <strong>
+   Stream Processing Toolkit (sprokit)
+  </strong>
+  <br/>
+  sprokit [10] aims to make it easy to process a stream of data with various algorithms. It supports divergent and convergent data flows with synchronization between them and connection type checking—all with full, first-class Python bindings.
+ </p>
+ <p>
+  <strong>
+   Vision Visualization and Analysis (ViViA)
+  </strong>
+  <br/>
+  ViViA is a collection of Qt-based applications for GUIs. It visualizes and explores content extracted from video.
+ </p>
+ <p>
+  <strong>
+   VIBRANT
+  </strong>
+  <br/>
+  VIBRANT is an end-to-end system for surveillance video analytics such as content-based retrieval and alerts based on behaviors, actions, and appearances.
+ </p>
+ <p>
+  <strong>
+   KWant
+  </strong>
+  <br/>
+  KWant is a lightweight toolkit for computing detection and tracking metrics on a variety of video data. It computes spatial and temporal associations between data sets, even with different frame rates. It has a flexible input format and can generate eXtensible Markup Language (XML)-based results.
+ </p>
+ <p>
+  <strong>
+   vital
+  </strong>
+  <br/>
+  vital is a core library of abstractions and data types. Various KWIVER components use vital.
+ </p>
+ <p>
+  Additionally, a separate repository, called Fletch [11], is a CMake-based project that assists with acquiring and building common open-source libraries for developing video exploitation tools. (Why Fletch? The verb fletch means “provide (an arrow) with feathers for flight“ [12], and of course, arrows are kept in quivers.)
+ </p>
+ <p>
+  This article concentrates on the capabilities of KWIVER related to aerial video analytics. KWIVER does have other core capabilities. For example, SMQTK provides search and retrieval capabilities for data sets related to social media images and video.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Fletch
+    </strong>
+   </span>
+  </span>
+  <br/>
+  At its core, KWIVER is a cross-platform project. The goal is to make KWIVER fully useful on Linux, Mac OS, and Windows systems. This, of course, presents an immediate challenge. KWIVER leverages a broad collection of open-source projects across a wide variety of domains. On Linux systems, a simple
+  <span style="font-family: courier;">
+   apt-get
+  </span>
+  or
+  <span style="font-family: courier;">
+   yum install
+  </span>
+  makes many (but not all) of these projects available. Similarly, on Mac OS, Homebrew or MacPorts package managers makes many (but again, not all) of these projects available.
+ </p>
+ <p>
+  Windows systems tend to present an even more difficult challenge. Fletch simplifies things and provides a reliable source of all of the packages that KWIVER and its components require. Fletch is a CMake-based superbuild. What this means is that it has a top-level
+  <span style="font-family: courier;">
+   CMakeLists.txt
+  </span>
+  file that can configure a Fletch build for specific projects.
+ </p>
+ <p>
+  Fletch also provides a CMake variable,
+  <span style="font-family: courier;">
+   fletch_ENABLE_ALL_PACKAGES
+  </span>
+  , which tells Fletch to build every package that it knows. Once configured, Fletch contains CMake modules that know how to build all of the packages requested and download the packages from their respective websites. In addition to building the packages, Fletch ensures that the packages know about each other. If, for example, Fletch has ZLib and Qt packages enabled, the Qt package will build and link against Fletch’s copy of ZLib, and so on.
+ </p>
+ <p>
+  Fletch builds much like any CMake project. The first step involves configuring the project and deciding which of the toolkits to build, using the CMake GUI tool (usually called
+  <span style="font-family: courier;">
+   cmake-gui
+  </span>
+  ) as shown in the below figure:
+ </p>
+ <p>
+  <a href="/source/files/134_606411040.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_606411040.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  Another route entails selecting the appropriate options on the command line through the CMake tool. For example, the following command configure builds Fletch with the default build environment (e.g., Unix Makefiles on Linux platforms):
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0d9747946220" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cmake  -Dfletch_ENABLE_ALL_PACKAGES:BOOL=TRUE ../source</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0d9747946220-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0d9747946220-1">
+        cmake  -Dfletch_ENABLE_ALL_PACKAGES:BOOL=TRUE ../source
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  Implementing the
+  <span style="font-family: courier;">
+   make
+  </span>
+  command then builds the project, since CMake creates the appropriate
+  <span style="font-family: courier;">
+   makefile
+  </span>
+  build files. Another choice is to utilize the
+  <span style="font-family: courier;">
+   cmake –build .
+  </span>
+  command. CMake will try to do a command-line build for the generator used.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Building KWIVER
+    </strong>
+   </span>
+  </span>
+  <br/>
+  To get started with building KWIVER, the first step is to clone the KWIVER repository on GitHub:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0e0721534397" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+git clone git@github.com:Kitware/kwiver.git</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e0721534397-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0e0721534397-1">
+        git clone git@github.com:Kitware/kwiver.git
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  As noted earlier, the KWIVER repository serves as a superbuild for a collection of projects that it can configure to work together. KWIVER manages these projects as Git sub-modules and requires fetching as well:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0e3944085589" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd kwiver
+git submodule update --init</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e3944085589-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e3944085589-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0e3944085589-1">
+        cd kwiver
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e3944085589-2">
+        git submodule update --init
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  This will fetch all of the other projects associated with the KWIVER build and checkout the version of those projects tested together within the KWIVER superbuild.
+ </p>
+ <p>
+  After the checkout completes, following the usual CMake build steps will build the KWIVER project. The KWIVER build uses the packages built by Fletch. Thus, the KWIVER build must know the location of the intended Fletch build. Setting the variable
+  <span style="font-family: courier;">
+   fletch_DIR
+  </span>
+  to point to the directory in which Fletch built accomplishes this.
+ </p>
+ <p>
+  Selections within the KWIVER build turn on or off any of the optional KWIVER sub-components. Building all of KWIVER means setting the CMake variable
+  <span style="font-family: courier;">
+   kwiver_ENABLE_ALL_PACKAGES
+  </span>
+  to
+  <span style="font-family: courier;">
+   TRUE
+  </span>
+  . As with Fletch (and any CMake project), there are a number of ways to configure the project. The simplest uses a
+  <span style="font-family: courier;">
+   cmake
+  </span>
+  command on the command line, such as the following:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0e5210193679" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+mkdir build
+cd build
+cmake -Dfletch_DIR:PATH=~/Projects/KWIVER/fletch/build -Dkwiver_ENABLE_ALL_PACKAGES:BOOL=TRUE &lt;kwiver source directory&gt;</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e5210193679-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e5210193679-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e5210193679-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0e5210193679-1">
+        mkdir build
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e5210193679-2">
+        cd build
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e5210193679-3">
+        cmake -Dfletch_DIR:PATH=~/Projects/KWIVER/fletch/build -Dkwiver_ENABLE_ALL_PACKAGES:BOOL=TRUE &lt;kwiver source directory&gt;
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  Once the KWIVER configuration completes, a make command can build KWIVER on Unix-style systems such as Linux or Mac OS X. Another option is to open the Visual Studio project, and build on a Windows system.
+ </p>
+ <p>
+  The above provides a fairly quick overview of how to build Fletch and KWIVER using CMake. For more details, consult the project documentation available through the KWIVER website and the CMake website.
+ </p>
+ <p>
+  After building everything, ensuring to source the
+  <span style="font-family: courier;">
+   setup_KWIVER.sh
+  </span>
+  (or
+  <span style="font-family: courier;">
+   setup_KWIVER.bat
+  </span>
+  on Windows machines) file in the install directory of the build directory puts the various KWIVER tools on the
+  <span style="font-family: courier;">
+   PATH
+  </span>
+  and makes certain that the KWIVER applications can find their libraries and other data files.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Using KWIVER for Video Analytics
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The following example uses a variety of KWIVER-based tools and techniques to compute and visualize detection and tracking analytics on full motion video (FMV). This includes pre-processing the data to subtract out the camera motion, detecting moving objects within the video, and linking those detections together into tracks. Finally, the example demonstrates how to visualize the results using one of the video analytics applications available through KWIVER’s ViViA project.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Utilizing Test Data
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  KWIVER’s website (
+  <a href="http://www.kwiver.org/TestData">
+   http://www.kwiver.org/TestData
+  </a>
+  ) contains download instructions for the data used in this example. The data set of interest is
+  <span style="font-family: courier;">
+   kwiver_fmv_set_1
+  </span>
+  . The test data does not include individual images and metadata (camera position, time of day, etc.) in the video.
+ </p>
+ <p>
+  Three sub directories make up the test set: an images directory that contains the actual data, a KWIVER Archive (KWA) directory, and a Tracks directory. These make convenient locations for the output that KWIVER will generate.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Creating KWIVER Archive Files with MAP-TK and sprokit
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Generating a special format video file called a KWA file allows for use of the KWIVER GUI applications that are part of ViViA. A KWA file contains all of the frames of a given video stored in a way that provides for easy and efficient random access to any frame in the video. The file also stores information about the frames, such as the frame homographies. Homographies are the mathematical relationship of one frame’s pixels to another frame’s pixels. The ViViA applications (and the various analytics applications) use these homographies for many purposes. In particular, they use homographies to compensate for camera motion. This means that when drawing a tripwire (a line that generates an alert if someone crosses over it) in a scene, the ViViA application can ensure that the tripwire stays in the same position in the scene, even if that position moves across the frame as a result of camera motion. In addition, the tracking application can ignore apparent motion generated by the movement of the camera so that the application can focus on detecting people and vehicles moving within the scene.
+ </p>
+ <p>
+  When trying to produce analytics on video scenes that involve moving cameras, such as those captured when taking video from an aerial drone like a quad copter, computing these homographies constitutes a critical first step. Fortunately, KWIVER (using MAP-Tk) provides services to do just that.
+ </p>
+ <p>
+  To make it easy to generate the necessary KWA files, Kitware created a sprokit pipeline. sprokit is another component of KWIVER and a plug-in-based pipeline framework. It excels when processing a lot of data in a sequential fashion (like the frames of a video) and when such processing involves a lot of sequential steps. Since KWIVER focuses primarily on video analytics, sprokit is a core part of KWIVER’s architecture. KWIVER adapts the capabilities of its various sub-projects (e.g., MAP-TK, VIBRANT, and KWant) as sprokit plug-ins to assemble them into useful and interesting processing chains.
+ </p>
+ <p>
+  In its simplest form, the
+  <span style="font-family: courier;">
+   pipeline_runner
+  </span>
+  runs a pipeline defined in a text file called a pipeline configuration file. Such a configuration file in the KWIVER repository is
+  <span style="font-family: courier;">
+   kwiver_util/pipeline_configs/images_to_kwa.pipe
+  </span>
+  .
+ </p>
+ <p>
+  The heart of the configuration is actually at the end of the file, and it looks something like this:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0e9802840330" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+connect from input.timestamp
+to   stabilize.timestamp
+connect from input.image
+to   stabilize.image
+connect from stabilize.homography_src_to_ref
+to   writer.homography_src_to_ref
+connect from input.timestamp
+to   writer.timestamp
+connect from input.image
+to   writer.image</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0e9802840330-10">
+        10
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-1">
+        connect from input.timestamp
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-2">
+        to   stabilize.timestamp
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-3">
+        connect from input.image
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-4">
+        to   stabilize.image
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-5">
+        connect from stabilize.homography_src_to_ref
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-6">
+        to   writer.homography_src_to_ref
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-7">
+        connect from input.timestamp
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-8">
+        to   writer.timestamp
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-9">
+        connect from input.image
+       </div>
+       <div class="crayon-line" id="crayon-5c41c6afcc0e9802840330-10">
+        to   writer.image
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  What this tells sprokit is that the pipeline consists of three processing elements: an input element; a stabilize element, which computes the homographies; and a writer element, which writes out the KWA files. Connecting an element’s output port with another element’s input port joins the elements. For example, the stabilize element has an output port called
+  <span style="font-family: courier;">
+   homography_src_to_ref
+  </span>
+  , which connects to the writer’s
+  <span style="font-family: courier;">
+   homography_src_to_ref
+  </span>
+  input port. The whole pipeline looks like this:
+ </p>
+ <p>
+  <a href="/source/files/134_2043967730.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_2043967730.jpg" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The remainder of the pipeline file configures each of the elements. For instance, the input element needs to know what images to read, the writer element needs to know where to write the KWA files, and so on. The key elements to adjust are as follows.
+ </p>
+ <p>
+  <strong>
+   Input
+  </strong>
+  <br/>
+  Under the process input section, the following line must contain the correct location of the image_list.txt file in the test data set.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0ec317363057" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+:image_list_file image_list.txt</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0ec317363057-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0ec317363057-1">
+        :image_list_file image_list.txt
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  Choices include an absolute or a relative path (from where to run
+  <span style="font-family: courier;">
+   pipeline_runner
+  </span>
+  ).
+ </p>
+ <p>
+  <strong>
+   Writer
+  </strong>
+  <br/>
+  Under the process writer section, the following line must point to a directory in which to write the KWA files.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0ee355114299" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+:output_directory ../KWA/</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0ee355114299-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0ee355114299-1">
+        :output_directory ../KWA/
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  Again, it is important to specify an absolute or a relative path.
+ </p>
+ <p>
+  The directory that stores the data set’s images runs the  checked-in version of the
+  <span style="font-family: courier;">
+   .pipe
+  </span>
+  file without requiring any changes. Once properly configured, the next step calls for running the pipeline:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0f0173533470" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+pipeline_runner -p /path/to/images_to_kwa.pipe</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0f0173533470-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0f0173533470-1">
+        pipeline_runner -p /path/to/images_to_kwa.pipe
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  This will take some time to process and write status messages to the console. When the processing completes, the specified directory will contain the KWA files needed to visualize the analytic results.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Detecting and Tracking Movers with VIBRANT
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  After processing the test data set and producing the KWAs that the KWIVER GUI applications will need, it is time to generate analytics on the video and review them with those applications. In this case, VIBRANT detects and tracks the moving objects in the scene (either people or vehicles). In the future, Kitware plans to adapt VIBRANT’s detection and tracking algorithms to work as sprokit components. For now, VIBRANT provides a stand-alone executable that reads images and generates a track file. The executable is
+  <span style="font-family: courier;">
+   vibrant_detect_and_track_async
+  </span>
+  .
+ </p>
+ <p>
+  Similar to the sprokit pipeline used earlier,
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c6afcc0f2090136587" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    vibrant_detect_and_track_async
+   </span>
+  </span>
+  requires a configuration file. The KWIVER source tree contains this file at
+  <span style="font-family: courier;">
+   Packages/vibrant/tools/config_files/kwt_kwiver_fmv_set_1.conf
+  </span>
+  . The file configures VIBRANT’s detection and tracking capabilities for this particular data, which comes from a publicly available data set called AP Hill (for the location of its collection).
+ </p>
+ <p>
+  Like the
+  <span style="font-family: courier;">
+   .pipe
+  </span>
+  file used earlier, this file is checked in so as to allow it to run without change from the images directory in the test data set. Running a different configuration requires a change to the line so that it properly specifies an absolute or a relative path to the
+  <span style="font-family: courier;">
+   image_meta_list.txt
+  </span>
+  file included in the images directory.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0f4551635595" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+src:image_metadata_list:file = list.txt</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0f4551635595-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0f4551635595-1">
+        src:image_metadata_list:file = list.txt
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  The following syntax runs the command:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0f6444275024" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+vibrant_detect_and_track_async -c /path/to/kwt_kwiver_fmv_set_1.conf</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0f6444275024-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0f6444275024-1">
+        vibrant_detect_and_track_async -c /path/to/kwt_kwiver_fmv_set_1.conf
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  As happened when running
+  <span style="font-family: courier;">
+   pipeline_runner
+  </span>
+  , this command will run for some time, generating logging output. When the run completes, the Tracks directory stores a track file, called
+  <span style="font-family: courier;">
+   tracks_terminated.kw18
+  </span>
+  , next to the images directory where the run occurred.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Reviewing Results with ViViA
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  After producing analytics, ViViA reviews the results using an application called vsPlay. vsPlay makes interacting with videos possible in a manner similar to a normal video player for watching movies. However, vsPlay can overlay analytics—in this case tracks—on a video. In addition, it has facilities for drawing annotations on the video. These facilities leverage the homographies produced earlier so that they stick to the ground where drawn. vsPlay also has facilities for filtering and adjusting the way the analytics display.
+ </p>
+ <p>
+  Providing arguments on the command line runs vsPlay by telling it the locations of the KWA file and the track analytics file produced earlier. This command assumes that the images directory in which the other commands run also runs vsPlay:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c6afcc0f8818946269" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+vsPlay -vf ../KWA/kw_archive.index -tf ../Tracks/tracks_terminated.kw18</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c6afcc0f8818946269-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c6afcc0f8818946269-1">
+        vsPlay -vf ../KWA/kw_archive.index -tf ../Tracks/tracks_terminated.kw18
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p>
+  This brings up the user interface seen here:
+ </p>
+ <p>
+  <a href="/source/files/134_1072732026.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1072732026.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The upper left displays the standard media controls that allow for playing, stopping, pausing, and rewinding the video. Under the Tracks menu, it is important to make sure  to check the Show Tracks menu item. Accordingly, as the video plays, it will present trails associated with most of the movers, showing where the detection and tracking from VIBRANT found people and vehicles moving in the scene.
+ </p>
+ <p>
+  The vsPlay application is a very feature-rich application. To learn more about ViViA, read “ViSGUI: A Visualization Framework for Video Analytics” [13]. (VisGUI is the former name of ViViA.) Also see the vsPlay user’s manual in
+  <span style="font-family: courier;">
+   Packages/vivia/Documentation/User Manuals/vsPlay.rst
+  </span>
+  .
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Conclusion
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Now that we released what we consider to be the core components of KWIVER, we will work hard to improve them and make them more useful to the community at large. We will add more documentation and write blog posts to show how to do other interesting things with KWIVER. We will also adapt more of the KWIVER technologies as sprokit elements to provide for building bigger, more flexible, and more capable pipelines. For example, we will adapt the core elements of the
+  <span style="font-family: courier;">
+   vibrant_detect_and_track_async
+  </span>
+  application to enable configuration within the same pipeline as the KWA pipeline. We will also add other new capabilities.
+ </p>
+ <p>
+  To stay posted on developments in KWIVER, keep an eye on KWIVER’s website, and subscribe to the mailing list. Finally, KWIVER is an open-source project. We welcome pull requests and look forward to combining efforts to make KWIVER as useful as possible to the community at large.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+  <br/>
+  [1] Kitware, Inc. “Tackle challenging image and video analysis problems with KWIVER.” KWIVER.
+  <a href="http://www.kwiver.org">
+   http://www.kwiver.org
+  </a>
+  .
+  <br/>
+  [2] GitHub, Inc. “Kitware / maptk.” GitHub.
+  <a href="https://github.com/Kitware/maptk">
+   https://github.com/Kitware/maptk
+  </a>
+  .
+  <br/>
+  [3] GitHub, Inc. “Kitware / SMQTK.” GitHub.
+  <a href="https://github.com/Kitware/SMQTK">
+   https://github.com/Kitware/SMQTK
+  </a>
+  .
+  <br/>
+  [4] GitHub, Inc. “Kitware / vibrant.” GitHub.
+  <a href="https://github.com/Kitware/vibrant">
+   https://github.com/Kitware/vibrant
+  </a>
+  .
+  <br/>
+  [5] GitHub, Inc. “Kitware / kwant.” GitHub.
+  <a href="https://github.com/Kitware/kwant">
+   https://github.com/Kitware/kwant
+  </a>
+  .
+  <br/>
+  [6] Kitware, Inc. “Kitware Blog.” Kitware.
+  <a href="https://blog.kitware.com">
+   http://www.kitware.com/blog
+  </a>
+  .
+  <br/>
+  [7] Kitware, Inc. “Mailing List.” KWIVER.
+  <a href="http://www.kwiver.org/mailing-list">
+   http://www.kwiver.org/mailing-list
+  </a>
+  .
+  <br/>
+  [8] GitHub, Inc. “Kitware / kwiver.” GitHub.
+  <a href="https://github.com/Kitware/kwiver">
+   https://github.com/Kitware/kwiver
+  </a>
+  .
+  <br/>
+  [9] Kitware, Inc. CMake.
+  <a href="https://cmake.org">
+   https://cmake.org
+  </a>
+  .
+  <br/>
+  [10] Github, Inc. “Kitware / sprokit.” GitHub.
+  <a href="https://github.com/Kitware/sprokit">
+   https://github.com/Kitware/sprokit
+  </a>
+  .
+  <br/>
+  [11] GitHub, Inc. “Kitware / fletch.” GitHub.
+  <a href="https://github.com/Kitware/fletch">
+   https://github.com/Kitware/fletch
+  </a>
+  .
+  <br/>
+  [12] Oxford University Press. “Definition of Fletch in English.” Oxford Dictionaries.
+  <a href="http://www.oxforddictionaries.com/us/definition/american_english/fletch">
+   http://www.oxforddictionaries.com/us/definition/american_english/fletch
+  </a>
+  .
+  <br/>
+  [13] Aashish Chaudhary et al., “VisGUI: A Visualization Framework for Video Analysis.” Kitware Source, October 2012.
+ </p>
+ <p>
+  <a href="/source/files/4_2033480502.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_2033480502.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Keith Fieldhouse
+  </strong>
+  joined Kitware in May 2010 as a research and development engineer. He soon became a Technical Lead for his contributions and leadership across multiple projects on the Computer Vision team. These include the Defense Advanced Research Projects Agency’s (DARPA’s) Persistent Stare Exploitation and Analysis System (PerSEAS) and Video and Image Retrieval and Analysis Toolkit (VIRAT) efforts. Keith continues to provide technical and project leadership on multiple efforts, such as the Air Force Research Laboratory’s Data-To-Decisions program. Keith specializes in large system design and
+  <br/>
+  integration.
+ </p>
+</div>

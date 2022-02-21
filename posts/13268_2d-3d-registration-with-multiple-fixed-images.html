@@ -1,0 +1,175 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Image-guided interventions, such as radiotherapy and minimally invasive surgery, normally require the registration of pre-operative and intra-operative images. It is common to find situations in which the pre-operative data comes in the form of a 3D dataset, such as a Computerised Axial Tomography (CAT) scan, while the intra-operative data consists of sets of multiple 2D images, such as radiographies, acquired at known locations.
+ </p>
+ <p>
+  The alignment process of the 3D images to the 2D ones is known as 2D-3D registration, a problem that has produced a large research effort in recent years [1]. The Insight Toolkit (ITK) is able to handle 2D-3D registrations, but with serious limitations: only one 2D image can be used per registration, multi-threading is not supported, and only one suitable interpolator class is available, which only accepts rigid transforms and completely ignores the orientation axes of the 3D images. To overcome some of these problems, we developed a new registration framework for 2D-3D registrations that accepts inputs with any number of 2D images and takes into account the orientation axes of the 3D image. The source code is free and was made available to the open source community on the Insight Journal (http://insight-journal.org/ browse/publication/800).
+ </p>
+ <p>
+  The proposed framework does not solve all of ITK’s problems, but interested readers could also consult the work of Steiniger et al, who proposed a new set of ITK classes that accept non-rigid transforms and offers support for multi-threading [2]. The proposed framework was designed to be as similar as possible to ITK, to ease its adoption by developers. The heart of any registration is an instance of the MultiImageToImageRegistrationMethod class, which like ITK’s ImageRegistrationMethod, calculates the optimal alignment after a call to its update method. It also expects the rest of the registration components to be plugged into it in a very similar way to the one used in ITK. In fact, the moving (3D) image, transform and optimizer are connected 2D-3D REGISTRATION WITH MULTIPLE FIXED IMAGES 14 using the standard SetMovingImage, SetTransform, and SetOptimizer methods respectively. As mentioned, only rigid transforms are supported, although the proposed framework supports virtually all of ITK’s single value optimizers.
+ </p>
+ <p>
+  The MultiImageToImageRegistrationMethod differs when setting the fixed (2D) images, regions and interpolators, as multiple instances are required instead of the single ones in the standard framework. To implement this, the MultiImageToImageRegistrationMethod offers a convenient set of methods to add the needed objects one by one. This can be made more clear using an example.
+ </p>
+ <p>
+  typedef itk::Image&lt;short,3&gt; FixedImageType;
+  <br/>
+  typedef itk::Image&lt;short,3&gt; MovingImageType;
+ </p>
+ <p>
+  typedef itk::PatchedRayCastInterpolateImageFunction
+ </p>
+ <p style="padding-left: 30px;">
+  &lt;MovingImageType,double&gt; InterpolatorType;
+ </p>
+ <p>
+  typedef itk::MultiImageToImageRegistrationMethod
+ </p>
+ <p style="padding-left: 30px;">
+  &lt;FixedImageType,
+  <br/>
+  MovingImageType&gt; RegistrationType;
+ </p>
+ <p>
+  const unsigned int FImgTotal = 2;
+  <br/>
+  RegistrationType::Pointer registration =
+ </p>
+ <p style="padding-left: 30px;">
+  RegistrationType::New();
+ </p>
+ <p>
+  for(unsigned int f=0; f&lt;FImgTotal; f++)
+ </p>
+ <p style="padding-left: 30px;">
+  {
+ </p>
+ <p>
+  FixedImageType::Pointer fixedImage;
+  <br/>
+  //do something here to read or create a fixed image
+ </p>
+ <p style="padding-left: 30px;">
+  registration-&gt;AddFixedImage(fixedImage);
+  <br/>
+  registration-&gt;
+ </p>
+ <p style="padding-left: 60px;">
+  AddRegion(fixedImage-&gt;GetBufferedRegion() );
+ </p>
+ <p style="padding-left: 30px;">
+  InterpolatorType::Pointer interpolator;
+  <br/>
+  interpolator = InterpolatorType::New();
+ </p>
+ <p>
+  //do something to set the interpolator’s parameters
+ </p>
+ <p style="padding-left: 30px;">
+  registration-&gt;AddInterpolator( interpolator );
+ </p>
+ <p>
+  }
+ </p>
+ <p>
+  As shown in the code snippet above, the fixed images are read (or created) individually and plugged into the registration object by means of the AddFixedImage method. Each image’s region is set using the AddRegion method with each of the images’ buffered region as argument. Also, as each fixed image requires an interpolator, the latter are created after each image is plugged and are included in the registration by the AddInterpolator method.
+ </p>
+ <p>
+  Metric objects are connected in a different way than fixed images or interpolators. In fact, only one object is needed, despite that similarity metrics in 2D-3D registration are calculated as the sum of individual metrics between the moving image and each of the fixed ones [1]. This is made using a new class named MultiImageMetric, which internally contains all the individual metrics. This approach was taken to keep the compatibility with ITK’s optimizers, which expect a single function object, not a collection of them. The MultiImageMetric class is purely virtual, but the proposed framework includes four subclasses that implement metrics commonly found on 2D-3D registration applications: Sum of Squared Differences, Gradient Difference, Normalized Gradient Correlation, and Pattern Intensity. As an example, the code snippet below creates an instance of the Gradient Difference metric and plugs it into the registration object.
+ </p>
+ <p>
+  typedef itk::
+ </p>
+ <p style="padding-left: 30px;">
+  GradientDifferenceMultiImageToImageMetric &lt;
+  <br/>
+  fixedimagetype,
+  <br/>
+  movingimagetype=””&gt; MultiMetricType;
+ </p>
+ <p>
+  MultiMetricType::Pointer multiMetric =
+ </p>
+ <p style="padding-left: 30px;">
+  MultiMetricType::New();
+ </p>
+ <p>
+  registration-&gt;SetMultiMetric( multiMetric );
+ </p>
+ <p>
+  As 2D-3D registration is an error-prone problem, likely to produce incorrect solutions if the initial misalignment between images is large, multi-resolution strategies are commonly used and these were made available by means of the MultiResolutionMultiImageToImageRegistrationMethod class. This was designed to be as similar as possible to ITK’s existing multi-resolution classes, keeping the SetNumberOfLevels and SetSchedules methods, which give control over the amount of downsampling per resolution level. Finer adjustment of the downsampling is possible using SetSchedules, which is recommended in 2D-3D registration problems. As 2D images are in fact 3D images with a single slice, setting the downsampling level on the slice direction to 1 is required on all levels. This is possible with SetSchedules, but not with SetNumberOfLevels.
+ </p>
+ <p>
+  The MultiResolutionMultiImageToImageRegistrationMethod also expects the user to plug downsampling filters, one per fixed image, thus the corresponding AddFixedImagePyramid method was also implemented. It’s use is quite similar to the other ‘Add’ methods, as shown in the code snippet below.
+ </p>
+ <p>
+  typedef itk::MultiResolutionPyramidImageFilter
+ </p>
+ <p style="padding-left: 30px;">
+  &lt;fixedimagetype,
+  <br/>
+  fixedimagetype=””&gt; FixedImagePyramidType;
+ </p>
+ <p>
+  for(unsigned int f=0;f&lt;fimgtotal;f++)
+ </p>
+ <p style="padding-left: 30px;">
+  {
+ </p>
+ <p style="padding-left: 30px;">
+  Fixedimagepyramidtype::Pointer fixedpyramidfilter
+ </p>
+ <p style="padding-left: 60px;">
+  = FixedImagePyramidType::New();
+ </p>
+ <p style="padding-left: 30px;">
+  registration-=&gt;AddFixedImagePyramid
+ </p>
+ <p style="padding-left: 60px;">
+  ( fixedPyramidFilter );
+ </p>
+ <p>
+  }
+ </p>
+ <p>
+  The proposed framework includes one interpolator class, PatchedRayCastInterpolateImageFunction, which projects a 3D image onto a plane using the ray casting algorithm, integrating intensity values along rays that go from all voxels on the imaging plane to a defined focal point. Ray casting offers a simplified model of the X-ray formation process, ignoring effects such as scattering, and has become a widely used algorithm for generation of digitally reconstructed radiographs. The proposed class is based on ITK’s RayCastInterpolateImageFunction, which has considerable shortcomings that have prevented its widespread use. Most importantly, the orientation axes of the moving image are completely ignored, which greatly complicated the problem definition. However, not all of its problems could be addressed. Currently, the PatchedRayCastInterpolateImageFunction class only supports rigid transforms and a bilinear scheme for interpolation, which could be extended to trilinear.
+ </p>
+ <p>
+  Included in the framework are two sample applications, MultiImageSearch and MultiImageRegistration. MultiImageSearch samples the similarity metric in a given grid, which is useful to characterise it and design a suitable optimization strategy. The MultiImageRegistration application implements a registration algorithm with three resolution levels using the Normalized Gradient Correlation metric and the Fletcher-Reeves Polak-Ribiere optimizer. This application was tested with a realistic input, using the public dataset provided by the Imaging Sciences Institute of the University of Utrecht (http://www.isi.uu.nl/Research/ Databases/GS/) comprised of CAT, Magnetic Resonance (MR), 3D radiography (3DRX), and fluoroscopy images of eight different vertebrae, complemented with a standard evaluation protocol for registration methods [3]. The aforementioned protocol defines the ground-truth transform for each image and 200 initial transforms with mean Target Registration 15 Error (mTRE) uniformly distributed between 0 and 20 mm. Combination of the vertebrae and transforms gives a total of 1600 registrations for evaluation of each algorithm, which are considered successful if their final mTRE is below 2 mm. The protocol also establishes calculation of the methods’ capture range as the value of the initial mTRE with a percentage of successful registrations of 95%.
+ </p>
+ <p>
+  The MultiImageRegistration application was evaluated with the CAT and 3DRX images, as MR ones are not compatible with the existing ray-casting algorithm. For the 3DRX datasets, the mean mTRE of successful registrations was 0.5827 mm, success rate was 62.06%, and capture range was 6 mm. For the CAT data, mean mTRE was 0.3511, success rate 61.31%, and capture range was 7 mm. Comparison of these results with other algorithms evaluated with the same protocol show that MultiImageRegistration fares well [4]. Its accuracy level is good, but is robustness needs to be increased to improve its success rate and capture range.
+ </p>
+ <p>
+  In summary, we have proposed a new framework for 2D-3D registration, which solves many of the shortcomings of ITK: multiple fixed images can now be included in the registration and the orientation of the moving image is taken into account. The framework’s interface was kept as similar as possible to ITK, so any developer familiar with the toolkit should become accustomed to the proposed framework with little effort.
+ </p>
+ <p>
+  Future work should address limitations such as support for additional transforms beside rigid ones, and extra interpolation algorithms. Currently, only intensity-based ray-casting is implemented, which is only useful when a direct relation in intensity exists between the moving and fixed X-ray images, as is the case for 3DRX and CAT data but not with MR images. Finally, we would like to say that we are happy to have released our work to the open-source community and hope that many other developers find it useful for the development of new medical imaging applications.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    REFERENCES
+   </span>
+  </strong>
+ </p>
+ <p>
+  [1] P Markelj, D Tomaževic, B Likar and F Pernuš. A review of 3D/2D registration methods for image-guided interventions. Medical Image Analysis (in press), 2010.
+ </p>
+ <p>
+  [2] P Steininger, M Neuner, and R Schubert. An extended ITKbased Framework for Intensity-based 2D/3D-Registration, 2009. (available online on: http://ibia.umit.at/ResearchGroup/ Phil/web/Simple2D3DRegistrationFramework.html)
+ </p>
+ <p>
+  [3] EB van De Kraats, GP Penney, D Tomaževic, T van Walsum and WJ Niessen. Standardized evaluation methodology for 2-D-3-D registration. IEEE Transactions on Medical Imaging, 24(9): 1177-1189, 2005.
+ </p>
+ <p>
+  [4] P Markelj, D Tomaževic, F Pernuš, and B Likar. Robust 3-D/ 2-D registration of CT and MR to X-ray images based on gradient reconstruction. International Journal of Computer Assisted Radiology and Surgery, 3(6):477–483, July 2008.
+ </p>
+ <p>
+  <strong>
+   Álvaro Bertelsen
+  </strong>
+  is a bioengineering PhD student at the University of Navarra and researcher at the Centro de Estudios e Investigaciones Técnicas de Guipúzcoa (CEIT), Spain. He obtained his Master in Engineering Sciences degree from the Pontifical Catholic University of Chile and has worked as a Research Assistant at the Imaging Sciences Department of Imperial College in London.
+ </p>
+</div>

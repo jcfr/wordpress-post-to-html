@@ -1,0 +1,186 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h2 style="font-style: italic;">
+  <span style="padding: 0px; margin: 0px; font-family: Arial, sans-serif; font-size: 12px; line-height: 16.7999992370605px; text-align: justify; background-color: #fafafa;">
+   <span style="font-size: 20px;">
+    Introduction
+   </span>
+  </span>
+ </h2>
+ <p style="padding: 0px; margin: 1em 0px; color: #333333; font-family: Arial, sans-serif; font-size: 12px; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; line-height: 16.7999992370605px; orphans: auto; text-align: justify; text-indent: 0px; text-transform: none; white-space: normal; widows: auto; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: #fafafa;">
+  <span style="padding: 0px; margin: 0px; font-family: Arial, sans-serif; font-size: 12px; line-height: 16.7999992370605px; text-align: justify; background-color: #fafafa;">
+   This is the first in a series of articles that describe how Sphinx has been extended to create a powerful example documentation system, the
+  </span>
+  <a href="http://itk.org/ITKExamples/" style="padding: 0px; margin: 0px; text-decoration: none; font-family: Arial, sans-serif; font-size: 12px; line-height: 16.7999992370605px; text-align: justify; background-color: #fafafa;">
+   ITK Sphinx Examples
+  </a>
+  <span style="padding: 0px; margin: 0px; font-family: Arial, sans-serif; font-size: 12px; line-height: 16.7999992370605px; text-align: justify; background-color: #fafafa;">
+   .
+  </span>
+ </p>
+ <p style="padding: 0px; margin: 1em 0px; color: #333333; font-family: Arial, sans-serif; font-size: 12px; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; line-height: 16.7999992370605px; orphans: auto; text-align: justify; text-indent: 0px; text-transform: none; white-space: normal; widows: auto; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: #fafafa;">
+  For previous posts, see
+ </p>
+ <p style="padding: 0px; margin: 1em 0px; color: #333333; font-family: Arial, sans-serif; font-size: 12px; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; line-height: 16.7999992370605px; orphans: auto; text-indent: 0px; text-transform: none; white-space: normal; widows: auto; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-align: center; background-color: #fafafa;">
+  <a href="https://blog.kitware.com/itk-sphinx-examples-part-i-credits-via-gitstats/" style="padding: 0px; margin: 0px; text-decoration: none;">
+   Part I: Credits via GitStats
+  </a>
+ </p>
+ <p style="padding: 0px; margin: 1em 0px; color: #333333; font-family: Arial, sans-serif; font-size: 12px; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; line-height: 16.7999992370605px; orphans: auto; text-indent: 0px; text-transform: none; white-space: normal; widows: auto; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-align: center; background-color: #fafafa;">
+  <a href="https://blog.kitware.com/itk-sphinx-examples-part-ii-webgl-visualizations/" style="padding: 0px; margin: 0px; text-decoration: none;">
+   Part II: WebGL Visualizations
+  </a>
+ </p>
+ <p style="padding: 0px; margin: 1em 0px; color: #333333; font-family: Arial,sans-serif; font-size: 12px; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; line-height: 16.8px; text-indent: 0px; text-transform: none; white-space: normal; word-spacing: 0px; background-color: #fafafa;">
+  <a href="http://www.stack.nl/~dimitri/doxygen/j">
+   Doxygen
+  </a>
+  is the de facto standard tool for generating documentation from annotated C++ sources, and it
+  <a href="http://itk.org/ITK/help/legacy_documentation.html">
+   has long been
+  </a>
+  a great documentation system for ITK. Some of my favorite pages include the
+  <a href="http://www.itk.org/Doxygen/html/classes.html">
+   Class Index,
+  </a>
+  which is a good page to use your browser’s find capabilities to locate classes of interest, and the
+  <a href="http://www.itk.org/Doxygen/html/modules.html">
+   Modules
+  </a>
+  page, which contains a hierarchical view of the toolkit organized by the Groups and Modules of ITKv4.
+ </p>
+ <p style="padding: 0px; margin: 1em 0px; color: #333333; font-family: Arial,sans-serif; font-size: 12px; font-style: normal; font-variant: normal; font-weight: normal; letter-spacing: normal; line-height: 16.8px; text-indent: 0px; text-transform: none; white-space: normal; word-spacing: 0px; background-color: #fafafa;">
+  This article describes how we automatically extract Doxygen to provide immediate, well-formatted class information inline in the
+  <a href="http://itk.org/ITKExamples/">
+   ITK Sphinx Examples
+  </a>
+  , create automatic links from Sphinx pages to Doxygen pages, and we
+  <a href="http://itk.org/Insight/Doxygen/html/examples.html">
+   indexed the examples
+  </a>
+  stored in the Sphinx repository in Doxygen.
+ </p>
+ <h2 style="font-style: italic;">
+  <span style="padding: 0px; margin: 0px; font-family: Arial, sans-serif; font-size: 12px; line-height: 16.7999992370605px; text-align: justify; background-color: #fafafa;">
+   <span style="font-size: 20px;">
+    Doxygen to Sphinx
+   </span>
+  </span>
+ </h2>
+ <p>
+  Sphinx is very extensible, and we can use this extensibility to bring Doxygen information into Sphinx. The
+  <a href="https://breathe.readthedocs.org/en/latest/">
+   breathe
+  </a>
+  extension adds a new
+  <a href="http://docutils.sourceforge.net/docs/ref/rst/directives.html">
+   directive
+  </a>
+  that inserts Doxygen content at a given location but formatted according to the local Sphinx style.
+ </p>
+ <p>
+  The breathe extension extracts information from the Doxygen generated XML, which can be generated by enabling a
+  <a href="http://itk.org/gitweb?p=ITK.git;a=blob;f=Utilities/Doxygen/doxygen.config.in;h=94abcac818f6e1f5e64fb47d3f25ea1f9b7ac74f;hb=HEAD#l1804">
+   simple configuration option
+  </a>
+  . On a side note, links to nightly generated ITK Doxygen HTML, XML, and tag file are available in the
+  <a href="http://www.itk.org/Doxygen/html/">
+   footer of all nightly Doxygen pages
+  </a>
+  .
+ </p>
+ <p>
+  In addition to inserting content, we can also link to Doxygen pages directly with the
+  <a href="https://pythonhosted.org/sphinxcontrib-doxylink/">
+   doxylink
+  </a>
+  directive.  This
+  <a href="http://docutils.sourceforge.net/docs/ref/rst/roles.html">
+   role
+  </a>
+  will expand a given class or method name to the corresponding URL for that item.
+ </p>
+ <p>
+  For convenience, we combined both the breathe and doxylink extensions into a single directive called
+  <a href="https://github.com/thewtex/breathelink">
+   breathelink
+  </a>
+  .  This directive inserts the documentation for a given class, and it also automatically follows with a link to the full Doxygen documentation.
+ </p>
+ <p>
+  For the documentation of every example, we include a section at the end called
+  <em>
+   Classes demonstrated
+  </em>
+  .  In our documentation, we add
+ </p>
+ <p>
+  <code>
+   .. breathelink:: itk::TranslationTransform
+  </code>
+ </p>
+ <p>
+  <a href="http://itk.org/ITKExamples/src/Core/Transform/TranslateImage/Documentation.html">
+   which results in
+  </a>
+ </p>
+ <p>
+  <a href="/blog/files/152_1707781582.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.152_1707781582.png" width="100%"/>
+  </a>
+ </p>
+ <h2 style="font-style: italic;">
+  <span style="padding: 0px; margin: 0px; font-family: Arial, sans-serif; font-size: 12px; line-height: 16.7999992370605px; text-align: justify; background-color: #fafafa;">
+   <span style="font-size: 20px;">
+    Sphinx to Doxygen
+   </span>
+  </span>
+ </h2>
+ <p>
+  Example code can also be indexed in Doxygen with the
+  <a href="http://www.stack.nl/~dimitri/doxygen/manual/commands.html#cmdexample">
+   <i>
+    \example
+   </i>
+  </a>
+  Doxygen command.  To automate the addition of these examples, the EXAMPLES_PATH Doxygen variable is
+  <a href="http://itk.org/gitweb?p=ITK.git;a=blob;f=Utilities/Doxygen/doxygen.config.in;h=94abcac818f6e1f5e64fb47d3f25ea1f9b7ac74f;hb=HEAD">
+   configured by CMake
+  </a>
+  and the required Doxygen code is
+  <a href="http://itk.org/gitweb?p=ITK.git;a=blob;f=Utilities/Doxygen/GenerateExamplesDox.cmake;h=bc13f50041c2a45321a307ee691df07ef9eb89b1;hb=HEAD">
+   generated by CMake
+  </a>
+  .
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   This results in a listing on the
+   <a href="http://www.itk.org/Doxygen/html/examples.html">
+    Examples Doxygen tab
+   </a>
+   :
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/152_604176804.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.152_604176804.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   And a
+   <a href="http://www.itk.org/Doxygen/html/classitk_1_1MeshFileWriter.html">
+    listing in the class documentation
+   </a>
+   for all classes that are used in an example:
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/152_1269352477.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.152_1269352477.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+ </p>
+</div>

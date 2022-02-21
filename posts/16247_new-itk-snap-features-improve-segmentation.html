@@ -1,0 +1,492 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ITK-SNAP [1] is a software application that segments structures in three-dimensional (3D) biomedical images. The application is free, open source, and multiplatform. Over the last several years, the application has undergone significant refactoring and expansion. It now includes a modern, Qt based graphical user interface; extensive support for segmenting multi-modality and multi-parametric imaging datasets; and more powerful tools for performing semi-automatic segmentation. ITK-SNAP also features improved performance and scalability [2].
+ </p>
+ <p>
+  This article briefly describes two additions to ITK-SNAP. The first addition is run-length encoding (RLE), which compresses label maps for storing image segmentations. The second addition is a morphological contour interpolation filter, which Albu et al. first proposed [3].
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    RLEImage
+   </span>
+  </strong>
+ </p>
+ <p>
+  When many adjacent pixels share the same value, as is almost always the case with label maps that represent organ segmentations, RLE can significantly save storage. Instead of keeping a line of pixels as “11111222200004555,” RLE stores the pixels as “5×1 4×2 4×0 1×4 3×5.” This reduces memory usage from 13 numbers to 10 numbers. For 3D images with millions of voxels, the savings prove far more significant.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16249" style="width: 411px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-1.bmp">
+   <img alt="RLE compression reduces the brain parcel to 9.73 percent of the original size." class="size-full wp-image-16249" height="383" src="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-1.bmp" width="401"/>
+  </a>
+  <p class="wp-caption-text">
+   RLE compression reduces the brain parcel to 9.73 percent of the original size.
+  </p>
+ </div>
+ <p>
+  To implement an RLE data structure for arbitrary dimensionality, ITK-SNAP relies on an existing Insight Segmentation and Registration Toolkit (ITK) class,
+  <span style="font-family: courier new,courier;">
+   itk::Image
+  </span>
+  . ITK-SNAP implements an RLEImage of n dimensions as an
+  <span style="font-family: courier new,courier;">
+   itk::Image
+  </span>
+  with n‑1 dimensions through the following run-length lines:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e85629635801540690" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+typedef std::pair&amp;lt;TCounter, TPixel&amp;gt; RLSegment;
+typedef std::vector&amp;lt;RLSegment&amp;gt; RLLine;
+typedef itk::Image&amp;lt;RLLine, VDimension-1&amp;gt; RLEImage;</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e85629635801540690-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85629635801540690-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e85629635801540690-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e85629635801540690-1">
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         pair
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         TCounter
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         TPixel
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         RLSegment
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85629635801540690-2">
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         std
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         vector
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         RLSegment
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         RLLine
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e85629635801540690-3">
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Image
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         RLLine
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         VDimension
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         RLEImage
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  For this image class to offer utility, it has to provide the access methods that ITK normally uses for the
+  <span style="font-family: courier new,courier;">
+   itk::Image
+  </span>
+  class. These access methods include
+  <span style="font-family: courier new,courier;">
+   Get
+  </span>
+  /
+  <span style="font-family: courier new,courier;">
+   Set
+  </span>
+  operators as well as
+  <span style="font-family: courier new,courier;">
+   const
+  </span>
+  iterators and writable iterators. With these operators and iterators,
+  <span style="font-family: courier new,courier;">
+   RLEImage
+  </span>
+  can serve as a drop-in replacement for itk::Image, as long as the user code does not assume a linear pixel layout, which it frequently does.
+ </p>
+ <p>
+  Furthermore, to display slices, ITK-SNAP needs to extract them. Slicing serves as the most frequently used operation that involves label maps. With the release of ITK-SNAP 3.4, the switch to
+  <span style="font-family: courier new,courier;">
+   RLEImage
+  </span>
+  only mildly affected slicing performance. In tests, slicing took about the same time with
+  <span style="font-family: courier new,courier;">
+   RLEImage
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   itk::Image
+  </span>
+  . For example, it took 11.7 milliseconds to axial slice brain parcels with
+  <span style="font-family: courier new,courier;">
+   RLEImage
+  </span>
+  , and it took 10.3 milliseconds to axial slice the same parcels with
+  <span style="font-family: courier new,courier;">
+   itk::Image
+  </span>
+  . The worst practical case involves axial slicing a whole body that the watershed algorithm has segmented. In this case, it took 154 milliseconds to slice the body with
+  <span style="font-family: courier new,courier;">
+   RLEImage
+  </span>
+  and 79 milliseconds to slice the body with
+  <span style="font-family: courier new,courier;">
+   itk::Image
+  </span>
+  .
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Morphological Contour Interpolation
+   </span>
+  </strong>
+ </p>
+ <p>
+  While the use of automatic segmentation algorithms has become more popular, the medical computing community continues to measure the performance of the algorithms against a manually created “gold standard” segmentation [1]. Additionally, the community continues to use manual segmentation to train the algorithms and to solve problems for which automatic segmentation is not sufficiently reliable.
+ </p>
+ <p>
+  Manual segmentation, however, is often a slow and tedious process.  An alternative approach to dense manual segmentation is to manually segment a sparse number of slices and use interpolation to fill in the gaps. This approach generates fully segmented volumes with much less manual input. The following screenshots demonstrate manual segmentation with the use of two labels on coronal slices.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16250" style="width: 635px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-2.bmp">
+   <img alt="ITK-SNAP displays example input of hippocampal subfields in in-vivo T2-weighted magnetic resonance imaging (MRI) scans." class="size-full wp-image-16250" height="566" src="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-2.bmp" width="625"/>
+  </a>
+  <p class="wp-caption-text">
+   ITK-SNAP displays example input of hippocampal subfields in in-vivo T2-weighted magnetic resonance imaging (MRI) scans.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_16251" style="width: 635px">
+  <img alt="ITK-SNAP shows example output." class="wp-image-16251" height="622" sizes="(max-width: 625px) 100vw, 625px" src="https://blog.kitware.com/wp-content/uploads/2016/10/Out1.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/Out1.png 1225w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-300x300.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-768x764.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-1024x1019.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-220x219.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-250x249.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-355x353.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-730x726.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-50x50.png 50w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-96x96.png 96w, https://blog.kitware.com/wp-content/uploads/2016/10/Out1-128x128.png 128w" width="625"/>
+  <p class="wp-caption-text">
+   ITK-SNAP shows example output.
+  </p>
+ </div>
+ <p>
+  Interpolation determines the correspondence between shapes on adjacent segmented slices. To do so, it detects overlaps, aligns the overlapping shapes, generates a transition sequence of one-pixel dilations, and takes the median as the result. Recursion can aid situations in which more than one empty slice separates the original slices. Albu et al. describe the method of interpolation [3]. The method retains some distinctive features and does not suffer from excessive smoothing, unlike most shape-based methods.
+ </p>
+ <p>
+  The
+  <span style="font-family: courier new,courier;">
+   itk::MorphologicalContourInterpolator
+  </span>
+  class implements interpolation. This class contains an image-to-image filter that supports 3D, four-dimensional, and higher-dimensional inputs. ITK-SNAP can restrict the filter to interpolate one label and/or to interpolate along one axis.
+  <br/>
+  The below example of interpolation kept every fourth output from the original manually segmented image. The example then used the reduced segmentation as input, and it used the original segmentation as ground truth, against which it measured the interpolated segmentation.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16253" style="width: 635px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-3.bmp">
+   <img alt="ITK-SNAP interpolates output and overlays it on a synthetic input with a sparsity of four." class="size-full wp-image-16253" height="506" src="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-3.bmp" width="625"/>
+  </a>
+  <p class="wp-caption-text">
+   ITK-SNAP interpolates output and overlays it on a synthetic input with a sparsity of four.
+  </p>
+ </div>
+ <p>
+  Tests on two images, “c10” and “c2,” with full manual segmentations evaluated interpolation performance. The tests left every nth slice to simulate sparse manual segmentation and cleared the rest of the images. Each test used the slices as input to the filter and then compared the output with the original image.
+ </p>
+ <p>
+  Dice similarity coefficient (DSC), positive predictive value (PPV), and negative predictive value (NPV) plots demonstrate the loss of precision that occurs with increasingly sparse manual segmentations. To calculate PPV and NPV, the tests assumed a background equal in size to the objects.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16252" style="width: 635px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-4.bmp">
+   <img alt="A plot averages the loss of precision over two images (“c10” and “c2”) and four axes (x, y, z, and x+y+z). The abscissa of the plot shows segmentation sparsity." class="wp-image-16252" height="492" src="https://blog.kitware.com/wp-content/uploads/2016/10/ITK-SNAP-4.bmp" width="625"/>
+  </a>
+  <p class="wp-caption-text">
+   A plot averages the loss of precision over two images (“c10” and “c2”) and four axes (x, y, z, and x+y+z). The abscissa of the plot shows segmentation sparsity.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_16254" style="width: 635px">
+  <img alt="A plot displays the loss of precision for image “c10,” after a test simulates segmentation along the x-axis, the y-axis, and the z-axis." class="wp-image-16254" height="455" sizes="(max-width: 625px) 100vw, 625px" src="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a.png 1309w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-300x218.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-768x559.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-1024x746.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-220x160.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-250x182.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-355x258.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-730x531.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-a-90x66.png 90w" width="625"/>
+  <p class="wp-caption-text">
+   A plot displays the loss of precision for image “c10,” after a test simulates segmentation along the x-axis, the y-axis, and the z-axis.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_16255" style="width: 635px">
+  <img alt="A plot demonstrates the loss of precision for image “c10,” after a test simulates segmentation along the x-axis." class="wp-image-16255" height="456" sizes="(max-width: 625px) 100vw, 625px" src="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x.png 1309w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-300x219.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-768x560.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-1024x747.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-220x161.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-250x182.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-355x259.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-730x533.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-x-90x66.png 90w" width="625"/>
+  <p class="wp-caption-text">
+   A plot demonstrates the loss of precision for image “c10,” after a test simulates segmentation along the x-axis.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_16256" style="width: 635px">
+  <img alt="A plot shows the loss of precision for image “c10,” after a test simulates segmentation along the y-axis." class="wp-image-16256" height="457" sizes="(max-width: 625px) 100vw, 625px" src="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y.png 1309w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-300x219.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-768x561.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-1024x749.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-220x161.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-250x183.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-355x260.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-730x534.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-y-90x66.png 90w" width="625"/>
+  <p class="wp-caption-text">
+   A plot shows the loss of precision for image “c10,” after a test simulates segmentation along the y-axis.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_16257" style="width: 635px">
+  <img alt="A plot illustrates the loss of precision for image “c10,” after a test simulates segmentation along the z-axis." class="wp-image-16257" height="456" sizes="(max-width: 625px) 100vw, 625px" src="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z.png 1309w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-300x219.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-768x560.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-1024x746.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-220x160.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-250x182.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-355x259.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-730x532.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/c10l-z-90x66.png 90w" width="625"/>
+  <p class="wp-caption-text">
+   A plot illustrates the loss of precision for image “c10,” after a test simulates segmentation along the z-axis.
+  </p>
+ </div>
+ <p>
+  As the resolution was already three times lower along the z-axis, adding sparsity exacerbated the problem. Most errors denote false negatives, which indicate places where the interpolated image presented pixels, but the ground truth did not. Other errors denote false negatives, which indicate places where the ground truth presented pixels, but the interpolated image did not. The below screenshot represents false positives in cyan, yellow, and green, and it portrays false negatives in violet, red, and blue.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16258" style="width: 635px">
+  <img alt="ITK-SNAP exhibits interpolation errors." class="wp-image-16258" height="506" sizes="(max-width: 625px) 100vw, 625px" src="https://blog.kitware.com/wp-content/uploads/2016/10/diffA.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/diffA.png 922w, https://blog.kitware.com/wp-content/uploads/2016/10/diffA-300x243.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/diffA-768x622.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/diffA-220x178.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/diffA-250x203.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/diffA-355x288.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/diffA-730x591.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/diffA-90x73.png 90w" width="625"/>
+  <p class="wp-caption-text">
+   ITK-SNAP exhibits interpolation errors.
+  </p>
+ </div>
+ <p>
+  The test for the above screenshot used the same portion of “c10” that the test for the previous screenshot used.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Open Science
+   </span>
+  </strong>
+ </p>
+ <p>
+  The general public can access the
+  <span style="font-family: courier new,courier;">
+   RLEIMage
+  </span>
+  class and the morphological contour interpolation filter as ITK remote modules under the Apache 2.0 license. These remote modules contain source code, unit tests, test data, and documentation. To download the remote modules, please go to the following websites:
+  <a href="https://github.com/KitwareMedical/ITKRLEImage">
+   https://github.com/KitwareMedical/ITKRLEImage
+  </a>
+  and
+  <a href="https://github.com/KitwareMedical/ITKMorphologicalContourInterpolation">
+   https://github.com/KitwareMedical/ITKMorphologicalContourInterpolation
+  </a>
+  .
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Acknowledgment
+   </strong>
+  </span>
+ </p>
+ <p>
+  The National Institutes of Health grant R01-EB014346, “Continued development and maintenance of the ITK-SNAP 3D image segmentation software,” supported the ITK-SNAP segmentation work.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    References
+   </span>
+  </strong>
+ </p>
+ <ol>
+  <li>
+   Yushkevich, Paul A., Joseph Piven, Heather Cody Hazlett, Rachel Gimpel Smith, Sean Ho, James C. Gee, and Guido Gerig. “User-guided 3D active contour segmentation of anatomical structures: Significantly improved efficiency and reliability.” Neuroimage 31(2006): 1116−1128.
+  </li>
+ </ol>
+ <p>
+  2.    Yushkevich, Paul A., Yang Gao, and Guido Gerig. “ITK-SNAP: an interactive tool for semi-automatic segmentation of multi-modality biomedical images.” In EMBC 2016 Proceedings, 38th Annual International Conference of the IEEE Engineering in Medicine and Biology Society, Orlando, Florida, 2016. New York, New York: Institute of Electrical and Electronics Engineers.
+ </p>
+ <p>
+  3.    Albu, Alexandra Branzan, Trevor Beugeling, and Denis Laurendeau. “A morphology-based approach for interslice interpolation of anatomical slices from volumetric images.” IEEE Transactions on Biomedical Engineering 55(2008): 2022−2038.
+ </p>
+ <p>
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/Dzenan-Zukic-Headshot.bmp">
+   <img alt="Dzenan Zukic Headshot" class="alignleft wp-image-16261" height="125" src="https://blog.kitware.com/wp-content/uploads/2016/10/Dzenan-Zukic-Headshot.bmp" width="100"/>
+  </a>
+  <strong>
+   Dženan Zukic
+  </strong>
+  is a senior research and development engineer on the medical computing team at Kitware. For his dissertation, he studied the segmentation of vertebral bodies in magnetic resonance images.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <a href="https://blog.kitware.com/wp-content/uploads/2016/10/Matthew-McCormick-Headshot.bmp">
+    <img alt="Matthew McCormick Headshot" class="alignleft wp-image-16262" height="125" src="https://blog.kitware.com/wp-content/uploads/2016/10/Matthew-McCormick-Headshot.bmp" width="100"/>
+   </a>
+   Matthew McCormick
+  </strong>
+  , a technical expert at Kitware, is a major contributor to and the current maintainer of ITK. His general interests include image processing and emphasize scientific reproducibility.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <a href="https://blog.kitware.com/wp-content/uploads/2016/10/Jared-Vicory-Headshot.bmp">
+    <img alt="Jared Vicory Headshot" class="alignleft wp-image-16263" height="125" src="https://blog.kitware.com/wp-content/uploads/2016/10/Jared-Vicory-Headshot.bmp" width="100"/>
+   </a>
+   Jared Vicory
+  </strong>
+  is a research and development engineer at Kitware. While working toward his doctoral degree, he developed a method for interpolating sparse contours into a dense 3D surface.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img class="wp-image-16267 size-full alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/10/Guido-Gerig-Headshot-1-e1476976398750.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/Guido-Gerig-Headshot-1-e1476976398750.png 100w, https://blog.kitware.com/wp-content/uploads/2016/10/Guido-Gerig-Headshot-1-e1476976398750-90x113.png 90w" width="100"/>
+   Guido Gerig
+  </strong>
+  is an institute professor at the New York University Tandon School of Engineering. His work revolves around image analysis in medicine, engineering, and statistics.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <a href="https://blog.kitware.com/wp-content/uploads/2016/10/Paul-Yushkovich-Headshot.bmp">
+    <img alt="Paul Yushkovich Headshot" class="alignleft wp-image-16265" height="125" src="https://blog.kitware.com/wp-content/uploads/2016/10/Paul-Yushkovich-Headshot.bmp" width="100"/>
+   </a>
+   Paul Yushkevich
+  </strong>
+  is an associate professor in the department of radiology at the University of Pennsylvania. He develops novel computational methodologies for the analysis of biomedical imaging data.
+ </p>
+</div>

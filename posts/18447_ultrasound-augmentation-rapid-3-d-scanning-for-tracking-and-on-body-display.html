@@ -1,0 +1,190 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  We have developed algorithms that analyze ultrasound signals to detect internal bleeding.  These algorithms are part of a point-of-care, computer-assisted ultrasound system that is intended to aid in the triage of patients with abdominal trauma at the scene of an accident, helping emergency medical service (EMS) personnel save lives by assisting them in deciding when to order expedited transport and initiate life-saving measures in the field.
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The remaining challenge with deploying our point-of-care, computer-assisted ultrasound system is, even though internal bleeding can be automatically detected, the EMS personnel must know where to place and how to manipulate an ultrasound probe at various anatomic locations in order to thoroughly examine the regions of the abdomen where blood tends to pool. Additionally, the EMS personnel must ensure that high-quality ultrasound data is being acquired. These positioning and data-quality-assessment tasks require extensive anatomic and ultrasound training—beyond what most clinicians and/or EMS personnel typically receive.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   To solve this problem, we are investigating a variety of methods and user interfaces to guide EMS personnel in probe placement, to inform them of data quality and to produce diagnoses. One innovative method that we are exploring involves the combination of  patient and probe tracking with augmented reality to create an “augmented ultrasound” system.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Augmented Ultrasound
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Rather than displaying data and instructions on a screen, our augmented ultrasound system proposes to concisely convey guidance and diagnoses by projecting instructions onto the surface of the patient. There are several advantages. Unlike a screen, a projection does not require the operator to look away from the patient. In addition, when combined with a tracker, the projection can provide directions in absolute terms. For example, our system will be able to direct the operator to “Place the scanner on the bullseye,” instead of relying on more abstract instructions such as “Place the scanner on the right side of the patient’s chest, half-way between the nipple and the shoulder.” Furthermore, instructions can be updated based on the tracked movement of the ultrasound probe and the images/anatomy captured in the ultrasound data, ensuring coverage of an anatomic area or flashing a warning icon when the probe is not making sufficient contact with the skin.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   To operate, the augmented ultrasound system must be able to track an ultrasound probe and the surface of the patient’s body and then use the generated model of the body and the position of the probe to accurately project graphics/instructions onto the patient’s body.  Furthermore, the augmented ultrasound system must work in sunlight and in rugged environments with minimal set-up time so that it can be applied at the scene of an accident.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   In the next section, we discuss how we formed a three-dimensional (3D) model of a scene using a laser projector and a high-speed camera. Then, we describe how we track objects in that scene.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   3D Scene Modeling
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   To form a 3D model of a scene, we replicated and extended the work in a paper by researchers at Carnegie Mellon University that involved a structured light 3D scanner based on a portable projector, which uses laser projection technology, and a high-speed camera. (See Fig. 1, adapted from [1].) The laser projector draws only one line of a projected image at a time, but it does so fast enough to enable the human eye to see the entire image. The high-speed camera is capable of precise timing and fast shutter speed. These properties allow the camera to take a picture as the projector draws a specific line of the image. Through a one-time calibration of the camera and the projector, and through using structured-light reconstruction algorithms, each point on a projected line can be efficiently and accurately triangulated to a point in 3D space (i.e., each illuminated point seen in a camera image is at the intersection of the plane/line of light emitted by the projector and the corresponding pixel/line viewed by the camera). The camera/projector calibration process is adapted from the method developed at Brown University [2], which is based on OpenCV and uses the camera application programming interface (API).
+   <br/>
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18455" style="width: 910px">
+  <img alt="" class="wp-image-18455" height="325" sizes="(max-width: 900px) 100vw, 900px" src="https://blog.kitware.com/wp-content/uploads/2017/06/image8-300x108.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/image8-300x108.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/06/image8-768x277.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/06/image8-1024x370.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/image8-220x79.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/06/image8-250x90.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/06/image8-355x128.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/06/image8-730x264.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/06/image8-90x33.jpg 90w, https://blog.kitware.com/wp-content/uploads/2017/06/image8.jpg 1096w" width="900"/>
+  <p class="wp-caption-text">
+   Figure 1. The augmented reality system uses a pico projector (based on laser projection technology) to display an image in a scene. A high-speed camera sees the individual lines being drawn by the projector to create the image. Via appropriate camera calibration, custom circuitry to detect the vertical reset of the laser and depth from structured lighting algorithms, a 3D model of the scene can be formed at very high resolution in about one second.
+  </p>
+ </div>
+ <p>
+  <span style="font-weight: 400;">
+   Our system is composed of a Grasshopper3 camera and a SONY mobile projector MP CL1. With a resolution of 2048 x 1536, we can use the camera at a frame rate of 300 fps. The update rate per image of the laser projector is 60Hz in scan line order. Given its resolution of 1920 x 720, it projects 43,200 lines/s.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The augmented ultrasound system works under varied lighting conditions for three reasons. First, the shutter speed simplifies the detection of which pixels are illuminated by the projector. It suppresses ambient light, even direct sunlight, simply by remaining open for no more than a tiny fraction of a second.
+  </span>
+ </p>
+ <div class="wp-caption alignright" id="attachment_18448" style="width: 259px">
+  <img alt="" class="wp-image-18448 size-medium" height="300" sizes="(max-width: 249px) 100vw, 249px" src="https://blog.kitware.com/wp-content/uploads/2017/06/image1-249x300.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/image1-249x300.png 249w, https://blog.kitware.com/wp-content/uploads/2017/06/image1-220x265.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/image1-250x302.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/image1-355x428.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/image1-90x109.png 90w, https://blog.kitware.com/wp-content/uploads/2017/06/image1.png 466w" width="249"/>
+  <p class="wp-caption-text">
+   Figure 2. Circuit diagram of the photo detector system used to determine when the laser returns to the upper left and begins drawing a new image (approximately every 1/60th of a second).
+  </p>
+ </div>
+ <p>
+  <span style="font-weight: 400;">
+   This benefit arises because the laser projector illuminates each point very brightly, but only for a fraction of a millisecond. Alternatively, ambient sources like the sun illuminate continuously at a lower intensity. Second, we use background subtraction to further reduce the effect of ambient light. In particular, from each image that is taken, we subtract an image from when the laser is in a different location.  Third, we apply a custom method that quickly detects the brightest point on a vertical scan line in a grayscale image.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The most difficult challenge with our low-cost, compact ultrasound augmentation system was that the horizontal sync signal produced by the projector/HDMI protocol was not phase-locked to the actual vertical movement of the laser. For this reason, we opted to trigger the camera off the light emitted by the projector, using a photocell and a pair of Operational Amplifiers.  See Fig. 2.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   Sample results from the system are shown in Fig. 3.  We are now optimizing the system for speed by expanding upon the trigger mode on the camera to capture up to three lines from each frame (i.e., every time the laser sweeps the scene).
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18487" style="width: 910px">
+  <img alt="" class="wp-image-18487" height="1689" sizes="(max-width: 900px) 100vw, 900px" src="https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3.png 1536w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-160x300.png 160w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-768x1442.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-546x1024.png 546w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-220x413.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-250x469.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-355x666.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-730x1370.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-3-90x169.png 90w" width="900"/>
+  <p class="wp-caption-text">
+   Figure 3. Examples of 3D scenes that can be captured by our system.
+  </p>
+ </div>
+ <h1>
+  <span style="font-weight: 400;">
+   Object Tracking
+  </span>
+ </h1>
+ <p>
+  <span style="font-weight: 400;">
+   Having formed a 3D model of a scene, the next step in ultrasound augmentation is to track an ultrasound probe. To that end, we mounted a multi-cubed, color-tagged marker (designed by InnerOptic) on the probe.  The colors of the cube are red, blue and green. They are optimized for the response curves of the color detectors in the camera. By determining the intersection of three adjacent faces on the cubes, we can determine the position and the orientation of the ultrasound probe.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   To simplify and speed the tracking algorithm, instead of estimating the specific location of each cube face, we estimate the planes that contain each of the faces of the cube and then solve for the intersection of those planes. The plane detection method begins with color pixel detection, using statistical models of the appearance of the cube faces under a range of lighting conditions. Depending on the image from the projector, the ambient light and the adjacent objects in the environment, extraneous pixels may be incorrectly identified as cube pixels based on color alone. To eliminate extraneous pixels, we compute the gravity centers for each target color using robust statistics. Knowing the expected position of each face relative to the others, we can redefine the estimates of the centers of gravity by eliminating colored pixels that are inconsistent with the expected relative positions of each face and too far from the estimated centers of gravity. To further reduce the influence of extraneous pixels, we also estimate the equations of the planes using the random sample consensus (RANSAC) algorithm. It randomly picks three points, computes the plane defined by them and then scores that plane based on how many other cube points are included in that plane. Ultimately, the planes with the best scores are chosen. The intersection point of the three chosen planes is then used to define the position and the orientation of the probe in space. A sample result of three detected planes intersecting the scene is shown in Fig. 4.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18454" style="width: 910px">
+  <img alt="" class="wp-image-18454" height="689" sizes="(max-width: 900px) 100vw, 900px" src="https://blog.kitware.com/wp-content/uploads/2017/06/image7.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/image7.png 995w, https://blog.kitware.com/wp-content/uploads/2017/06/image7-300x230.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/image7-768x588.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/image7-220x168.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/image7-250x191.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/image7-355x272.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/image7-730x559.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/image7-90x69.png 90w" width="900"/>
+  <p class="wp-caption-text">
+   Figure 4 a: The raw point cloud before cube detection.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_18452" style="width: 910px">
+  <img alt="" class="wp-image-18452" height="717" sizes="(max-width: 900px) 100vw, 900px" src="https://blog.kitware.com/wp-content/uploads/2017/06/image5.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/image5.png 950w, https://blog.kitware.com/wp-content/uploads/2017/06/image5-300x239.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/image5-768x612.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/image5-220x175.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/image5-250x199.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/image5-355x283.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/image5-730x582.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/image5-90x72.png 90w" width="900"/>
+  <p class="wp-caption-text">
+   Figure 4 b: The collected point cloud is shown in white. The intersection of the estimated red, green and blue planes with that point cloud are shown. This indicates that the faces of the cube are well represented by the estimated planes.
+  </p>
+ </div>
+ <h2>
+  <span style="font-weight: 400;">
+   Conclusion
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Ongoing work focuses on quantifying the performance of this algorithm.  Current studies indicate 2mm consistency within a 30cm x 60cm x 60cm operating environment.  The system has been shown to be insensitive to a wide range of ambient light brightness and to the image being projected into the scene.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The probe tracker data will be used, in combination with a custom image reconstruction technique, to compound a sequence of imprecisely and sparsely tracked ultrasound images into a complete 3D scan.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The 3D scene models will be used to rectify the images being projected into the scene.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   The final system is illustrated in Fig. 5.  The figure depicts the system indicating where a needle should be inserted for peripheral vascular access with ultrasound guidance.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18485" style="width: 4262px">
+  <img alt="" class="wp-image-18485 size-full" height="1957" sizes="(max-width: 4252px) 100vw, 4252px" src="https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5.jpg 4252w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-300x138.jpg 300w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-768x353.jpg 768w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-1024x471.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-220x101.jpg 220w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-250x115.jpg 250w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-355x163.jpg 355w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-730x336.jpg 730w, https://blog.kitware.com/wp-content/uploads/2017/06/Figure-5-90x41.jpg 90w" width="4252"/>
+  <p class="wp-caption-text">
+   Figure 5. An illustration of the end goal of the system. A target (black X) is projected onto the skin as the camera computes depth from structured light using the raster lines of the projected image as that image is drawn. Ultrasound can be used to detect peripheral vessels, select needle insertion locations and verify needle placement patency.
+  </p>
+ </div>
+ <h2>
+  <span style="font-weight: 400;">
+   Acknowledgements
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   This work was funded, in part, by the following grants.
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    NIH/NIBIB: “In-field FAST procedure support and automation” (R43EB016621)
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    NIH/NINDS: “Multimodality image-based assessment system for traumatic brain injury” (R44NS081792)
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    NIH/NIGMS/NIBIB: “Slicer+PLUS: Collaborative, open-source software for ultrasound analysis” (R01EB021396)
+   </span>
+  </li>
+ </ul>
+ <h2>
+  <span style="font-weight: 400;">
+   References
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   [1] C.Mertz, S. J. Koppal, S. Sia, S.G. Narasimhan. A low powered structured light sensor for outdoor scene reconstruction and dominant material identification. In CVPRW IEEE, 2012.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   [2] D. Moreno, G. Taubin. Simple, Accurate, and Robust Projector-Camera Calibration
+  </span>
+ </p>
+</div>

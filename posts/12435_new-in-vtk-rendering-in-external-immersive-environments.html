@@ -1,0 +1,142 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1 dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span style="color:#0000CD;">
+   <span style="font-family: Arial; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    Introduction
+   </span>
+  </span>
+ </h1>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d5b3-da27-9569-e2ae804f9661">
+   The latest wave of technological advancements in virtual reality has created significant opportunities. A virtual world’s ability to hijack some of the human senses and replace them with artificial stimuli has been harnessed for countless gaming experiences. Over the years, there has been increasing interest in using immersive technologies for the visualization and analysis of scientific data.
+  </span>
+  The Visualization Toolkit (VTK) is one of the most commonly used libraries for visualization and computing in the scientific community. Primarily written in C++, VTK provides classical and model visualization algorithms to visualize structured, unstructured, and point data sets on desktop, mobile, and web environments. Traditionally, VTK creates and manages its own OpenGL context and the data objects within the scene. The objective of this work is to bring the high-quality scientific visualization computing and rendering capabilities of VTK to virtual reality environments in a way that is easier to develop and maintain. By bringing VTK into virtual environments created by domain-specific tools such as GLUT, VRUI, and FreeVR, we are providing the tools necessary to build interactive, 3D scientific visualizations to the developers of the virtual reality community.
+ </p>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+ </p>
+ <h1 dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span style="color:#0000CD;">
+   <span id="docs-internal-guid-9859cd73-d552-2ccc-44d1-e6a385abf229">
+    Approach
+   </span>
+  </span>
+ </h1>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d552-2ccc-44d1-e6a385abf229">
+   In order to achieve widespread acceptance, it is important to require few, if any, changes to an external library and to work as close as possible to the standard application development workflow. Keeping this in mind, integrating VTK in external rendering systems required overriding some of the behavior of the vtkRenderWindow, vtkRenderer, and vtkCamera classes. Since vtkRenderWindow typically creates the context, and vtkRenderer controls objects of a scene in a given viewport, the rendering pipeline is constructed with properties and other attributes set specifically to support this most general use case. However, in the case of external environments, the context is created outside of VTK, and non-VTK graphical elements (such as the GUI) may be rendered before or after the VTK rendering. In addition, the environment may render its own visualization objects in the same context. To handle this situation, we have introduced a new module in VTK called
+  </span>
+  <strong>
+   vtkRenderingExternal
+  </strong>
+  that comprises four new classes:
+  <strong>
+   vtkExternalOpenGLRenderWindow
+  </strong>
+  ,
+  <strong>
+   vtkExternalOpenGLRenderer
+  </strong>
+  ,
+  <strong>
+   vtkExternalOpenGLCamera
+  </strong>
+  and
+  <strong>
+   ExternalVTKWidget
+  </strong>
+  .
+ </p>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+ </p>
+ <h1 dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span style="color:#0000CD;">
+   <span id="docs-internal-guid-9859cd73-d552-2ccc-44d1-e6a385abf229">
+    Implementation
+   </span>
+  </span>
+ </h1>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d552-2ccc-44d1-e6a385abf229">
+   The vtkExternalOpenGLRenderWindow class is an extension to the vtkGenericOpenGLRenderWindow, which provides a platform-agnostic VTK OpenGL window. The external render window class prevents a new VTK render window from being created and, instead, uses an existing OpenGL context. The vtkExternalOpenGLRenderer derives from vtkOpenGLRenderer and provides all of its features and functionalities. The external renderer offers an API that prevents it from clearing the OpenGL color and depth buffers at each frame. This ensures that the main application holds control over the OpenGL context and preserves rendered elements in the scene, of which VTK is unaware.
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d552-2ccc-44d1-e6a385abf229">
+   One of the most important prerequisites of this work was seamless user interaction with the two rendering systems. Generally, in the case of an external system such as VRUI or FreeVR, interaction such as navigation in the scene space, grab, and rotation of various scene objects are handled by the system (i.e., VRUI or FreeVR). VTK has its own classes and methods for interaction and scene object manipulation. To synchronize the navigation in these two systems, the vtkExternalOpenGLCamera class was added. This class empowers the external application to manage camera interaction for VTK objects. We added a GL query in the external renderer, which uses the GL state system to get the projection and modelview transformation matrices. These two matrices determine the location and orientation of the object in the scene. The vtkExternalOpenGLRenderer sets these matrices on the vtkExternalOpenGLCamera, triggering a recomputation of the camera viewing coordinates – position, focal-point, and view up vectors.
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d563-952e-8500-94f1ed6b66b1">
+   The ExternalVTKWidget class provides a one-stop solution to use all the new classes, described above, in an external application. The overarching application need just instantiate this class to use VTK's rendering capabilities. It creates a new external render window or uses one provided to it.
+  </span>
+ </p>
+ <p style="text-align: justify;">
+  This work has been merged into the VTK master as we needed it sooner for our collaborators. To enable this module, set
+  <strong>
+   Module_vtkRenderingExternal
+  </strong>
+  to ON (default is OFF). If you run into issues, please don't hesitate to contact us.
+ </p>
+ <h1 dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span style="color:#0000CD;">
+   <span id="docs-internal-guid-9859cd73-d572-f853-252e-aeffd711fce1">
+    Conclusion
+   </span>
+  </span>
+ </h1>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d572-f853-252e-aeffd711fce1">
+   To demonstrate the usefulness of the system and to test various use cases, we have implemented various use cases that employ the new module in different immersive environments. The following are a few screen grabs of the VTK rendering system working in an external environment.
+  </span>
+ </p>
+ <div>
+ </div>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+ </p>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <a href="https://www.kitware.com/blog/files/163_1270702898.png" style="font-size: 13px; line-height: 20.7999992370605px;" target="_blank">
+   <img src="https://www.kitware.com/blog/files/Small.163_1270702898.png" style="opacity: 0.9;" width="100%"/>
+  </a>
+ </p>
+ <address dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: center;">
+  <span id="docs-internal-guid-9859cd73-d572-f853-252e-aeffd711fce1">
+   Figure 1: Geometry rendering in VRUI using VTK
+  </span>
+ </address>
+ <address dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: center;">
+ </address>
+ <p style="text-align: justify;">
+  <a href="/blog/files/163_75309788.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.163_75309788.png" width="100%"/>
+  </a>
+ </p>
+ <address dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: center;">
+  <span id="docs-internal-guid-9859cd73-d572-f853-252e-aeffd711fce1">
+   Figure 2: Volume rendering in VRUI using VTK
+  </span>
+ </address>
+ <address dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+ </address>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d572-f853-252e-aeffd711fce1">
+   One notable accomplishment of this work is the ability to create sophisticated visualizations in an OpenGL immersive environment with relatively few lines of VTK code.
+  </span>
+ </p>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+ </p>
+ <h1 dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span style="color:#0000CD;">
+   <span id="docs-internal-guid-9859cd73-d572-f853-252e-aeffd711fce1">
+    Acknowledgements
+   </span>
+  </span>
+ </h1>
+ <p dir="ltr" style="line-height: 1.55999994277954; margin-top: 0pt; margin-bottom: 0pt; text-align: justify;">
+  <span id="docs-internal-guid-9859cd73-d572-f853-252e-aeffd711fce1">
+   This material is based upon the work supported by the Department of Energy, Idaho National Laboratory.
+  </span>
+ </p>
+ <div>
+ </div>
+</div>

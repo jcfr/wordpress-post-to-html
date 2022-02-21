@@ -1,0 +1,406 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  QGoImageCompare was developed in the Megason Lab at Harvard Medical School and at the University of Wisconsin-Madison. It is a library aimed at simple comparison of images. The library provides an easy means to add 2D and 3D image visualization and examination features to a Qt4 application, or the bundled visualization executables can be used on their own.
+ </p>
+ <p>
+  This project merged with Matt McCormick’s visual debugger for ITK in order to provide a complete package for visualizing images while debugging an ITK pipeline. The developers are now from the many itk::ImageFileWriter’s in their code.
+ </p>
+ <p>
+  QGoImageCompare can be used in the process of developing an ITK or VTK image processing or data visualization program and developers can use it to quickly visualize and compare results of filters in different parts of the pipeline. It is capable of displaying images directly from the memory while debugging an ITK application. Finally, QGoImageCompare can be used in software applications like Slicer, SNAP, GoFigure2 or V3D in their plug-ins infrastructure [1] to compare the input and the resulting output of one filter.
+ </p>
+ <p>
+  QGoImageCompare is hosted on a github repository [2]. The repository includes code source, documentation, publication, examples (in /Examples/GUI/lib/), tests (in /Testing/GUI/), and executables / applications (in /Main/).
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: small;">
+     Features
+    </span>
+    <br/>
+   </strong>
+  </span>
+  QGoImageCompare includes:
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  Support for ITK scalar images (see supported format for ITK image support details)
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  Support for VTK images
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  2D or 3D images with planar views and a tri-planar (xy, xz, yz) 3D view
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  Camera synchronization for fine comparison of results
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  Choice of look-up tables
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  Pixel examination, location, index, and value at cross-hair
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  QWidget UI form for easy customization using Qt Designer
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  QWidget inheritance for integration to a Qt GUI based application
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  A manager class that takes care of visualizations properties
+  <br/>
+  (creation, deletion, synchronization of several views, look-up tables…)
+  <br/>
+  <span style="color: #000080;">
+   •
+  </span>
+  ITK visual comparison debugging
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+     Visualization Library
+    </strong>
+   </span>
+   <br/>
+  </span>
+  The library is composed by six classes, which are all Qt objects.
+  <br/>
+  The abstract class for QGoSynchronizedView2D and 3D is QGoSynchronizedView. It is used to display a QWidget containing a two- or three- dimensional vtkImageData* or itk::Image*. It provides the interface to synchronize cameras among several of the abstract classes’ objects.
+ </p>
+ <p>
+  QGoSynchronizedView2D(3D)Callbacks takes a list of the abstract 2D and 3D  classes and synchronizes their cameras by setting up callbacks. It is highly recommended to let the QGoSynchronizedViewManager handle this process.
+ </p>
+ <p>
+  QGoSynchronizedViewManager is the high level class for the QGo 2D and 3D synchronized views and callbacks. This class deals with QGoSynchronizedViews for correct synchronization and provides a simple interface to create, delete and synchronize QGoSynchronizedViews.
+ </p>
+ <p>
+  For more details, we invite you to look at the Doxygen documentation and the source code.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+     Library Usage
+    </strong>
+   </span>
+   <br/>
+  </span>
+  For further clarification, there is a description of the basic use of the visualization library and an example to illustrate its functionality.
+ </p>
+ <p>
+  <strong>
+   Code Snippets
+   <br/>
+  </strong>
+  We introduce here the high-level functions for creating QWidgets views and synchronizing visualizations, based on the QGoSynchronizedViewManager.
+ </p>
+ <p>
+  To develop a visualization manager object we simply create a new manager that will take care of creation/deletion of visualization and callbacks for us.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      QGoSynchronizedViewManager* ViewManager =
+      <br/>
+      new QGoSynchronizedViewManager();
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  We can now visualize and process images as necessary. Once visualization is no longer needed, remember to delete ViewManager.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      delete ViewManager;
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  For the visualization of a VTK image, the synchronization manager can create visualization windows given a valid pointer to the image and a string encoding the name of the visualization.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      ViewManager-&gt;newSynchronizedView(“My VTK View”,
+      <br/>
+      VTKSmartPointerToImage);
+      <br/>
+      ViewManager-&gt;Update();
+      <br/>
+      ViewManager-&gt;show();
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  For the visualization of an ITK image, the synchronization manager can create visualization windows given a valid pointer to the image, the template argument representing the image pixel type and a string encoding the name of the visualization.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      ViewManager-&gt;newSynchronizedView&lt;InputPixelType&gt;(
+      <br/>
+      “My ITK View”, ITKSmartPointerToImage);
+      <br/>
+      ViewManager-&gt;Update();
+      <br/>
+      ViewManager-&gt;show();
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The camera for several open images can be synchronized by the synchronization manager with a simple function call.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      ViewManager-&gt;synchronizeOpenSynchronizedViews();
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Examples
+    </span>
+   </strong>
+  </span>
+  <br/>
+  Here, we illustrate a simple segmentation pipeline design (Figure 1), for ear cell nuclei in developing zebrafish embryo (Figure 2(a)). We show synchronized images at each step of the pipeline (Figures 2(a), 2(b), 2(c)).
+ </p>
+ <p>
+  Note that a possible improvement could be to add one QWidget for each filter with sliders or spin boxes to tweak each parameter involved in this process.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="549" src="https://blog.kitware.com/source/files/4_124941797_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: The diagram shows how to use the code snippets to visualize intermediary results in an
+   <br/>
+   image-processing pipeline. (The example can be found in /Examples/GUI/lib/pipeitkexample.cxx)
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="136" src="https://blog.kitware.com/source/files/4_799023377_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: Viewers generated by pipeitkexample, showing (a)the input image,
+   <br/>
+   (b) the filtered image, and (c) the thresholded image.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+  The pipeitkexample takes a 3D image as an argument, and processes it, displaying the output of the filters at each stage of the pipeline in a synchronized manner.
+ </p>
+ <p>
+  The pipevtkexample takes vtk readable image as an argument and blurs it. It displays the input and the output of the filter in a synchronized manner.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Applications
+    </span>
+   </strong>
+  </span>
+  <br/>
+  comparegui shows how to create a very basic GUI using the functionalities provided by the QGoSynchronized classes. Figure 3 is a screenshot of this application. comparesimple takes a list of 2D or 3D images as an input and displays them in synchronized viewer widgets.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="246" src="https://blog.kitware.com/source/files/4_712647609_png" style="border: 0pt none;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3: Illustration of comparegui example application. We use it to compare two
+   <br/>
+   identical datasets, in a synchronized manner, with a custom look-up table.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Visual Debugging
+    </span>
+   </strong>
+  </span>
+  <br/>
+  Here we describe the GDB-pretty-ITK project, which utilizes QGoImageCompare for debugging image-processing pipelines using the GNU Debugger (GDB). When creating a new ITK pipeline or filter, it is often beneficial to examine the intermediate images that are generated.  In the context of a debugging, pretty-printing is the act of displaying a complex data structure in an insightful way.  For example, pretty-printing a C array pointer may involve printing the elements of the array or pretty-printing a C structure may imply printing the structure’s members.  In a previous article in the Source [3], we demonstrated how custom GDB Python pretty-printers could be used to launch an image viewer, which displays an itk::Image’s BufferedRegion when ‘printing’ the object in GDB.
+ </p>
+ <p>
+  In our previous work, we launched an independent child process such as ParaView or Mayavi for each object that was printed. Here we describe a new Python pretty-printer based on QGoImageCompare. This pretty-printer utilizes the well-designed visualization and analysis tools of QGoImageCompare. It also has an advantage over the other image viewer pretty-printers because the camera view is synchronized between all images that are printed.
+ </p>
+ <p>
+  The first time print is called on an itk::Image pointer, the pretty-printer module, called icp, launches a child process, icpGui. A separate process is needed to separate the GDB event loop and the Qt event loop.  The image’s information (spacing, origin, etc.) and data buffer are passed from the Python module to the GUI via Qt’s inter-process communication (IPC) capabilities. Subsequent images are sent across the same IPC channels and the view is synchronized between images. Simultaneous synchronized zooming, for instance, can be very helpful in image analysis.
+ </p>
+ <p>
+  The GDB-pretty-ITK project is still in the alpha stages, but it is usable and may be helpful in your adventures with ITK.  We have tried to lower the barrier to installation and usage, although there is admittedly a way to go. A set of installation instructions has been placed on the ITK wiki [4]. Instructions exist for the QGoImageCompare pretty-printer along with the rest of the system. Note that the entire system must be installed to use the icp pretty-printer. We also developed a set of CMake modules to ease registration of the ITK pretty-printers in your project [5].
+ </p>
+ <p>
+  An example use of the icp pretty-printer is distributed as a CTest test within the source tree. This example includes a simple executable and a GDB script of commands that can be interactively entered into the debugger.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+  <br/>
+  [1]   Chen, S. Insight Toolkit Plug-ins: Volview and V3D, Kitware Source, October 2010.
+  <br/>
+  [2]   QGoImageCompare: Source code of QGoImageCompare. https://github.com/gofigure2/QGoImageCompare.
+  <br/>
+  [3]   McCormick, M. Visual Debugging of ITK. Kitware Source. April 2010.
+  <br/>
+  http://kitware.com/products/html/VisualDebuggingOfITK.html
+  <br/>
+  [4]   ITK/GDBPretty. The ITK Wiki. http://www.itk.org/Wiki/ITK/GDBPretty.
+  <br/>
+  [5]   gdb-pretty-itk-cmake: CMake scripts to register GDB pretty-printers for ITK on targets.
+  <br/>
+  http://gitorious.org/gdb-pretty/gdb-pretty-itk-cmake.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Acknowledgements
+    </span>
+   </strong>
+  </span>
+  <br/>
+  This work was supported by NHGRI P50 HG004071 and NIDCD R01 DC010791.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_671026410_png" style="float: left; border: 0pt none;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Antonin Perrot-Audet is a Ph.D. student at the CREATIS Lab, University of Lyon in France, and in collaboration with the Megason Lab at Harvard Medical School, working on his thesis in registration of cell lineages.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_1891192284_png" style="float: left; border: 0pt none;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Matthew McCormick is a PhD. candidate at the University of Wisconsin-Madison working on his thesis in medical ultrasound characterization of carotid plaques.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="83" src="https://blog.kitware.com/source/files/4_300046098_png" style="border: 0pt none; float: left;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Arnaud Gelas is a Research Associate in the Megason Lab at Harvard Medical School where he is in charge of the GoFigure2 project.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_970242760_png" style="float: left; border: 0pt none;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Nicolas Rannou is a Research Associate in the Megason Lab at Harvard Medical School where he is participating in the development of GoFigure2. He is currently in charge of the Visualization component in GoFigure2.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_10231263_png" style="float: left; border: 0pt none;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Lydie Souhait is a Research Associate in the Megason Lab at Harvard Medical School where she is participating in the development of GoFigure2. She is currently in charge of the Database and GUI components in GoFigure2.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_1063663523_png" style="border: 0pt none; float: left;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Kishore Mosaliganti is a Research Fellow in the Megason Lab at Harvard Medical School where he is currently developing algorithms for the extraction of zebrafish ear lineages using confocal microscopy images to be included in GoFigure2.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="82" src="https://blog.kitware.com/source/files/4_1368923649_png" style="float: left; border: 0pt none;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Sean Megason is an Assistant Professor in the Department of Systems Biology at Harvard Medical School. The Megason lab wants to understand how the code in the genome is executed to turn an egg into an embryo.
+ </p>
+</div>

@@ -1,0 +1,332 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Earlier last week, support for volumetric mesh was integrated in 3D Slicer. The work was initiated, discussed and mostly completed during the National Alliance for Medical Image Computing (NA-MIC 2017) Winter Project Week [1] at the Computer Science and Artificial Intelligence Laboratory (CSAIL) at the Massachusetts Institute of Technology (MIT) in Cambridge, MA. Highlights and major contributions of the project week are summarized in the post “
+  <a href="https://blog.kitware.com/deep-learning-and-web-technologies-are-the-focus-of-3d-slicer-2017-winter-project-week/">
+   Deep learning and web technologies are the focus of 3D Slicer 2017 Winter Project Week
+  </a>
+  .”
+ </p>
+ <p>
+  <a href="https://www.kitware.com/alexis-girault/">
+   Alexis Girault
+  </a>
+  (Kitware, Inc) led the effort to add volumetric mesh support as a 3D Slicer core feature. The project week allowed him to meet with some of the 3D Slicer primary investigators. Andras Lasso (PerkLab, Queen’s University),
+  <a href="https://www.kitware.com/jean-christophe-fillion-robin/">
+   Jean-Christophe Fillion-Robin
+  </a>
+  (Kitware, Inc), Curtis Lisle (KnowledgeVis, LLC), Csaba Pinter (PerkLab, Queen’s University) and Steve Pieper (Isomics, Inc), among others, gave useful advice and helped design the infrastructure described below. Details of the collaborative reviewing effort can be found on the associated
+  <a href="https://github.com/Slicer/Slicer/pull/647">
+   Github pull request
+  </a>
+  .
+ </p>
+ <h2>
+  Volumetric Mesh
+ </h2>
+ <p>
+  As outlined on the corresponding
+  <a href="https://en.wikipedia.org/wiki/Volume_mesh">
+   Wikipedia article
+  </a>
+  , volumetric meshes are a polygonal representation of an object structure. Unlike surface meshes, which only define the outside layer of an object, volumetric meshes also discretize the interior structure of the object. One application of volumetric meshes is in finite element modeling. Figure 1.a and Figure 1.b (below) showcase a clipped surface mesh and its associated volumetric mesh. The figures use the latest improvements integrated into 3D Slicer nightly, which are described further down in this post.
+ </p>
+ <table>
+  <tbody>
+   <tr>
+    <td>
+     <p>
+      <div class="wp-caption aligncenter" id="attachment_17119" style="width: 329px">
+       <img class="wp-image-17119" height="275" src="https://blog.kitware.com/wp-content/uploads/2017/02/180rotateSurface.gif" width="319"/>
+       <p class="wp-caption-text">
+        Figure 1.a: Clipped surface representation showing outside layer of segmented mouse head
+       </p>
+      </div>
+     </p>
+    </td>
+    <td>
+     <p>
+      <div class="wp-caption aligncenter" id="attachment_17120" style="width: 329px">
+       <img class="wp-image-17120" height="275" src="https://blog.kitware.com/wp-content/uploads/2017/02/180rotateVolumetric.gif" width="319"/>
+       <p class="wp-caption-text">
+        Figure 1.b: Clipped volumetric representation showing internal cells of segmented mouse head
+       </p>
+      </div>
+     </p>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <h2>
+  History of Mesh Support in Slicer
+ </h2>
+ <p>
+  Volumetric meshes are an important feature. They were introduced in 3D Slicer version 3.4 through the NA-MIC National Consortium of Breast Centers collaboration “
+  <a href="http://wiki.na-mic.org/Wiki/index.php/NA-MIC_NCBC_Collaboration:Automated_FE_Mesh_Development">
+   Automated FE Mesh Development
+  </a>
+  .” This collaboration resulted in the creation of
+  <a href="https://www.slicer.org/wiki/Modules:IA_FEMesh-Documentation-3.4">
+   IA_FEMesh
+  </a>
+  , a finite element meshing module from the University of Iowa, which encapsulates tools to create a volumetric mesh, to assign material properties and boundary conditions (such as external forces) to its elements and to export it in the Abaqus format in order to perform finite element analysis. The resulting mesh was, however, not part of the
+  <a href="https://www.slicer.org/wiki/Documentation/Nightly/Developers/MRML">
+   Medical Reality Markup Language
+  </a>
+  (MRML) architecture. Therefore, it was not easily accessible to other 3D Slicer modules.
+ </p>
+ <div class="wp-caption aligncenter" style="width: 422px">
+  <img height="281" src="https://www.slicer.org/w/images/4/42/Femesh-in-trunk-120808.png" width="412"/>
+  <p class="wp-caption-text">
+   Fig. 2: Snapshot of the IA_FEMesh module in 3D Slicer 3.4
+  </p>
+ </div>
+ <p>
+  Due to resource allocation and priorities, support for volumetric meshes was not ported to the 4.0 release of 3D Slicer; only surface meshes made the cut as part of the Model MRML node class. Nevertheless, some work was done in more recent versions of 3D Slicer to offer mesh-creation capabilities, like the below illustrated
+  <a href="https://www.slicer.org/wiki/Documentation/Nightly/Modules/BodyCentricCubicMesh">
+   Body Centric Cubic Mesh
+  </a>
+  (BCCM) and
+  <a href="https://www.slicer.org/wiki/Documentation/Nightly/Extensions/CleaverExtension">
+   CleaverExtension
+  </a>
+  .
+ </p>
+ <table>
+  <tbody>
+   <tr>
+    <td>
+     <p>
+      <div class="wp-caption aligncenter" id="attachment_17176" style="width: 294px">
+       <a href="https://www.slicer.org/w/images/f/f3/Nidus.jpg">
+        <img class="wp-image-17176" height="215" sizes="(max-width: 284px) 100vw, 284px" src="https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-300x227.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-300x227.png 300w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-768x581.png 768w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-1024x775.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-220x167.png 220w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-250x189.png 250w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-355x269.png 355w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-730x553.png 730w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg-90x68.png 90w, https://blog.kitware.com/wp-content/uploads/2017/02/Nidus.jpg.png 1433w" width="284"/>
+       </a>
+       <p class="wp-caption-text">
+        Fig. 3: Resulting mesh of BCCM
+       </p>
+      </div>
+     </p>
+    </td>
+    <td>
+     <p>
+      <div class="wp-caption aligncenter" id="attachment_17177" style="width: 362px">
+       <a href="https://www.slicer.org/w/images/d/d4/Screenshot2.jpeg">
+        <img class="wp-image-17177" height="215" sizes="(max-width: 352px) 100vw, 352px" src="https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-300x183.jpeg" srcset="https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-300x183.jpeg 300w, https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-768x469.jpeg 768w, https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-1024x625.jpeg 1024w, https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-220x134.jpeg 220w, https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-250x153.jpeg 250w, https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-355x217.jpeg 355w, https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-730x445.jpeg 730w, https://blog.kitware.com/wp-content/uploads/2017/02/Screenshot2-90x55.jpeg 90w" width="352"/>
+       </a>
+       <p class="wp-caption-text">
+        Fig. 4: Resulting mesh of CleaverExtension
+       </p>
+      </div>
+     </p>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <h2>
+  Need for Volumetric Mesh in Optical Imaging
+ </h2>
+ <div class="wp-caption alignright" id="attachment_17130" style="width: 245px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/02/image04.png">
+   <img class="wp-image-17130 size-thumbnail" height="156" src="https://blog.kitware.com/wp-content/uploads/2017/02/image04-235x156.png" width="235"/>
+  </a>
+  <p class="wp-caption-text">
+   Fig. 5: NIRFAST MATLAB displaying a finite element model that is based on a label map and fiducial inputs created in NIRFAST-Slicer
+  </p>
+ </div>
+ <p>
+  <a href="http://www.dartmouth.edu/~nir/nirfast/">
+   NIRFAST
+  </a>
+  is an interactive open-source software application package based on MATLAB that is widely used in the optical imaging research community. NIRFAST provides functionalities for modeling and reconstructing near-infrared light transport in tissue from optical data, which is acquired by tissue spectroscopy, to recover internal functional parameters such as blood oxygen saturation, water content, and lipid concentration [2]. These measurements can provide valuable information for detecting breast cancer and analyzing imaging brain functions, among other applications.
+ </p>
+ <div class="wp-caption alignright" id="attachment_17131" style="width: 245px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/02/image00.png">
+   <img class="wp-image-17131 size-thumbnail" height="156" src="https://blog.kitware.com/wp-content/uploads/2017/02/image00-235x156.png" width="235"/>
+  </a>
+  <p class="wp-caption-text">
+   Fig. 6: NIRFAST-Slicer showcasing reconstructed optical parameters from NIRFAST, resampled and overlaid above a structural image of a cancerous breast
+  </p>
+ </div>
+ <p>
+  The optical modeling and image reconstruction in NIRFAST uses finite element modeling, which requires structural information that can be provided through multi-model methods such as magnetic resonance imaging (MRI) or computed tomography (CT) guided optical spectroscopy [3]. The NIRFAST primary investigators at Thayer School of Engineering at Dartmouth College reached out to Kitware to help them put together segmentation tools for creating suitable volumetric meshes of complex tissue geometries. The current solution is a 3D Slicer based custom application named NIRFAST-Slicer, which is described in more detail in the blog post “
+  <a href="https://blog.kitware.com/kitware-customer-highlight-optics-in-medicine-laboratory/">
+   Kitware customer highlight: Optics in Medicine Laboratory
+  </a>
+  .”
+ </p>
+ <p>
+  One of the requirements of NIRFAST is to visualize the optical data overlaid above the coupled structural image used during the guided optical spectroscopy. Due to the lack of volumetric mesh support in 3D Slicer 4.6, it was necessary to resample the output finite element mesh from NIRFAST (Fig. 5) within its coupled structural image structure (e.g., offset, spacing and dimensions) to be able to visualize the optical data in NIRFAST-Slicer (Fig. 6). This process was slow for a high number of elements, introduced interpolation errors and forced the user to go through additional steps. These limitations exposed the need to directly display the optical data in its raw format, as a finite element structure. This need motivated the improvements for volumetric mesh support that are available today in the 3D Slicer Nightly build and will be offered soon in the 4.7 release.
+ </p>
+ <h2>
+  Improvements to 3D Slicer
+ </h2>
+ <p>
+  Surface meshes were represented in 3D Slicer 4.6 by the MRML model node class, which served as a thin wrapper over the Visualization Toolkit (VTK) polygon mesh class (
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkPolyData
+  </span>
+  ). Since surface and volumetric meshes share a lot of properties, the development team decided to support volumetric meshes by generalizing MRML model nodes to be able to store both surface and volumetric meshes. Model nodes now contain a
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkPointSet
+  </span>
+  pointer, which can either refer to a
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkPolyData
+  </span>
+  (for surface mesh) or to a
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkUnstructuredGrid
+  </span>
+  (for volumetric mesh). This generalization was carried out with minimal changes in the interface of the model node.
+ </p>
+ <div class="wp-caption aligncenter" style="width: 433px">
+  <img height="313" src="https://blog.kitware.com/wp-content/uploads/2017/02/image06.gif" width="423"/>
+  <p class="wp-caption-text">
+   Fig. 7: The Models module Information widget shows the mesh type for a volumetric mesh.
+  </p>
+ </div>
+ <p>
+  The storage node for Models was extended to support reading and writing of both .vtk (legacy) and .vtu (XML) files as well as to make to identify a .vtk surface mesh file (Fig. 8). Leveraging the existing infrastructure, those changes also allow the passing of Models containing volumetric meshes between 3D Slicer and command-line interface (CLI) modules.
+ </p>
+ <div class="wp-caption aligncenter" style="width: 514px">
+  <img class="wp-image-17133 " height="192" src="https://blog.kitware.com/wp-content/uploads/2017/02/image02.gif" width="504"/>
+  <p class="wp-caption-text">
+   Fig. 8: 3D Slicer data-saving widget showing appropriate export file formats based on the inner data structure of the MRML model node
+  </p>
+ </div>
+ <p>
+  The display node for Models was refactored to avoid inefficiencies, simplify the code and bring visualization consistency within the 3D view and the 2D views. Clipping functionalities were maintained using the
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkExtractGeometry
+  </span>
+  filter (instead of
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkPolyDataClipper
+  </span>
+  for surface mesh), allowing users to see the internal structure of the volumetric mesh based on the slice positions. The projection representation was also maintained. It allows users to visualize interpolated values in 2D slice views by making use of the
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkCutter
+  </span>
+  filter (Fig. 9).
+ </p>
+ <div class="wp-caption aligncenter" style="width: 502px">
+  <img class="wp-image-17137 " height="402" src="https://blog.kitware.com/wp-content/uploads/2017/02/image10.gif" width="492"/>
+  <p class="wp-caption-text">
+   Fig. 9: Volumetric imaging of fluorescent tracers in a mouse head, acquired through MRI coupled fluorescence molecular tomography
+  </p>
+ </div>
+ <p>
+  Improvements to the MRML model display node were also made to consolidate the selection of the scalar range mode and to dynamically adapt its precision in the module widget for better usability (Fig. 10).
+ </p>
+ <div class="wp-caption aligncenter" style="width: 447px">
+  <img class="wp-image-17132 " height="163" src="https://blog.kitware.com/wp-content/uploads/2017/02/image01.gif" width="437"/>
+  <p class="wp-caption-text">
+   Fig. 10: Models module display widget with improved scalar range mode selection and dynamic range precision
+  </p>
+ </div>
+ <p>
+  Finally, a new addition was brought to the MRML model display node to threshold the volumetric mesh based on its active scalar values (Fig. 11). This feature helps to hide cells, which hold data that can be ignored for visualization purposes.
+ </p>
+ <div class="wp-caption aligncenter" style="width: 490px">
+  <img class=" wp-image-17136 size-full" height="387" src="https://blog.kitware.com/wp-content/uploads/2017/02/image08.gif" width="480"/>
+  <p class="wp-caption-text">
+   Fig. 11: Thresholding volumetric imaging of fluorescent tracers in a mouse head improve overlaid visualization with the structural image underneath
+  </p>
+ </div>
+ <h2>
+  Future Work
+ </h2>
+ <p>
+  These recent contributions offer room for potential future improvements, such as the following:
+ </p>
+ <ul>
+  <li style="font-weight: 400;">
+   adding an opacity option for the 2D slice views [
+   <a href="http://na-mic.org/Mantis/view.php?id=4334">
+    Mantis
+   </a>
+   ];
+  </li>
+  <li style="font-weight: 400;">
+   adding a “smooth” clipping option to show a flat surface when clipping the volumetric mesh in the 3D view, instead of removing cells [
+   <a href="http://na-mic.org/Mantis/view.php?id=4335">
+    Mantis
+   </a>
+   ];
+  </li>
+  <li style="font-weight: 400;">
+   cleaning up and consolidating the Models module interface for usability [
+   <a href="http://na-mic.org/Mantis/view.php?id=4336">
+    Mantis
+   </a>
+   ]; and
+  </li>
+  <li style="font-weight: 400;">
+   implementing modules to convert the volumetric mesh model node to other MRML nodes such as surface mesh model, segmentation, and label volume. Converting those MRML nodes to a volumetric mesh model can be done by adapting the previous mesh-creation tools referenced above (IA_FEMesh, the BCCM module, and CleaverExtension) to rely on these new and streamlined core functionalities [
+   <a href="http://na-mic.org/Mantis/view.php?id=4337">
+    Mantis
+   </a>
+   ].
+  </li>
+ </ul>
+ <h2>
+  Summary
+ </h2>
+ <p>
+  With the collaboration of multiple 3D Slicer community members reunited during the NA-MIC 2017 Winter Project Week, volumetric mesh visualization support was brought back to the 3D Slicer 4.x series.
+ </p>
+ <p>
+  The basic capabilities gravitate around an enhanced MRML model node class, which now wraps a
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkPointSet
+  </span>
+  data structure, a base class of
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkPolyData
+  </span>
+  (surface mesh) and
+  <span style="font-family: 'Cutive Mono', monospace;">
+   vtkUnstructuredGrid
+  </span>
+  (volumetric mesh), as well as improved display functionalities for clipping, thresholding, 3D and 2D visualization and scalar range selection. These capabilities offer better consistency and usability.
+ </p>
+ <p>
+  This work will be used right away within NIRFAST-Slicer, a 3DSlicer based custom application that is part of the NIRFAST package. Based on tissue spectroscopy, NIRFAST-Slicer helps to recover internal functional parameters that can provide valuable information for diverse medical applications.
+ </p>
+ <p>
+  These features, which are already available in the Slicer Nightly build, will be a part of the 4.7 release of 3D Slicer and will facilitate upcoming work to bring more volumetric mesh capabilities (such as mesh creation and conversion to other data structures) to the platform. To download the software, please visit
+  <a href="http://download.slicer.org/">
+   http://download.slicer.org/
+  </a>
+  .
+ </p>
+ <p>
+  To learn more about how Kitware can tailor
+  <a href="https://www.kitware.com/platforms/">
+   solutions
+  </a>
+  to meet your research needs, please contact
+  <a href="mailto:kitware@kitware.com">
+   kitware@kitware.com
+  </a>
+  .
+ </p>
+ <h2>
+  Acknowledgments
+ </h2>
+ <p>
+  This work was supported by the National Cancer Institute under award number R01CA184354 as part of NIRFAST-Slicer improvements for NIRFAST. The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.
+ </p>
+ <h2>
+  References
+ </h2>
+ <p>
+  [1] Kapur T, Pieper S, Fedorov A, Fillion-Robin JC, Halle M, O’donnell L, Lasso A, Ungi T, Pinter C, Finet J, others. Increasing the Impact of Medical Image Computing Using Community-Based Open-Access Hackathons: the NA-MIC and 3D Slicer Experience. Medical Image Analysis 2016.
+ </p>
+ <p>
+  [2] H. Dehghani, M.E. Eames, P.K. Yalavarthy, S.C. Davis, S. Srinivasan, C.M. Carpenter, B.W. Pogue, and K.D. Paulsen, “Near infrared optical tomography using NIRFAST: Algorithm for numerical model and image reconstruction,” Communications in Numerical Methods in Engineering, vol. 25, 711-732 (2009).
+ </p>
+ <p>
+  [3] M. Jermyn, H. Ghadyani, M.A. Mastanduno, W. Turner, S.C. Davis, H. Dehghani, and B.W. Pogue, “Fast segmentation and high-quality three-dimensional volume mesh creation from medical images for diffuse optical tomography,” J. Biomed. Opt. 18 (8), 086007 (August 12, 2013), doi: 10.1117/1.JBO.18.8.086007.
+ </p>
+</div>

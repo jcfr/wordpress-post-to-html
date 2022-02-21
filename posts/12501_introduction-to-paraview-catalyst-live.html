@@ -1,0 +1,167 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="http://catalyst.paraview.org/">
+   ParaView Catalyst
+  </a>
+  is a library that adds ParaView analysis and visualization capabilities to a simulation program. For each time step, the simulation code generates data which is passed (using
+  <a href="http://catalyst.paraview.org/">
+   Catalyst’s API
+  </a>
+  ) to a ParaView pipeline. This pipeline generates images or processed data that can be saved to disk.
+ </p>
+ <p>
+  Furthermore, data can be exchanged with a remote ParaView server enabling easy inspection of simulation status and modification of analysis and visualization parameters. We call this connection ParaView Catalyst Live.
+ </p>
+ <p>
+  The goal of this post is to enable you to try out Catalyst Live and introduce its main features. First, we invite you to watch a video which introduces the example presented next.
+ </p>
+ <p>
+  <a href="https://vimeo.com/107165598">
+   Introduction to Paraview Catalyst Live
+  </a>
+  from
+  <a href="https://vimeo.com/kitware">
+   Kitware
+  </a>
+  on
+  <a href="https://vimeo.com">
+   Vimeo
+  </a>
+  .
+ </p>
+ <p>
+  To be able to run the example presented, you need to download a
+  <a href="http://www.paraview.org/Wiki/ParaView/Git">
+   repository version
+  </a>
+  of ParaView, configure it with PARAVIEW_ENABLE_CATALYST and PARAVIEW_ENABLE_PYTHON and compile it (see the
+  <a href="http://www.paraview.org/Wiki/ParaView:Build_And_Install">
+   ParaView Build and Install Wiki
+  </a>
+  for more information). Optionally, you can also enable PARAVIEW_USE_MPI if you want to run coprocessing or ParaView in parallel.
+ </p>
+ <p>
+  You also need two scripts:
+  <code>
+   driver.py
+  </code>
+  and
+  <code>
+   coprocessing-pipeline.py
+  </code>
+  which are attached to this blog post.
+  <code>
+   driver.py
+  </code>
+  plays the role of a simulation process which generates at each time step a wavelet with a different parameters (see ParaView’s Sources/Wavelet menu).
+  <code>
+   coprocessing-pipeline.py
+  </code>
+  processes this data by running a contour filter, saving both the wavelet and the contour as data files, saving an image showing the contour and enabling Catalyst Live communication. This second script was generated using the
+  <a href="http://www.paraview.org/Wiki/images/4/48/CatalystUsersGuide.pdf">
+   Catalyst Script Generator Plugin
+  </a>
+  (for ParaView 4.1 and earlier it was called the CoProcessing Script Generator Plugin).
+ </p>
+ <p>
+  With these, you are ready to try out Catalyst Live. Note that all commands shown are relative to ParaView’s build directory. First download the two scripts in a directory (assume it is called Catalyst-test) and start the driver and the coprocessing pipeline:
+ </p>
+ <div style="background: #eee;border: 1px solid #ccc;padding: 5px 10px">
+  <span style="line-height: 1.6em">
+   bin/pvbatch ~/Catalyst-test/driver.py coprocessing-pipeline.py 1000
+  </span>
+ </div>
+ <p>
+  Here we run the driver for 1,000 time steps and we pass the coprocessing pipeline script as a parameter. Then, start ParaView
+  <span style="line-height: 1.6em">
+   and connect to Catallyst using Catalyst &gt; Connect menu. The Pipeline Browser displays two servers, the builtin server and the catalyst server. Note that next to the catalyst server there is a ‘play’ icon showing that the simulation is running.
+  </span>
+ </p>
+ <p>
+  <a href="/blog/files/329_919373652.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.329_919373652.png" style="width: 50%;height: 50%"/>
+  </a>
+ </p>
+ <p>
+  The two grayed out icons next to PVTrivialProducer0 and Contour0 allow you to extract data from Catalyst, transfer it, and visualize it on Catalyst Live. Care must be exercised when clicking on the extract icons as data you request to be transfered may be very big (for real simulations).  When you click on the extract icon next the the Contour0 data is added as a source to the builtin server. This data can be visualized by clicking on the eye icon next to it.
+ </p>
+ <p>
+  <a href="/blog/files/329_1920375308.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.329_1920375308.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  A user can do the following operations:
+ </p>
+ <ul>
+  <li>
+   <span style="line-height: 1.6em">
+    Modify any visualization pipeline or writer parameters. Note that pipeline elements cannot be added or removed in the current version and we provide only generic writer parameters such as file name and writing frequency.
+   </span>
+  </li>
+  <li>
+   Pause a simulation using Catalyst &gt; Pause Simulation and continue it using Catalyst &gt; Continue. If a simulation is paused, a ‘pause’ icon will be displayed next to the catalyst server.
+  </li>
+  <li>
+   Pause the simulation at a certain time step in the future using Catalyst &gt; Set Breakpoint or remove a previously set breakpoint using Catalyst &gt; Remove Breakpoint. If a breakpoint is set, a red circle is displayed next to the catalyst server.
+  </li>
+ </ul>
+ <p>
+  While a simulation is paused, the user can fully interact with simulation data by changing visualization pipeline parameters.
+ </p>
+ <p>
+  If you compiled ParaView with PARAVIEW_USE_MPI you can run both Catalyst and Paraview in parallel:
+ </p>
+ <div style="background: #eee;border: 1px solid #ccc;padding: 5px 10px">
+  mpiexec -np 5 bin/pvbatch -sym ~/Catalyst-test/driver.py coprocessing-pipeline.py 1000
+ </div>
+ <p>
+  runs the driver and the coprocessing pipeline on 5 processors
+ </p>
+ <div style="background: #eee;border: 1px solid #ccc;padding: 5px 10px">
+  mpiexec -np 2 bin/pvserver
+ </div>
+ <p>
+  runs ParaView server on 2 processors
+ </p>
+ <div style="background: #eee;border: 1px solid #ccc;padding: 5px 10px">
+  bin/paraview -url=cs://your-computer-name:11111
+ </div>
+ <p>
+  runs the ParaView client and connects it to the ParaView server you just started. Everything else behaves the same as in the serial run.
+ </p>
+ <p>
+  With this, we end our introduction to ParaView Catalyst Live and invite you to try it out. It is part of the ParaView 4.2 release.
+ </p>
+ <h2>
+  Update 2017/11/03
+ </h2>
+ <p>
+  The files in the post are now used for testing and are available in the ParaView source code.  Search the source code for the driver
+  <tt>
+   CatalystWaveletDriver.py
+  </tt>
+  and the coprocessing pipeline
+  <tt>
+   CatalystWaveletCoprocessing.py
+  </tt>
+  . You can use these files as described in the post or you can run the associated ParaView tests:
+  <code>
+   ctest -R CatalystLive
+  </code>
+  . Make sure you compile ParaView with
+  <tt>
+   BUILD_TESTING
+  </tt>
+  ,
+  <tt>
+   PARAVIEW_USE_MPI
+  </tt>
+  and
+  <tt>
+   PARAVIEW_ENABLE_PYTHON
+  </tt>
+  .
+ </p>
+</div>

@@ -1,0 +1,94 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <strong>
+   Collaboration on Computational Anatomy with Johns Hopkins Center for Imaging Science
+  </strong>
+  <br/>
+  A joint project by Johns Hopkins University’s Center for Imaging Science, under Michael Miller, and Kitware, under Will Schroeder,  is leading to new functionality in ParaView, to facilitate its use by JHU in order to empower its Computational Anatomy research. This blog entry documents on-going work on this project, which promises to facilitate the interactive use and visualization of results of the ITK classes for the medical imaging community at large, further potentiating their broad applicability and usefulness.
+ </p>
+ <p>
+  JHU CIS research emphasizes probabilistic anatomical atlases, including many structures of the brain, which encodes population shape statistics, for both surfaces and image sub-volumes representing anatomical structures. ParaView, which is already the platform of choice at JHU CIS for visualization,  will also be relied upon by this group to manage its sophisticated image analysis, which characterizes shape variation in the population on the basis of  Large Deformation Diffeomorphic Metric Mapping (LDDMM), by which one can establish correspondences between equivalent points in anatomically defined coordinates, and therefore statistical measurements determined from them,  for  a set of surfaces or  segmented volumes of comparable structures.
+ </p>
+ <p>
+  In addition to being able to trigger ITK processing via VTK plug-ins that run on ParaView, an important component of this project is the management of a scene based on the notion of a scene graph as well as on the MRML standard, as developed under Slicer. The implication of treating anatomy as a scene graph is that this approach allows independent computations on, and  effective visualization of, many anatomically distinct structures that comprise an atlas.
+ </p>
+ <p>
+  <strong>
+   Empowering ITK-based Image Analysis on Paraview via VTK plug-ins
+  </strong>
+  <br/>
+  ITK-based image analysis on ParaView is one of the main objectives of this collaboration between Kitware and JHU CIS.  A first step towards this objective was realized with an ITK-based VTK plug-in that was developed by Andinet Enquobahrie and Julien Finet, and is shown below. This plug-in imbeds processing using the class itk::RecursiveGaussianImageFilter. The interface features a user-selectable scale factor. This ITK class was chosen because it produces immediate and visible results, irrespective of the scale factor selected by the user. This infinite impulse response (IIR) filter is based on the work of Rachid Deriche in the  1980s and 1990s.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/blog/files/66_440241548_png" width="100%"/>
+ </p>
+ <p>
+  A second example was developed by myself and Julien, to demonstrate surface algorithms, based on a vtkPolyData input that is converted to an itk::QuadEdgeMesh, which is processed by an itk::QuadEdgeMeshSmoothing class, and the output of which processing is converted back to a vtkPolyData. The output vtkPolyData is viewed on the screen, superimposed with the wireframe of the original. The smoother effectively updates the position of each point with a weighted sum of its previous position and a neighborhood average, which for a convex surface tends to pull each point inwards. The number of  such iterations is a parameter that can be set by the user via this VTK plug-in running on ParaView.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/blog/files/66_1548024954_png" width="100%"/>
+ </p>
+ <p>
+  <strong>
+   <br/>
+   JHU – Kitware collaboration at NAMIC Summer Project Week
+  </strong>
+  <br/>
+  Surface processing will be further evidenced during NAMIC Summer Project week, in which JHU’s Michael Bowers and I will develop a new VTK plug-in, for recently developed ITK classes of his, which Michael will contribute to ITK via Insight Journal, for a Laplace-Beltrami operator that processes surface inputs for Computational Anatomy. This operator computes the divergence of the gradient of a function defined on a triangulated surface that represents the boundary of an anatomical structure. The eigenvalue problem defined through this operator leads to a compact, highly descriptive characterization of shape on the basis of a small set of eigenvectors.
+ </p>
+ <p>
+  <strong>
+   Slicer-compatible MRML-Based Scene Management
+  </strong>
+  <strong>
+   via KWScene
+  </strong>
+  <br/>
+  Finally, preliminary results illustrate the compatibility of MRML-based scene management, via the new
+  <em>
+   KWScene
+  </em>
+  toolkit, between ParaView and Slicer. This toolkit is the joint work of Luis Ibanez, Andinet Enquobahrie, Julien Finet, Stephen Aylward and myself.
+ </p>
+ <p>
+  One litmus test for this scene graph is to i) view an atlas composed of anatomical surfaces under Slicer,  ii) save this atlas as a MRML scene, iii) input this scene to Paraview, iv) populate a representation of this scene internally, and then v) output this new scene in MRML format. vi) The results must also be viewable under Slicer.
+ </p>
+ <p>
+  Shown here is a visualization of components of the original JHU brain atlas scene under Slicer. The various anatomical components have been modified by hand in the MRML file to produce a different color for each structure as well as make them semi-transparent. This MRML is still visible under Slicer, and each atlas component appears distinct from the others.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/blog/files/66_358822678_gif" width="100%"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  The same atlas-containing MRML scene can be read by, and populated in, ParaView, by way of a plug-in based on a KWScene shared library, as shown below. All properties of these MRML ModelNodes (in this case, .byu-type triangulated surfaces), including color and opacity as visible here, are preserved.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/blog/files/66_569811470_png" width="100%"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  Last, the scene instantiated in ParaView can be saved as a new MRML file. This new MRML file is  also viewable under Slicer, as seen below, and all MRML entries of these ModelNodes, such as color and opacity, are once again preserved. Differences in viewing parameters are apparent, as currently KWScene emphasizes support for data-related nodes, such as Model and Volume.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/blog/files/66_2136086008_gif" width="100%"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  MRML entries of image volumes (VolumeNode-type)  including triplanar viewing parameters (Slice and SliceComposite nodes), are also preserved. Landmarks (FiducialNode) and TransformNodes are under way, while annotations, which are used by JHU to label atlas components, are planned as future work.
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Intuitive Interactivity of ParaView, Broad Functionality of ITK, Descriptiveness of Slicer-MRML
+  </strong>
+ </p>
+ <p>
+  To summarize, this project benefits from the sophisticated requirements of the JHU CIS group’s Computational Anatomy research, which in turn has elicited a new combination of open-source software platforms that builds on their strengths, namely the intuitive interactivity afforded by ParaView, the broad functionality of image analysis classes available under ITK, and the descriptiveness and flexibility of Slicer-MRML.
+ </p>
+</div>

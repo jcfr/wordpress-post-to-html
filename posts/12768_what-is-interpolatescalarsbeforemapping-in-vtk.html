@@ -1,0 +1,383 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  In VTK, there is a mapper flag called
+  <em>
+   InterpolateScalarsBeforeMapping
+  </em>
+  .  The flag affects the way scalar data is visualized with colors.  The effect can be small, or quite large, depending on the data and color map that are used.  So let’s look at some examples to see how it works.
+ </p>
+ <p>
+ </p>
+ <p>
+  If you do a Google image search for
+  <a href="http://www.google.com/images?q=opengl+triangle">
+   OpenGL triangle
+  </a>
+  you’ll find a familiar image:
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_1091171951.png" rel="noopener" target="_blank">
+   <img alt="" height="130" src="https://blog.kitware.com/blog/files/Small.174_1091171951.png" width="173"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  An image like this can be found in almost every OpenGL tutorial, somewhere around the 2nd or 3rd lesson.  First you are taught how to draw a triangle, then you are taught how to add vertex colors.  The image is an example of OpenGL color interpolation, and it looks kind of like a Pink Floyd laser show…
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_811698342.jpg" rel="noopener" target="_blank">
+   <img alt="" height="150" src="https://blog.kitware.com/blog/files/Small.174_811698342.jpg" width="272"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  In scientific visualization, we can use colors to represent data.  For example, this rendering of Mount St. Helens uses color to indicate terrain elevation:
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_406766821.png" rel="noopener" target="_blank">
+   <img alt="" height="271" src="https://blog.kitware.com/blog/files/Small.174_406766821.png" width="400"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  The following image shows the mesh from a different perspective, and you can see that it is composed of triangles.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_1740819267.png" rel="noopener" target="_blank">
+   <img alt="" height="211" src="https://blog.kitware.com/blog/files/Small.174_1740819267.png" width="312"/>
+  </a>
+  <a href="/blog/files/174_866861540.png" rel="noopener" target="_blank">
+   <img alt="" height="211" src="https://blog.kitware.com/blog/files/Small.174_866861540.png" width="313"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  The colors at the vertices are chosen based on the elevation.  Every vertex in the mesh has a scalar value which represents the elevation of the earth is at that location. We can map scalar values to colors using a lookup table.
+ </p>
+ <p>
+  <a href="/blog/files/174_1734590380.png" rel="noopener" target="_blank">
+   <img alt="" height="103" src="https://blog.kitware.com/blog/files/Small.174_1734590380.png" width="396"/>
+  </a>
+ </p>
+ <p>
+  The lookup table says that vertices with the lowest elevation are blue, and vertices with the highest elevation are red.  Vertices with elevation close to the middle will be white.
+ </p>
+ <p>
+ </p>
+ <p>
+  With VTK, you can define a color lookup table using the class
+  <a href="http://www.vtk.org/doc/nightly/html/classvtkLookupTable.html">
+   vtkLookupTable
+  </a>
+  , and you can render the mesh using a
+  <a href="http://www.vtk.org/doc/nightly/html/classvtkMapper.html">
+   vtkMapper
+  </a>
+  .  Together, these two classes provide a comprehensive API for controlling how the mesh colors are rendered.  In the API of vtkMapper, there is a flag called
+  <a href="http://www.vtk.org/doc/nightly/html/classvtkMapper.html#a9e0262837bb18752277a6a9c7b972583">
+   <em>
+    InterpolateScalarsBeforeMapping
+   </em>
+  </a>
+  which can be toggled
+  <em>
+   on
+  </em>
+  or
+  <em>
+   off
+  </em>
+  .   The default is
+  <em>
+   off
+  </em>
+  , but is it better to turn it
+  <em>
+   on
+  </em>
+  ?  The documentation says:
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   “By default, vertex color is used to map colors to a surface. Colors are interpolated after being mapped. This option avoids color interpolation by using a one dimensional texture map for the colors.”
+  </strong>
+ </p>
+ <p>
+  <strong>
+  </strong>
+ </p>
+ <p>
+  The ParaView documentation says:
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   “If on, scalars will be interpolated within polygons and color mapping will happen on a per-pixel basis.  If off, color mapping occurs at polygon points and colors are interpolated, which is generally less accurate.”
+  </strong>
+ </p>
+ <p>
+  <strong>
+  </strong>
+ </p>
+ <p>
+  So how does this flag affect a typical visualization? Let’s start with a simple example.  Using ParaView, I created a
+  <em>
+   Cylinder
+  </em>
+  source and applied the
+  <em>
+   Elevation
+  </em>
+  filter, then visualized it with the
+  <em>
+   Radiation
+  </em>
+  color map:
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_367849162.png" rel="noopener" target="_blank">
+   <img alt="" height="209" src="https://blog.kitware.com/blog/files/Small.174_367849162.png" width="309"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  The cylinder mesh is composed of vertices at the top and bottom caps, and color is interpolated along the vertical edges.  Or is it?  If you interpolate from black to white, you should get gray in the middle. But we don’t see gray, we see the red/orange/yellow progression that is defined by the color map.  That’s because ParaView has set the InterpolateScalarsBeforeMapping flag to
+  <em>
+   on
+  </em>
+  .  In ParaView, it is enabled by default.  And it’s a good thing, because here is what the visualization looks like if we disable InterpolateScalarsBeforeMapping:
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_135773488.png" rel="noopener" target="_blank">
+   <img alt="" height="207" src="https://blog.kitware.com/blog/files/Small.174_135773488.png" width="306"/>
+  </a>
+ </p>
+ <p>
+  InterpolateScalarsBeforeMapping
+  <em>
+   off.
+  </em>
+ </p>
+ <p>
+ </p>
+ <p>
+  Oops, not so colorful anymore.  The color is interpolated between the vertices, and the result doesn’t look anything like the color map.  That’s because when InterpolateScalarsBeforeMapping is off, the colors are interpolated by OpenGL using the vertex RGB values, and this can lead to the appearance of colors in your visualization which
+  <strong>
+   <em>
+    do not appear at all
+   </em>
+  </strong>
+  in the original color map.
+ </p>
+ <p>
+  The same interpolation effect occurs for wireframe visualization too:
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_675160397.png" rel="noopener" target="_blank">
+   <img alt="" height="192" src="https://blog.kitware.com/blog/files/Small.174_675160397.png" width="284"/>
+  </a>
+  <a href="/blog/files/174_1841393603.png" rel="noopener" target="_blank">
+   <img alt="" height="192" src="https://blog.kitware.com/blog/files/Small.174_1841393603.png" width="285"/>
+  </a>
+ </p>
+ <p>
+  Left, InterpolateScalarsBeforeMapping
+  <em>
+   on
+  </em>
+  .  Right, InterpolateScalarsBeforeMapping
+  <em>
+   off
+  </em>
+  .
+ </p>
+ <p>
+ </p>
+ <p>
+  For the next example, I used ParaView to generate a more interesting mesh.  I created a
+  <em>
+   Wavelet
+  </em>
+  source, then applied the
+  <em>
+   Clip
+  </em>
+  filter:
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_638418654.png" rel="noopener" target="_blank">
+   <img alt="" height="204" src="https://blog.kitware.com/blog/files/Small.174_638418654.png" width="302"/>
+  </a>
+  <a href="/blog/files/174_1848112748.png" rel="noopener" target="_blank">
+   <img alt="" height="204" src="https://blog.kitware.com/blog/files/Small.174_1848112748.png" width="302"/>
+  </a>
+ </p>
+ <p>
+  Left, InterpolateScalarsBeforeMapping
+  <em>
+   on
+  </em>
+  .  Right, InterpolateScalarsBeforeMapping
+  <em>
+   off
+  </em>
+  .
+ </p>
+ <p>
+ </p>
+ <p>
+  In this visualization, the difference is hardly noticeable.  But there is a slight difference, and it’s apparent if you use ParaView to switch rapidly between the renderings.  In ParaView, the interpolation option can be toggled in the Display panel.
+ </p>
+ <p>
+ </p>
+ <p>
+  Now, let’s see what happens if we reduce the number of colors in the lookup table.  In the following image, the lookup table contains just eight discrete colors, as shown in the vertical color bar:
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_1735344406.png" rel="noopener" target="_blank">
+   <img alt="" height="210" src="https://blog.kitware.com/blog/files/Small.174_1735344406.png" width="311"/>
+  </a>
+  <a href="/blog/files/174_1838421206.png" rel="noopener" target="_blank">
+   <img alt="" height="210" src="https://blog.kitware.com/blog/files/Small.174_1838421206.png" width="312"/>
+  </a>
+ </p>
+ <p>
+  Left, InterpolateScalarsBeforeMapping
+  <em>
+   on
+  </em>
+  .  Right, InterpolateScalarsBeforeMapping
+  <em>
+   off
+  </em>
+  .
+ </p>
+ <p>
+ </p>
+ <p>
+  On the left, we can clearly see the contours of the scalar field, but on the right, the contours are obscured due to the color interpolation. In both modes, the colors at the vertices are the same, the difference is how color is assigned
+  <em>
+   between
+  </em>
+  the vertices.  Clearly, color interpolation is not the best strategy for this type of visualization.
+ </p>
+ <p>
+ </p>
+ <p>
+  As the vtkMapper documentation states: color interpolation is avoided when you set InterpolateScalarsBeforeMapping to
+  <em>
+   on
+  </em>
+  .  When it is
+  <em>
+   on
+  </em>
+  , VTK will generate a 1-dimensional texture that encodes the color lookup table.  Vertex colors are replaced with vertex texture coordinates.  Instead of interpolating colors, OpenGL will interpolate the texture coordinates, and assign pixel colors via texture lookup.
+ </p>
+ <p>
+ </p>
+ <p>
+  For more information about VTK, try the
+  <a href="https://www.kitware.com/what-we-offer/#books">
+   VTK and ParaView books
+  </a>
+  , or browse
+  <a href="http://www.vtk.org/Wiki/VTK/Tutorials">
+   tutorials
+  </a>
+  and
+  <a href="http://www.vtk.org/Wiki/VTK/Examples">
+   examples
+  </a>
+  online.
+ </p>
+ <p>
+  <a href="https://www.kitware.com/what-we-offer/#books" rel="noopener" target="_blank">
+   <img alt="" class="alignnone" height="172" src="https://blog.kitware.com/blog/files/Small.174_1878146281.png" width="157"/>
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+  Scalar interpolation is also supported in
+  <a href="http://www.vtk.org/Wiki/VES">
+   Kiwi
+  </a>
+  , a framework for cross platform mobile device development using VTK, with OpenGL ES 2.0 rendering supported through
+  <a href="http://www.vtk.org/Wiki/VES">
+   VES
+  </a>
+  .  For more information, please ask on the
+  <a href="http://public.kitware.com/cgi-bin/mailman/listinfo/ves">
+   VES public mailing list
+  </a>
+  .
+ </p>
+ <p>
+ </p>
+ <p>
+  Thanks for reading!
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  A note on point cloud rendering: if you are using VTK for point cloud rendering with single vertex cells, then you should leave InterpolateScalarsBeforeMapping
+  <em>
+   off
+  </em>
+  .  Scalar interpolation isn’t needed when rendering point clouds, and you will experience poor rendering performance otherwise.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/174_2037169401.png" rel="noopener" target="_blank">
+   <img alt="" height="240" src="https://blog.kitware.com/blog/files/Small.174_2037169401.png" width="357"/>
+  </a>
+ </p>
+ <p>
+  For point cloud visualization, set InterpolateScalarsBeforeMapping
+  <em>
+   off
+  </em>
+  .
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  image credits:
+ </p>
+ <p>
+  http://onlyinpgh.com/2011/04/carnegie-laser-show/
+ </p>
+</div>

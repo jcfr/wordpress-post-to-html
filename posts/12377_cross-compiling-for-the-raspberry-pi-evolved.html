@@ -1,0 +1,1207 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <div class="document" id="cross-compiling-for-the-raspberry-pi-evolved">
+  <div class="section" id="cross-compilation-process-evolution">
+   <h1>
+    Cross-compilation process evolution
+   </h1>
+   <p>
+    In
+    <a class="reference external" href="https://blog.kitware.com/cross-compiling-for-raspberry-pi/">
+     previous
+    </a>
+    <a class="reference external" href="https://blog.kitware.com/cross-compiling-itk-for-raspbery-pi/">
+     posts
+    </a>
+    , Luis taught us how to
+    <a class="reference external" href="https://en.wikipedia.org/wiki/Cross_compiler">
+     cross-compile
+    </a>
+    for the
+    <a class="reference external" href="https://www.raspberrypi.org/">
+     Raspberry Pi
+    </a>
+    . In this post, we’ll discuss an evolved approach for cross-compiling for the Raspberry Pi and
+    <a class="reference external" href="https://www.raspberrypi.org/products/raspberry-pi-2-model-b/">
+     Raspberry Pi 2
+    </a>
+    .
+   </p>
+   <p>
+    The cross-compiling process for this ARM platform from an x86_64 host is now greatly simplified. Also, we can now run the test suite!
+    <strong>
+     <em>
+      wOOt!
+     </em>
+    </strong>
+   </p>
+   <p style="text-align: center;">
+    <img alt="" src="http://www.itk.org/Doxygen43/html/itkLogo.jpg" style="width: 200px; height: 128px;"/>
+    <img alt="" src="https://www.kitware.com/blog/files/Small.6_1187232131.jpg" style="width: 200px; height: 133px;"/>
+    <a href="/blog/files/152_1390236703.png" rel="noopener" style="line-height: 1.6em;" target="_blank">
+     <img src="https://blog.kitware.com/blog/files/Small.152_1390236703.png" style="width: 200px;"/>
+    </a>
+   </p>
+   <p>
+    While cross-compiling, the following improvements are notable, some of which are specific to
+    <a class="reference external" href="http://itk.org">
+     ITK
+    </a>
+    .
+   </p>
+   <div class="section" id="the-toolchain-is-a-single-command-away">
+    <h2>
+     1) The toolchain is a single command away
+    </h2>
+    <p>
+     As discussed in a
+     <a class="reference external" href="https://blog.kitware.com/easy-cross-compiler-toolchain-access-with-docker-and-cmake/">
+      previous post
+     </a>
+     ,
+     <a class="reference external" href="https://docker.com">
+      Docker
+     </a>
+     is a great, cross-platform way to download and run pre-built and configured toolchains.
+    </p>
+    <p>
+    </p>
+   </div>
+   <div class="section" id="no-need-to-populate-a-toolchain-cmake-file">
+    <h2>
+     2) No need to populate a
+     <cite>
+      Toolchain.cmake
+     </cite>
+     file
+    </h2>
+    <p>
+     Since we used a Docker image that is pre-configured with its own toolchain file, we only need to do is pass CMake the path to this single file, and CMake is informed of all it needs to know about the toolchain.
+    </p>
+    <p>
+    </p>
+   </div>
+   <div class="section" id="no-need-to-populate-a-tryrunresults-cmake-file">
+    <h2>
+     3) No need to populate a
+     <cite>
+      TryRunResults.cmake
+     </cite>
+     file
+    </h2>
+    <p>
+     <a class="reference external" href="http://cmake.org">
+      CMake
+     </a>
+     gets information specific to the target system with the
+     <a class="reference external" href="http://www.cmake.org/cmake/help/git-master/command/try_run.html">
+      try_run
+     </a>
+     command. When cross-compiling, access to the target system is not available. By default, CMake will output a
+     <cite>
+      TryRunResults.cmake
+     </cite>
+     that must be populated by transferring the
+     <a class="reference external" href="http://www.cmake.org/cmake/help/git-master/command/try_run.html">
+      try_run
+     </a>
+     executables over to the target system, running the commands, and entering the output and return value in this file. This file must then be transferred back to the build host, and then the
+     <cite>
+      TryRunResults.cmake
+     </cite>
+     are read by CMake before the build process can be continued.
+    </p>
+    <p>
+     In this case, this entire process is now avoided when a
+     <a class="reference external" href="http://www.cmake.org/cmake/help/git-master/variable/CMAKE_CROSSCOMPILING_EMULATOR.html#variable:CMAKE_CROSSCOMPILING_EMULATOR">
+      CMAKE_CROSSCOMPILING_EMULATOR
+     </a>
+     is configured in the toolchain file. This emulator is used to run the
+     <a class="reference external" href="http://www.cmake.org/cmake/help/git-master/command/try_run.html">
+      try_run
+     </a>
+     executables, and the build configuration process proceeds automatically without any user intervention required. The
+     <a class="reference external" href="http://wiki.qemu.org/download/qemu-doc.html">
+      QEMU user-mode
+     </a>
+     emulator is applied for this task.
+    </p>
+    <p>
+    </p>
+   </div>
+   <div class="section" id="no-need-for-tiff-and-hdf5-workarounds">
+    <h2>
+     4) No need for TIFF and HDF5 workarounds
+    </h2>
+    <p>
+     ITK has been improved so the internal third-party library builds of TIFF and HDF5 no longer require manual intervention.
+    </p>
+    <p>
+    </p>
+   </div>
+   <div class="section" id="build-all-the-things">
+    <h2>
+     5) Build all the things
+    </h2>
+    <p>
+     All the default ITK modules,
+     <em>
+      and their tests
+     </em>
+     , now build without issue.
+    </p>
+    <p>
+    </p>
+   </div>
+   <div class="section" id="run-the-test-suite">
+    <h2>
+     6) Run the test suite
+    </h2>
+    <p>
+     The test suite can also be run on the build host.
+     <a class="reference external" href="http://www.cmake.org/cmake/help/git-master/variable/CMAKE_CROSSCOMPILING_EMULATOR.html#variable:CMAKE_CROSSCOMPILING_EMULATOR">
+      CMAKE_CROSSCOMPILING_EMULATOR
+     </a>
+     will be used to run all tests that use executables built for the target system.
+    </p>
+    <p>
+    </p>
+   </div>
+   <div class="section" id="no-pi-required">
+    <h2>
+     7) No Pi required
+    </h2>
+    <p>
+     We don’t actually need a physical Raspberry Pi to develop for one.
+    </p>
+    <p>
+    </p>
+   </div>
+  </div>
+  <div class="section" id="get-the-cross-compiler">
+   <h1>
+    Get the cross-compiler
+   </h1>
+   <p>
+    If
+    <a class="reference external" href="http://docs.docker.com/installation/">
+     Docker is installed
+    </a>
+    , download the cross-compiler
+    <a class="reference external" href="https://docs.docker.com/userguide/dockerimages/">
+     image
+    </a>
+    . This cross-compiler with work will both the Raspberry Pi and the Raspberry Pi 2, even though Raspberry Pi is
+    <a class="reference external" href="https://en.wikipedia.org/wiki/ARM_architecture">
+     ARMv7
+    </a>
+    .
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e819dacd9556304158" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker pull thewtex/cross-compiler-linux-armv6</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e819dacd9556304158-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e819dacd9556304158-1">
+          <span class="crayon-e">
+           docker
+          </span>
+          <span class="crayon-e">
+           pull
+          </span>
+          <span class="crayon-v">
+           thewtex
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           cross
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           compiler
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           linux
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           armv6
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+  </div>
+  <div class="section" id="get-the-code">
+   <h1>
+    Get the code
+   </h1>
+   <p>
+    Download the ITK source tree if it not already available, and create a build directory:
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e819dace2770637163" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd ~/src
+git clone http://itk.org/ITK.git
+mkdir -p ~/bin/ITK-build</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e819dace2770637163-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace2770637163-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace2770637163-3">
+          3
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e819dace2770637163-1">
+          <span class="crayon-v">
+           cd
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-e">
+           src
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace2770637163-2">
+          <span class="crayon-e">
+           git
+          </span>
+          <span class="crayon-r">
+           clone
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           http
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-c">
+           //itk.org/ITK.git
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace2770637163-3">
+          <span class="crayon-v">
+           mkdir
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           p
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           bin
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           build
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+  </div>
+  <div class="section" id="build-and-test">
+   <h1>
+    Build and test!
+   </h1>
+   <p>
+    Start up a docker container, and mount the source and build directories as volumes in the container:
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e819dace4778122868" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+docker run --rm -it \
+  -v ~/src/ITK:/usr/src/ITK:ro \
+  -v ~/bin/ITK-build:/usr/src/ITK-build:rw \
+  thewtex/cross-compiler-linux-armv6</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e819dace4778122868-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace4778122868-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace4778122868-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace4778122868-4">
+          4
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e819dace4778122868-1">
+          <span class="crayon-e">
+           docker
+          </span>
+          <span class="crayon-v">
+           run
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           --
+          </span>
+          <span class="crayon-v">
+           rm
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           it
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace4778122868-2">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           v
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-i">
+           ro
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace4778122868-3">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           v
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           ~
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           bin
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           build
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           build
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-i">
+           rw
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace4778122868-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           thewtex
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           cross
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           compiler
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           linux
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           armv6
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0003 seconds] -->
+   <p>
+    The
+    <cite>
+     –rm
+    </cite>
+    flag tells Docker to remove the image after we exit. The
+    <cite>
+     -it
+    </cite>
+    flag tells Docker to start up an interactive terminal. Our Docker image is configured to drop us into a new
+    <a class="reference external" href="https://en.wikipedia.org/wiki/Bash_(Unix_shell)">
+     bash
+    </a>
+    shell by default. Next, clear the build tree and configure the build:
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e819dace7895412789" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cd /usr/src/ITK-build
+rm -rf *
+cmake \
+  -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+  -DBUILD_EXAMPLES=OFF \
+  -G Ninja \
+  ../ITK</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e819dace7895412789-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace7895412789-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace7895412789-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace7895412789-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace7895412789-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace7895412789-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace7895412789-7">
+          7
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e819dace7895412789-1">
+          <span class="crayon-v">
+           cd
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-e">
+           build
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace7895412789-2">
+          <span class="crayon-v">
+           rm
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-e ">
+           rf *
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace7895412789-3">
+          <span class="crayon-i">
+           cmake
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace7895412789-4">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_TOOLCHAIN_FILE
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           CMAKE_TOOLCHAIN_FILE
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace7895412789-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DBUILD_EXAMPLES
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-i">
+           OFF
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace7895412789-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           G
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-i">
+           Ninja
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace7895412789-7">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0003 seconds] -->
+   <p>
+    The Docker image is configured to set the path to the toolchain file in the
+    <cite>
+     CMAKE_TOOLCHAIN_FILE
+    </cite>
+    environmental variable. We set
+    <cite>
+     BUILD_EXAMPLES
+    </cite>
+    to
+    <em>
+     OFF
+    </em>
+    because the test driver executable, used to test the examples, spawns a process to run the example. QEMU does not currently support this, even though the examples build fine. We also tell CMake to use our favorite generator,
+    <a class="reference external" href="https://martine.github.io/ninja/">
+     Ninja
+    </a>
+    .
+   </p>
+   <p>
+    Next, we will run an
+    <em>
+     Experimental
+    </em>
+    ctest build. CTest does a CMake configuration, executes the build, runs the tests, and submits the results to the
+    <a class="reference external" href="https://open.cdash.org/index.php?project=Insight">
+     CDash dashboard
+    </a>
+    . QEMU user-mode currently is limited in its multi-threading capabilities, so run the tests in single-threaded mode by setting the
+    <cite>
+     ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
+    </cite>
+    environmental variable:
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e819dace9467466892" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+export ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1
+ctest -j $(nproc) -D Experimental</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e819dace9467466892-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dace9467466892-2">
+          2
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e819dace9467466892-1">
+          <span class="crayon-e">
+           export
+          </span>
+          <span class="crayon-v">
+           ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-cn">
+           1
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dace9467466892-2">
+          <span class="crayon-v">
+           ctest
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           j
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           (
+          </span>
+          <span class="crayon-v">
+           nproc
+          </span>
+          <span class="crayon-sy">
+           )
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           D
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           Experimental
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+  </div>
+  <div class="section" id="create-applications">
+   <h1>
+    Create applications
+   </h1>
+   <p>
+    We can build applications against ITK in a similar way. To build
+    <a class="reference external" href="http://itk.org/ITKExamples/src/Core/Common/BuildAHelloWorldProgram/Documentation.html">
+     this example
+    </a>
+    :
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e819dacec465555948" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+wget http://itk.org/ITKExamples/src/Core/Common/BuildAHelloWorldProgram/BuildAHelloWorldProgram.tar.gz
+tar xvzf BuildAHelloWorldProgram.tar.gz
+cd BuildAHelloWorldProgram/build
+cmake \
+  -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DITK_DIR=/usr/src/ITK-build \
+  ..
+ninja</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-3">
+          3
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-4">
+          4
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-5">
+          5
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-6">
+          6
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-7">
+          7
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-8">
+          8
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-9">
+          9
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41e819dacec465555948-10">
+          10
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-1">
+          <span class="crayon-e">
+           wget
+          </span>
+          <span class="crayon-v">
+           http
+          </span>
+          <span class="crayon-o">
+           :
+          </span>
+          <span class="crayon-c">
+           //itk.org/ITKExamples/src/Core/Common/BuildAHelloWorldProgram/BuildAHelloWorldProgram.tar.gz
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-2">
+          <span class="crayon-e">
+           tar
+          </span>
+          <span class="crayon-e">
+           xvzf
+          </span>
+          <span class="crayon-v">
+           BuildAHelloWorldProgram
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-v">
+           tar
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-e">
+           gz
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-3">
+          <span class="crayon-e">
+           cd
+          </span>
+          <span class="crayon-v">
+           BuildAHelloWorldProgram
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-e">
+           build
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-4">
+          <span class="crayon-i">
+           cmake
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-5">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           G
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-i">
+           Ninja
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-6">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_TOOLCHAIN_FILE
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-sy">
+           $
+          </span>
+          <span class="crayon-sy">
+           {
+          </span>
+          <span class="crayon-v">
+           CMAKE_TOOLCHAIN_FILE
+          </span>
+          <span class="crayon-sy">
+           }
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-7">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DCMAKE_BUILD_TYPE
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-i">
+           Release
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-8">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-v">
+           DITK_DIR
+          </span>
+          <span class="crayon-o">
+           =
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           usr
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           src
+          </span>
+          <span class="crayon-o">
+           /
+          </span>
+          <span class="crayon-v">
+           ITK
+          </span>
+          <span class="crayon-o">
+           -
+          </span>
+          <span class="crayon-i">
+           build
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           \
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-9">
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41e819dacec465555948-10">
+          <span class="crayon-v">
+           ninja
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0003 seconds] -->
+   <p>
+    ctest -V
+   </p>
+   <p>
+   </p>
+   <p>
+    Happy hacking!
+   </p>
+  </div>
+ </div>
+</div>

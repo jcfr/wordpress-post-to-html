@@ -1,0 +1,86 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Last July, for the
+  <a href="http://kitware.com/products/thesource.html">
+   Kitware Source
+  </a>
+  , our quarterly developer newsletter, I wrote an article called “
+  <a href="http://kitware.com/products/archive/kitware_quarterly0709.pdf">
+   CDash Subprojects
+  </a>
+  .”
+  <a href="http://kitware.com/products/archive/kitware_quarterly0709.pdf">
+   http://kitware.com/products/archive/kitware_quarterly0709.pdf
+  </a>
+  (see pp. 10-13)
+ </p>
+ <p>
+  Recently, it came to my attention that there are two omissions in that article, and so I am here today to make amends, and offer you this addendum.
+ </p>
+ <p>
+  There are two additional steps you should take to get subprojects and labels working flawlessly on your CDash dashboard. The first step is mandatory if you follow the article to the letter, and should not have been left out. The sample scripts presented do not submit pretty results as written. The second step is useful for improved warning and error reporting.
+ </p>
+ <p>
+  <strong>
+   1. Use the APPEND argument in all ctest_build(…) script calls.
+  </strong>
+ </p>
+ <p>
+  When you submit to a CDash dashboard with multiple ctest_submit calls in a script, submitting individual parts each time you do so, it is very important that when you call ctest_build, you use the APPEND flag. Near the bottom of page 12, in the first column, there’s a line of code that reads:
+ </p>
+ <p>
+  <code>
+   ctest_build(BUILD "${CTEST_BINARY_DIRECTORY}")
+  </code>
+ </p>
+ <p>
+  It should instead read:
+ </p>
+ <p>
+  <code>
+   ctest_build(BUILD "${CTEST_BINARY_DIRECTORY}"
+   <strong>
+    APPEND
+   </strong>
+   )
+  </code>
+ </p>
+ <p>
+  Similarly for subsequent sample uses of the ctest_build command. When splitting into subproject based steps, the APPEND argument is critical.
+ </p>
+ <p>
+  If you do not add APPEND, then strange things happen: multiple rows for what should have been the configure, build and test steps for the same row; rows that are just simply missing entirely. The reason behind this is all about CDash behaving in a backwards compatible manner, and is a topic for a whole ‘nother blog entry.
+ </p>
+ <p>
+  <strong>
+   2. Set CTEST_USE_LAUNCHERS to 1 either in the driving script and the initial configuration cache OR in your CTestConfig.cmake.
+  </strong>
+ </p>
+ <p>
+  The idea behind ctest launchers is that they wrap each compile or link step so the output can be saved and sent to CDash in the event of a warning or error. Rather than trying to grep through and analyze the full build output after thousands of compile and link calls, with this technique, ctest may simply capture the error output directly and pass it in its entirety to the dashboard. This helps immensely in figuring out some why some errors occur, without necessarily even having access to the client machine.
+ </p>
+ <p>
+  Additionally, since each call to compile or link is wrapped when this setting is on, ctest can associate labels with build errors or warnings. Since it knows what source file or target caused the error, and it knows the source-file- and target-to-label mappings, it can pass that information along to CDash.
+ </p>
+ <p>
+  I would recommend doing this in the driving script as the best practice:
+ </p>
+ <p>
+  <code>
+   set(CTEST_USE_LAUNCHERS 1)
+  </code>
+ </p>
+ <p>
+  ...
+ </p>
+ <p>
+  ctest_configure(BUILD "${CTEST_BINARY_DIRECTORY}"
+ </p>
+ <p>
+  OPTIONS "-DCTEST_USE_LAUNCHERS=${CTEST_USE_LAUNCHERS}"
+ </p>
+ <p>
+  ... )
+ </p>
+</div>

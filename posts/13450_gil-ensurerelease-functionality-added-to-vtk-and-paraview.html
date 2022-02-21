@@ -1,0 +1,431 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Some people have been experiencing some problems with the Python interpreter in
+  <span class="spellver" title="">
+   VTK
+  </span>
+  and
+  <span class="spellver" title="Para View, Para-View, Preview, Purview, Privier, Previews, Prove, Review, Parade, Privies, Palaver, Parader, Parried, Parries, Preview's">
+   ParaView,
+  </span>
+  when initializing their own Python interpreter and using
+  <span class="spellverupdated" title="">
+   ParaView
+  </span>
+  Python capability as well.
+ </p>
+ <p>
+  A new
+  <span class="ver" title="">
+   CMake
+  </span>
+  variable has been added to
+  <span class="spellverupdated" title="">
+   ParaView,
+  </span>
+  VTK_PYTHON_FULL_THREADSAFE, which will turn on the GIL Ensure/Release on all
+  <span class="spellmodupdated" title="">
+   VTK
+  </span>
+  and P
+  <span class="spellmodupdated" title="">
+   araView
+  </span>
+  Python calls.
+ </p>
+ <p>
+  If you are
+  <span class="spellmodupdated" title="">
+   developing
+  </span>
+  for
+  <span class="spellver" title="">
+   VTK
+  </span>
+  and
+  <span class="spellverupdated" title="">
+   ParaView,
+  </span>
+  make sure to use the
+  <span class="verupdated" title="">
+   vtkPythonScopeGilEnsurer
+  </span>
+  before any Python call. It is a
+  <span class="spellmod" title="">
+   noop
+  </span>
+  without the CM
+  <span class="spellmod" title="">
+   make
+  </span>
+  <span class="verupdated" title="">
+   option, but will
+  </span>
+  automatically call
+  <span class="ver" title="">
+   PyGILState_Ensure(
+  </span>
+  ) and
+  <span class="ver" title="">
+   PyGILState_Release(
+  </span>
+  ) on the scope of the variable if defined.
+ </p>
+ <p>
+  In vtkPythonInterpreter.cxx e.g. :
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8429d78e563854879" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+    // Redirect Python's stdout and stderr and stdin - GIL protected operation
+    {   
+    vtkPythonScopeGilEnsurer gilEnsurer;
+    PySys_SetObject(const_cast&lt;char*&gt;("stdout"),
+      reinterpret_cast&lt;PyObject*&gt;(wrapperOut));
+    PySys_SetObject(const_cast&lt;char*&gt;("stderr"),
+      reinterpret_cast&lt;PyObject*&gt;(wrapperErr));
+    PySys_SetObject(const_cast&lt;char*&gt;("stdin"),
+      reinterpret_cast&lt;PyObject*&gt;(wrapperOut));
+    Py_DECREF(wrapperOut);
+    Py_DECREF(wrapperErr);
+    }   </textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8429d78e563854879-12">
+        12
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-1">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Redirect Python's stdout and stderr and stdin - GIL protected operation
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vtkPythonScopeGilEnsurer
+        </span>
+        <span class="crayon-v">
+         gilEnsurer
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         PySys_SetObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         const_cast
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "stdout"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         reinterpret_cast
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e ">
+         PyObject*
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         wrapperOut
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         PySys_SetObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         const_cast
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "stderr"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         reinterpret_cast
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e ">
+         PyObject*
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         wrapperErr
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         PySys_SetObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         const_cast
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "stdin"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         reinterpret_cast
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e ">
+         PyObject*
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         wrapperOut
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Py_DECREF
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         wrapperOut
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Py_DECREF
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         wrapperErr
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8429d78e563854879-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

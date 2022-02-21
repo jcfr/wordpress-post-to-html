@@ -1,0 +1,939 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  If you’ve written unit tests in C++, you may have heard of
+  <a href="https://github.com/google/googletest">
+   Google Test
+  </a>
+  . Google Test is a C++ unit testing framework that makes it easy to write and execute unit tests. Compared to writing unit tests without a framework, Google Test allows developers to write tests much faster without sacrificing quality, often resulting in tests with more useful diagnostics on failure compared to tests written without a framework, or with a lesser-quality framework.
+ </p>
+ <h2>
+  Myths and Overview
+ </h2>
+ <p>
+  A misconception I have encountered several times is that Google Test “replaces” CTest. This is completely untrue. CTest is a tool for managing and executing a complete suite of tests (i.e. all tests within a project), and for submitting build and test results to CDash. Google Test is a tool for writing
+  <em>
+   individual
+  </em>
+  C++ tests. Although Google Test does provide some overlap in that both it and CTest have notions of selecting tests or test cases to execute, the two tools are complementary. Most projects will have more than one test executable, and may have tests that are not C++ executables, and will therefore have need of CTest. Even in the case of a single text executable, CTest is still useful for submitting results to CDash.
+ </p>
+ <p>
+  The main purpose of CMake’s Google Test support is to help Google Test and CTest “play together”. The simplest way to register a Google Test test with CTest is to simply use
+  <a href="https://cmake.org/cmake/help/git-master/command/add_test.html">
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433844c347658600" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      add_test
+     </span>
+    </span>
+   </span>
+  </a>
+  to add a test that runs the test executable with no arguments. This will create a single CTest test that runs all Google Test test cases in the executable. While this works, it is not very granular; if the test fails, there is very little information about the location of the failure short of inspecting the test output.
+ </p>
+ <p>
+  Thus,
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338453015894520" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  was created. This command, provided by the
+  <a href="https://cmake.org/cmake/help/git-master/module/GoogleTest.html">
+   GoogleTest
+  </a>
+  module, inspects the test sources to extract individual test cases, in order to create a separate CTest test for each Google Test test case. By doing so, the user can see from the CTest summary (or on the CDash page which lists failing tests) which specific Google Test test case or cases failed. Unfortunately, this approach comes with several drawbacks.
+ </p>
+ <h2>
+  Problems
+ </h2>
+ <p>
+  The first, perhaps most obvious, and perhaps worst issue is that test inspection happens during the CMake configure stage. This means that any time a test source file is change, CMake must be re-run. For some projects, this may consume a significant amount of time.
+ </p>
+ <p>
+  Most of the problems, however, stem from the manner in which tests are found. Since CMake is not a C++ compiler,
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338456032227336" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  finds tests using regular expressions. This approach is fairly simple, and is subject to a number of shortcomings by virtue of its inability to fully understand C++ code:
+ </p>
+ <ul class="simple">
+  <li style="margin-bottom: 1em">
+   It does not handle conditional compilation. If a test is disabled by preprocessor logic or C-style block comments, either because the author did not use the recommended method of disabling a test case by prepending
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338458401232139" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     DISABLED_
+    </span>
+   </span>
+   to its name,
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433845b845409878" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      gtest_add_tests
+     </span>
+    </span>
+   </span>
+   will still detect it and erroneously attempt to register it with CTest, resulting in a CTest test that cannot be executed.
+  </li>
+  <li style="margin-bottom: 1em">
+   It has limited understanding of type- and value-parameterized tests. Because the mechanism used to instantiate these involves complex C++ logic,
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433845d976331390" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      gtest_add_tests
+     </span>
+    </span>
+   </span>
+   has no realistic hope of determining the individual types or values on which a test or test case is instantiated. As a result,
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433845f672903833" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      gtest_add_tests
+     </span>
+    </span>
+   </span>
+   is only able to add the “abstract” test, resulting in a CTest test that executes the test cases over all types or values. While this is an improvement over running
+   <em>
+    all
+   </em>
+   tests as a single CTest test, it falls short of the granularity that is possible.
+  </li>
+  <li style="margin-bottom: 1em">
+   It does not understand esoteric ways of declaring a test. For example, if multiple test cases are generated via preprocessor macro expansion, such tests will not be found by
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338461491825111" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      gtest_add_tests
+     </span>
+    </span>
+   </span>
+   . (This affected me personally and is largely why I created the dynamic discovery mechanism. More in the next section…)
+  </li>
+ </ul>
+ <h2>
+  History
+ </h2>
+ <p>
+  Several years ago, I was working on a library that used Google Test. I wanted to implement some type-parameterized tests, but was unhappy with the way Google Test named the test cases using its built-in support for such tests. Instead, I ended up using a preprocessor macro to synthesize multiple test cases for the set of types to be tested. This resulted in the test cases being declared in a somewhat esoteric manner that
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338463466323405" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  was unable to detect.
+ </p>
+ <p>
+  The built-in argument handling for Google Test, however, includes a mode that lists the available tests. Thus, I wrote my own mechanism that would detect and register tests by actually
+  <em>
+   running
+  </em>
+  the test with this flag.
+ </p>
+ <p>
+  Unfortunately, the library never saw the light of day. I moved on to other projects, and did not have an opportunity to interact with Google Test again for quite some time.
+ </p>
+ <p>
+  Then, recently, I started working on
+  <a class="reference external" href="http://www.kwiver.org/">
+   KWIVER
+  </a>
+  . At the time, KWIVER had its own unit test “framework” (if the extremely minimal set of utility macros even warrants the term), which was inherited from — and is still used by — sprokit. Initially, I attempted to use this when writing unit tests for new features I was adding, but I quickly grew to feel constrained by the limited feature set. Having used Google Test previously, I knew there was a better way.
+ </p>
+ <p>
+  Thus, the seed was planted to dust off the dynamic test discovery mechanism I’d written years ago. This time, I knew I didn’t want to just dump a copy into KWIVER’s repository. I wanted
+  <em>
+   anyone
+  </em>
+  to be able to use my discovery mechanism, which meant cleaning it up and submitting it to CMake upstream. In the process, I realized that the mechanism would be greatly simplified by being able to list more than one additional CTest include file. This led to
+  <a class="reference external" href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1031">
+   CMake!1031
+  </a>
+  , which added
+  <a class="reference external" href="https://cmake.org/cmake/help/git-master/prop_dir/TEST_INCLUDE_FILES.html">
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338465028777100" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      CTEST_INCLUDE_FILES
+     </span>
+    </span>
+   </span>
+  </a>
+  , and
+  <a class="reference external" href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1056">
+   CMake!1056
+  </a>
+  .
+ </p>
+ <h2>
+  Operation, Features and Usage
+ </h2>
+ <p>
+  <a class="reference external" href="https://gitlab.kitware.com/cmake/cmake/merge_requests/1056">
+   CMake!1056
+  </a>
+  introduces a new way of registering Google Test tests:
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338467753196518" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  . Unlike
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338469606988149" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  , this new mechanism works by setting up a post-link step that runs the test executable after it has been built in order to discover tests. The executable’s output is parsed by a utility script (also bundled with CMake) in order to generate at build time a supplemental CTest script, which the command registers for inclusion using
+  <a class="reference external" href="https://cmake.org/cmake/help/git-master/prop_dir/TEST_INCLUDE_FILES.html">
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433846b716782563" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      CTEST_INCLUDE_FILES
+     </span>
+    </span>
+   </span>
+  </a>
+  . Although this slightly complicates the process of adding additional test properties to individual test cases, it solves the problems mentioned previously. Since discovery occurs at build time, there is no need to re-run CMake because a test source file has changed. Test discovery is also 100% accurate, and type- and value-parameterized tests are split into individual CTest tests.
+ </p>
+ <p>
+  Use of
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433846d558921808" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  is similar to
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433846f439518310" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  , and in many cases the two commands share options. In the simplest case, the only argument that must be given to
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338471520505602" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  is the target name of the test executable. Other supported arguments include passing additional arguments when executing the test, specifying properties to be set on all CTest tests registered via a
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338472974888551" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  invocation, adding a prefix and/or suffix to the CTest test name, and others. (See the
+  <a class="reference external" href="https://cmake.org/cmake/help/git-master/module/GoogleTest.html">
+   GoogleTest
+  </a>
+  module’s documentation for details.)
+ </p>
+ <p>
+  If it is necessary to set properties on only certain CTest tests belonging to a test executable, this is best accomplished by writing a
+  <em>
+   separate
+  </em>
+  CTest script to set these properties, and adding the script to
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338474878623239" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     CTEST_INCLUDE_FILES
+    </span>
+   </span>
+  </span>
+  (
+  <em>
+   after
+  </em>
+  invoking
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338476548047508" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  , so that the custom script is evaluated after the script which registers the discovered tests). The list of registered tests is made available in a variable (see
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433847b787003167" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     TEST_LIST
+    </span>
+   </span>
+  </span>
+  ), which can assist in determining the names of the CTest tests to be modified.
+ </p>
+ <h2>
+  Examples
+ </h2>
+ <p>
+  To help illustrate the difference between the old, static test case discovery, and the new, dynamic test case discovery, consider the following CMake snippet:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8433847d920873105" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+include(GoogleTest)
+
+add_executable(tests tests.cpp)
+target_link_libraries(tests GTest::GTest)
+
+gtest_add_tests(TARGET tests TEST_PREFIX old:)
+gtest_discover_tests(tests TEST_PREFIX new:)
+add_test(NAME monolithic COMMAND tests)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8433847d920873105-8">
+        8
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-1">
+        <span class="crayon-e">
+         include
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         GoogleTest
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-3">
+        <span class="crayon-e">
+         add_executable
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         tests
+        </span>
+        <span class="crayon-v">
+         tests
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         cpp
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-4">
+        <span class="crayon-e">
+         target_link_libraries
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         tests
+        </span>
+        <span class="crayon-v">
+         GTest
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         GTest
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-6">
+        <span class="crayon-e">
+         gtest_add_tests
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         TARGET
+        </span>
+        <span class="crayon-e">
+         tests
+        </span>
+        <span class="crayon-e">
+         TEST_PREFIX
+        </span>
+        <span class="crayon-v">
+         old
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-7">
+        <span class="crayon-e">
+         gtest_discover_tests
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         tests
+        </span>
+        <span class="crayon-e">
+         TEST_PREFIX
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8433847d920873105-8">
+        <span class="crayon-e">
+         add_test
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         NAME
+        </span>
+        <span class="crayon-e">
+         monolithic
+        </span>
+        <span class="crayon-e">
+         COMMAND
+        </span>
+        <span class="crayon-v">
+         tests
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  In both cases, registering the tests is quite simple; the appropriate command is used, and is given the target name of the test executable. Since this example is demonstrating both styles of test registration, a prefix has been added so that the test names will not collide. For the sake of comparison, the test executable has also been registered using
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433847f685546251" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     add_test
+    </span>
+   </span>
+  </span>
+  .
+ </p>
+ <div style="margin: 0 2em;background: #e9f2fc;border-left: 0.3em solid #d5e5f8;padding-left: 0.5em">
+  <p style="font-weight: bold">
+   Note
+  </p>
+  <p>
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338481418297706" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      gtest_add_tests
+     </span>
+    </span>
+   </span>
+   requires that the target name is tagged to disambiguate tagged-argument invocation from an older interface that took only positional arguments. Since
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338482610736090" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      gtest_discover_tests
+     </span>
+    </span>
+   </span>
+   did not have this constraint, it takes the test target as a positional argument, while remaining arguments are always tagged.
+  </p>
+ </div>
+ <p>
+  The test code (not shown) used for this example exercises most of the corners of Google Test, including both type- and value-parameterized tests, explicitly disabled tests, and a test case that is guarded by a preprocessor condition.
+ </p>
+ <p>
+  Now, consider the output from CTest:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c84338484259595012" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+Test project /path/to/build
+      Start  1: new:DisabledSuite.test
+ 1/20 Test  #1: new:DisabledSuite.test ...............***Not Run (Disabled)   0.00 sec
+      Start  2: new:DisabledTest.test
+ 2/20 Test  #2: new:DisabledTest.test ................***Not Run (Disabled)   0.00 sec
+      Start  3: new:SimpleTest.test
+ 3/20 Test  #3: new:SimpleTest.test ..................   Passed    0.00 sec
+      Start  4: new:TypedTest/int.test1
+ 4/20 Test  #4: new:TypedTest/int.test1 ..............   Passed    0.00 sec
+      Start  5: new:TypedTest/int.test2
+ 5/20 Test  #5: new:TypedTest/int.test2 ..............   Passed    0.00 sec
+      Start  6: new:TypedTest/long.test1
+ 6/20 Test  #6: new:TypedTest/long.test1 .............   Passed    0.00 sec
+      Start  7: new:TypedTest/long.test2
+ 7/20 Test  #7: new:TypedTest/long.test2 .............   Passed    0.00 sec
+      Start  8: new:values/IntValueTest.test/1
+ 8/20 Test  #8: new:values/IntValueTest.test/1 .......   Passed    0.00 sec
+      Start  9: new:values/IntValueTest.test/2
+ 9/20 Test  #9: new:values/IntValueTest.test/2 .......   Passed    0.00 sec
+      Start 10: new:values/StrValueTest.test/"dog"
+10/20 Test #10: new:values/StrValueTest.test/"dog" ...   Passed    0.00 sec
+      Start 11: new:values/StrValueTest.test/"cat"
+11/20 Test #11: new:values/StrValueTest.test/"cat" ...   Passed    0.00 sec
+      Start 12: old:DisabledSuite.test
+12/20 Test #12: old:DisabledSuite.test ...............***Not Run (Disabled)   0.00 sec
+      Start 13: old:DisabledTest.test
+13/20 Test #13: old:DisabledTest.test ................***Not Run (Disabled)   0.00 sec
+      Start 14: old:ConditionalTest.test
+14/20 Test #14: old:ConditionalTest.test .............   Passed    0.00 sec
+      Start 15: old:SimpleTest.test
+15/20 Test #15: old:SimpleTest.test ..................   Passed    0.00 sec
+      Start 16: old:*/IntValueTest.test/*
+16/20 Test #16: old:*/IntValueTest.test/* ............   Passed    0.00 sec
+      Start 17: old:*/StrValueTest.test/*
+17/20 Test #17: old:*/StrValueTest.test/* ............   Passed    0.00 sec
+      Start 18: old:TypedTest/*.test1
+18/20 Test #18: old:TypedTest/*.test1 ................   Passed    0.00 sec
+      Start 19: old:TypedTest/*.test2
+19/20 Test #19: old:TypedTest/*.test2 ................   Passed    0.00 sec
+      Start 20: monolithic
+20/20 Test #20: monolithic ...........................   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 16</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-42">
+        42
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c84338484259595012-43">
+        43
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-1">
+        Test project /path/to/build
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-2">
+        Start  1: new:DisabledSuite.test
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-3">
+        1/20 Test  #1: new:DisabledSuite.test ...............***Not Run (Disabled)   0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-4">
+        Start  2: new:DisabledTest.test
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-5">
+        2/20 Test  #2: new:DisabledTest.test ................***Not Run (Disabled)   0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-6">
+        Start  3: new:SimpleTest.test
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-7">
+        3/20 Test  #3: new:SimpleTest.test ..................   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-8">
+        Start  4: new:TypedTest/int.test1
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-9">
+        4/20 Test  #4: new:TypedTest/int.test1 ..............   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-10">
+        Start  5: new:TypedTest/int.test2
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-11">
+        5/20 Test  #5: new:TypedTest/int.test2 ..............   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-12">
+        Start  6: new:TypedTest/long.test1
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-13">
+        6/20 Test  #6: new:TypedTest/long.test1 .............   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-14">
+        Start  7: new:TypedTest/long.test2
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-15">
+        7/20 Test  #7: new:TypedTest/long.test2 .............   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-16">
+        Start  8: new:values/IntValueTest.test/1
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-17">
+        8/20 Test  #8: new:values/IntValueTest.test/1 .......   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-18">
+        Start  9: new:values/IntValueTest.test/2
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-19">
+        9/20 Test  #9: new:values/IntValueTest.test/2 .......   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-20">
+        Start 10: new:values/StrValueTest.test/"dog"
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-21">
+        10/20 Test #10: new:values/StrValueTest.test/"dog" ...   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-22">
+        Start 11: new:values/StrValueTest.test/"cat"
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-23">
+        11/20 Test #11: new:values/StrValueTest.test/"cat" ...   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-24">
+        Start 12: old:DisabledSuite.test
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-25">
+        12/20 Test #12: old:DisabledSuite.test ...............***Not Run (Disabled)   0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-26">
+        Start 13: old:DisabledTest.test
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-27">
+        13/20 Test #13: old:DisabledTest.test ................***Not Run (Disabled)   0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-28">
+        Start 14: old:ConditionalTest.test
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-29">
+        14/20 Test #14: old:ConditionalTest.test .............   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-30">
+        Start 15: old:SimpleTest.test
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-31">
+        15/20 Test #15: old:SimpleTest.test ..................   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-32">
+        Start 16: old:*/IntValueTest.test/*
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-33">
+        16/20 Test #16: old:*/IntValueTest.test/* ............   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-34">
+        Start 17: old:*/StrValueTest.test/*
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-35">
+        17/20 Test #17: old:*/StrValueTest.test/* ............   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-36">
+        Start 18: old:TypedTest/*.test1
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-37">
+        18/20 Test #18: old:TypedTest/*.test1 ................   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-38">
+        Start 19: old:TypedTest/*.test2
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-39">
+        19/20 Test #19: old:TypedTest/*.test2 ................   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-40">
+        Start 20: monolithic
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-41">
+        20/20 Test #20: monolithic ...........................   Passed    0.00 sec
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-42">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c84338484259595012-43">
+        100% tests passed, 0 tests failed out of 16
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  The “monolithic” test can be seen at the bottom. Although a pass/fail is generated, no additional information is available without running the test verbosely. Compared to either of the other methods, there is very little information available “at a glance” if some part of the test suite fails. Both other methods thus have an immediate advantage; by arranging for each registered CTest test to execute only a subset of test cases within the test executable, CTest (and CDash) is directly communicating more information about the area of failure. This can also be of particular use if a test case is crashing, since a crash in one test case will not prevent other cases from being executed.
+ </p>
+ <p>
+  For simple tests, there is little difference between
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338488109330798" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  and
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433848b544821716" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  by the time CTest executes. Moreover, both handled the case of a test that has been disabled by prefixing either the test suite name or test case name with
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433848d860225667" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    DISABLED_
+   </span>
+  </span>
+  .
+ </p>
+ <p>
+  However, the less trivial cases start to show differences. Where
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433848f678285452" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  created a single CTest test (with a wildcard in its name) per test case of a type-parameterized test,
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338490145834369" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  registered a separate CTest test for each test case and type parameter combination. Similarly, for value-parameterized tests, the CTest tests that were registered by
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338493154700265" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  include both the actual value, and the name of the value set (the first argument to
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338494377571731" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     INSTANTIATE_TEST_CASE_P
+    </span>
+   </span>
+  </span>
+  ) to which the value belongs. (Unnamed value sets are also supported, in which case the test name simply starts with the test suite name, as usual.)
+ </p>
+ <p>
+  Another case worth noting is
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338496029315296" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    old:ConditionalTest.test
+   </span>
+  </span>
+  . In the source code, this test case was guarded by a preprocessor condition (which is false), and the body of the test case contained an explicit failure. This test case was, correctly, not registered by
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c84338498229408542" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_discover_tests
+    </span>
+   </span>
+  </span>
+  , whereas
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433849a897453634" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     gtest_add_tests
+    </span>
+   </span>
+  </span>
+  registered a CTest test that calls the test executable with a
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41c8433849c781547604" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    --gtest_filter
+   </span>
+  </span>
+  that does not match any test cases (and thus does nothing). This presents a possible cause of confusion, as the test output might lead a viewer to believe that the test was executed and passed, when in fact it was not even compiled.
+ </p>
+ <h2>
+  Conclusion
+ </h2>
+ <p>
+  Dynamic test discovery offers a new and exciting mechanism for integrating two great tools: CMake and Google Test. We hope we have shown how this feature is useful, and how it can be used in your own projects. Keep coding, and keep writing tests!
+ </p>
+</div>

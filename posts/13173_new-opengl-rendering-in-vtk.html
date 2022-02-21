@@ -1,0 +1,60 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  We are currently rewriting the majority of the rendering code in the Visualization Toolkit (VTK). Up until now, the rendering code has relied primarily on the (now deprecated) OpenGL 1.1 fixed pipeline calls. On Friday, June 20, a topic branch was merged into VTK’s master development branch, introducing the first set of major changes in an alternative rendering backend. The old rendering code will remain the default as we work to convert other rendering modules over to the new rendering backend.
+ </p>
+ <p>
+  If you would like to try out the code, we encourage you to clone the repository and switch the VTK_RENDERING_BACKEND cache variable to “OpenGL2.” You will need GLEW installed on your system. (This will be added to VTK as a third party module soon.) There are still some missing capabilities, and the work discussed here is focused on rendering traditional polygonal geometry.
+ </p>
+ <p>
+  Most modern graphics cards are designed to perform optimally when graphical primitives are stored in graphics memory using vertex buffer objects and when the rendering is performed using specialized shader programs. One major advantage of using this approach is that significant performance enhancements are possible, as is improving the quality of the rendered images.
+ </p>
+ <p>
+  The new rendering code assumes a minimum OpenGL API version of 2.1, which has enabled us to significantly simplify the rendering code and remove several workarounds for old driver bugs/missing extensions. This, of course, means that some of the old systems will no longer work. However, most systems built in the last five years should support version 2.1, which was released in 2006. In addition, software rendering provided by Mesa supports OpenGL 2.1 (optionally accelerated using LLVM/Gallium).
+ </p>
+ <p>
+  The new rendering module is largely a drop-in replacement for the existing module. However, code that derives from the old module will require modification. Two major short-term goals are to have ParaView working (optionally) with the new rendering backend and to have simple Android/iOS applications based on the new rendering code available to demonstrate what is possible when using the new code.
+ </p>
+ <p>
+  The dragon model shown above has 1.13 million triangles, and a larger model, Lucy (an angel), has over 28 million triangles (obtained from the Stanford 3D scanning repository). These were used as large polygonal models to derive baselines, for which we have seen significant improvements in time for initial and subsequent renders.
+ </p>
+ <p>
+  On Windows, with an nVidia graphics card, we have seen render times for the Lucy model go from 33.5 seconds for the initial render and 4.84 seconds per subsequent frame (on average) to 2.4 seconds for the initial render and 0.043 seconds per subsequent frame. This makes the rendering speed over 10 times faster for the initial render and over 100 times faster for an average subsequent frame using full lighting.
+ </p>
+ <p>
+  <a href="/source/files/4_224355676.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_224355676.jpg" style="width: 400px; margin-left: 125px; margin-right: 125px;"/>
+  </a>
+ </p>
+ <p>
+  The numbers were a little different when using an nVidia Quadro card on Linux. The time it took to render the initial frame dropped from 29.650 to 1.554 seconds. However, the time it took to render subsequent frames only went from 3.935 to 0.136 seconds. This makes the rendering speed 20 times faster for the initial render and 30 times faster for an average subsequent frame. More testing is required to see how much of this difference is dependent on the GPU and/or on the operating system.
+ </p>
+ <p>
+  As the models get smaller, the speedup observed decreases. The render time for the dragon model is about 17 times faster for the initial frame, but only about 1.5 times faster for subsequent renders. The Glyph3D mapper is over twice as fast in rendering the first large molecule frame and then just under 1.5 times as fast for each subsequent frame.
+ </p>
+ <p>
+  Another improvement we have made is in regards to memory usage for larger models. On Linux, for example, the Lucy model process uses 1.5GB of memory when rendering, whereas the old code uses 6.0GB as measured in the system monitor!
+ </p>
+ <p>
+  As you can see, even the more modest improvements in rendering speed are coming in at rates of roughly 50%, and we have only done minimal profiling/optimization at this stage. These improvements, coupled with rewrites to things such as depth-peeling for transparency, will also enable us to render larger data sets on the same hardware or to extend to even larger systems in the future using distributed
+  <br/>
+  rendering.
+ </p>
+ <p>
+  These are all still quite early numbers, but we hope you will agree that they are very promising. We will be extending and further integrating the new rendering code in the coming months.
+ </p>
+ <p>
+  We would especially like to recognize the National Institutes of Health for sponsoring this work under the grant NIH R01EB014955 “Accelerating Community-Driven Medical Innovation with VTK.” Also, the main contributors to the VTK polygonal rendering effort have been Marcus Hanwell and Ken Martin. Note that Aashish Chaudhary and Lisa Avila are revamping the volume rendering pipeline and will produce a Kitware Source article in the near future.
+ </p>
+ <p>
+  <a href="/source/files/4_2069751191.jpg" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_2069751191.jpg" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Marcus Hanwell
+  </strong>
+  is a Technical Leader on the Scientific Computing team at Kitware, where he leads the Open Chemistry effort.  He has a background in open source, open science, physics, and chemistry. He has worked in open source for over a decade.
+ </p>
+</div>

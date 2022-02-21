@@ -1,0 +1,135 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style=" line-height: 2em;">
+   For effective software development, the
+  </span>
+  <em style=" line-height: 2em;">
+   edit-compile-test
+  </em>
+  <span style=" line-height: 2em;">
+   cycle should run quickly.  In order to get a better understanding of
+  </span>
+  <a href="http://itk.org" style=" line-height: 2em;">
+   ITK
+  </a>
+  <span style=" line-height: 2em;">
+   ‘s test times, we created
+  </span>
+  <a href="http://itk.org/gitweb?p=ITK.git;a=blob;f=Utilities/Maintenance/VisualizeTestTimes.py;h=514f19ef4a73f211b698d5a78173f5e87ff6c2f8;hb=dea22b3bcec654ca38d45e7b03030c8cc39a6c0e" style=" line-height: 2em;">
+   a Python script
+  </a>
+  <span style=" line-height: 2em;">
+   that visualizes
+  </span>
+  <a href="http://www.cmake.org/cmake/help/v2.8.11/ctest.html" style=" line-height: 2em;">
+   CTest
+  </a>
+  <span style=" line-height: 2em;">
+   test times with
+  </span>
+  <a href="http://vtk.org" style=" line-height: 2em;">
+   VTK
+  </a>
+  <span style=" line-height: 2em;">
+   ‘s
+  </span>
+  <a href="http://www.vtk.org/doc/nightly/html/classvtkTreeMapView.html" style=" line-height: 2em;">
+   TreeMapView
+  </a>
+  <span style=" line-height: 2em;">
+   .
+  </span>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   <a href="/blog/files/152_2049599542.png" target="_blank">
+    <img alt="" height="246" src="https://blog.kitware.com/blog/files/Small.152_2049599542.png" width="302"/>
+   </a>
+   <br/>
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   ITK test times.
+  </em>
+ </p>
+ <p>
+  <em>
+  </em>
+  Tests that run longer have a proportionally larger area.  With the visualization, it is clear that there are some tests that take significantly longer than most others.  It is possible to zoom in and zoom out on tests and identify their names with a mouse hover or click.
+ </p>
+ <p>
+  <span style="line-height: 2em;">
+   After identifying the long running tests, we added a
+   <a href="http://www.cmake.org/cmake/help/v2.8.11/cmake.html#prop_test:LABELS">
+    CTest label
+   </a>
+   to them.
+  </span>
+ </p>
+ <p style="text-align: center;">
+  <a href="/blog/files/152_1608438594.png" target="_blank">
+   <img alt="" height="245" src="https://blog.kitware.com/blog/files/Small.152_1608438594.png" style="display: block; margin-left: auto; margin-right: auto;" width="302"/>
+  </a>
+  <em>
+   ITK tests without RUNS_LONG label (top) and with RUNS_LONG label (bottom).
+  </em>
+ </p>
+ <p>
+  Tests with the RUNS_LONG label constituted less than 1% of the tests, but they take approximately half of the time to run the test suite!
+ </p>
+ <p>
+  It is possible to also organize the visualization by ITK module label.
+ </p>
+ <p style="text-align: center;">
+  <a href="/blog/files/152_2056007413.png" target="_blank">
+   <img alt="" height="247" src="https://blog.kitware.com/blog/files/Small.152_2056007413.png" style="display: block; margin-left: auto; margin-right: auto;" width="305"/>
+  </a>
+  <em>
+   ITK test times organized by module.
+  </em>
+ </p>
+ <p>
+  Most of the long running tests identified were integration tests, as opposed to unit tests, and tests for advanced algorithms on semi-realistic data.  The decrease in code coverage after excluding the tests was 0.25%.  To increase the quickness of the
+  <em>
+   edit-build-test
+  </em>
+  cycle, it is possible to exclude the long running tests locally with
+ </p>
+ <p>
+  ctest -LE RUNS_LONG
+ </p>
+ <p>
+  <span style="line-height: 2em;">
+   For dashboard build platforms that take so long to run that their maintainers may prefer not to run them at all (we’re looking at you, Visual Studio in Debug!), the tests can be excluded with
+  </span>
+ </p>
+ <p>
+  set(CTEST_TEST_ARGS EXCLUDE_LABEL RUNS_LONG)
+ </p>
+ <p>
+  Of course, these approaches should only be taken after it is determined that it is not feasible to refactor the code or the tests so they run more quickly.
+ </p>
+ <p>
+  The script is generally applicable on any system that has VTK Python wrapping installed and uses CTest.  For example, screen captures of VTK and CMake test suites are shown below.
+ </p>
+ <p style="text-align: center;">
+  <a href="/blog/files/152_909912186.png" target="_blank">
+   <img alt="" height="227" src="https://blog.kitware.com/blog/files/Small.152_909912186.png" style="display: block; margin-left: auto; margin-right: auto;" width="278"/>
+  </a>
+  <em>
+   VTK test times.
+  </em>
+ </p>
+ <p style="text-align: center;">
+ </p>
+ <p style="text-align: center;">
+  <a href="/blog/files/152_233382509.png" target="_blank">
+   <img alt="" height="239" src="https://blog.kitware.com/blog/files/Small.152_233382509.png" style="display: block; margin-left: auto; margin-right: auto;" width="293"/>
+  </a>
+  <em>
+   CMake test times.
+  </em>
+ </p>
+</div>

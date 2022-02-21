@@ -1,0 +1,50 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400">
+   VTK and ParaView developers who follow the dashboards closely might have noticed this a few weeks ago, but for everyone else I thought I should direct your attention to the new Rendering/OSPRay module that we’ve been working on. What this is is a new lightweight ray tracing based rendering backend for VTK. It acts as an interface to Intel’s OSPRay open source interactive ray tracing library. It is lightweight in that it is run time compatible with both the GL2 and legacy backends and can be easily swapped in and out of any renderer at run time.
+  </span>
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_14489" style="width: 955px">
+  <img alt="ray traced rendering in ParaView" class="size-large wp-image-14489" height="1024" sizes="(max-width: 945px) 100vw, 945px" src="https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-945x1024.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-945x1024.png 945w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-277x300.png 277w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-768x832.png 768w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-220x238.png 220w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-250x271.png 250w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-355x385.png 355w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-730x791.png 730w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16-90x98.png 90w, https://blog.kitware.com/wp-content/uploads/2016/05/Screenshot-from-2016-03-07-14-23-16.png 1162w" width="945"/>
+  <p class="wp-caption-text">
+   An early ambient occlusion OSPRay result in ParaView.
+  </p>
+ </div>
+ <p>
+  <span style="font-weight: 400">
+   To try it, check out VTK or ParaView master and configure your build with Module_vtkRenderingOSPRay=ON or PARAVIEW_USE_OSPRAY=ON respectively. These turn on the ${VTKSRC}/Rendering/OSPRay directory and CMake will then ask you where it can find the OSPRay library, so you should have that available too. See
+  </span>
+  <a href="http://www.ospray.org/getting_ospray.html">
+   <span style="font-weight: 400">
+    http://www.ospray.org/getting_ospray.html
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   for instructions on how to get OSPray and specifically I recommend using either version 0.9.0 or the upcoming 0.10.0.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Next run the OSPRay related regression tests via “ctest -R OSPRay”. Most of these tests respect the “-I” argument, so if you run them manually (ctest -R OSPRay -V | grep “command:” will show you how) and append “-I” to the command line the test will wait for you to interact with the window before it shuts it down. In interactive mode hit the ‘c’ key to toggle back and forth between OpenGL and OSPRay. In ParaView, the Properties tab has a “Enable OSPRay” button which does the same.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Technically we’ve put this thing together as a vtkRenderPass which deciphers VTK’s scene graph and maps VTK rendering state into OSPRay specific API calls. Add the pass to a renderer and rendering happens via OSPRay. Remove the pass and rendering goes back to normal. The source code of the tests demonstrate.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   We put a lot of time into the tests (especially OSPRayRenderMesh) in order to make the new rendering option as feature complete as we can compared to VTK’s normal rendering stack and of course to keep this working as VTK and OSPRay continue to evolve. This is a ray tracer though so some things are different. In particular I find that implicit spheres rendered for VTK_VERTEX type cells coupled with OSPRay’s Ambient Occlusion sampling are quite effective for some visualizations (see the figure). I also like OSPRay’s fast first frame spatial sorting and very fast subsequent frame rendering rate which is insensitive to geometric complexity for standard ray casting.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   There is always room for improvement and we would like to hear from you regarding feature requests and bug reports. We are currently working with the OSPRay developers on the handful of items that we know need to be improved before VTK 7.1 where this will first appear in a VTK release. Topmost on our todo list is porting over OSPRay volume rendering from the pvOSPRay ParaView plugin and then incorporating OSPRay’s path traced rendering option to get the stereotypical reflective and refractive materials that you would expect from a ray tracer.
+  </span>
+ </p>
+ <p>
+  Thanks go out to TACC for paving the way with the pvOSPRay ParaView plugin and to Intel for funding this latest direct integration effort.
+ </p>
+</div>

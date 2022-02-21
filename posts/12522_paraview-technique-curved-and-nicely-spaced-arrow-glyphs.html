@@ -1,0 +1,134 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ParaView has a number of great filters for generating visualizations of 3D vector fields. This post describes a recipe I learned from
+  <a href="http://www.cs.unc.edu/~taylorr">
+   Russell M Taylor II
+  </a>
+  at UNC’s Department of Computer Science. The recipe combines several of ParaView’s filters to produce curved arrow glyphs that are laid end-to-end at a good density in the image, resulting in improved perception of the vector field. The technique is inspired by the 2D vector field visualizaton technique Turk and Banks presented in their
+  <a href="http://www.cc.gatech.edu/~turk/streamlines/streamlines.html">
+   Image-Guided Streamline Placement
+  </a>
+  paper at SIGGRAPH 1996.
+ </p>
+ <p>
+  This recipe can be used to generate images like this:
+ </p>
+ <p style="text-align: center">
+  <a href="/blog/files/332_261389867.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.332_261389867.png" style="width: 80%"/>
+  </a>
+ </p>
+ <p>
+  Compared to the image below created with the standard Glyph filter, the curvedness of the glyphs and their end-to-end alignment in the image above makes it much easier to visually trace along the vector field.
+ </p>
+ <p style="text-align: center">
+  <a href="/blog/files/332_236255030.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.332_236255030.png" style="width: 80%"/>
+  </a>
+ </p>
+ <p>
+  <span style="line-height: 1.6em">
+   To create images like this, follow this recipe:
+  </span>
+ </p>
+ <ol>
+  <li>
+   Load data with a vector field array. Let’s assume the array is named Velocity.
+  </li>
+  <li>
+   Add a
+   <strong>
+    Point Source
+   </strong>
+   from the
+   <strong>
+    Sources
+   </strong>
+   menu. Place the center of this source somewhere near the beginning of the vector field. Set the “Number of Points” to between 50-100. Adjust this number if the resulting image is overloaded with arrow glyphs.
+  </li>
+  <li>
+   Create a
+   <strong>
+    Stream Tracer with Custom Source
+   </strong>
+   . Set the “Input” to the dataset you loaded in step 1 and the “Seed Source” to the
+   <strong>
+    Point Source
+   </strong>
+   created in step 2. Set the “Integration Step Unit” option to “Length”.
+  </li>
+  <li>
+   Attach a
+   <strong>
+    Contour
+   </strong>
+   filter to the
+   <strong>
+    Stream Tracer with Custom Source
+   </strong>
+   created in Step 3. Change the “Vectors” option to “Velocity” and the “Contour By” option to “IntegrationTime”. Remove the existing value in the table under “Isosurfaces” and click on the insert range icon (below the minus sign). Change the number of “Steps” to somewhere between 50 and 100. Again, some tweaking might be needed to the exact number of steps to achieve the desired glyph density. This step gives you a set of points along the streamlines evenly spaced in integration time, which means points will be closer where the vector field magnitude is lower and less densely packed where the vector field magnitude is greater.
+  </li>
+  <li>
+   Create another
+   <strong>
+    Stream Tracer with Custom Source
+   </strong>
+   with the “Input” set to the dataset loaded in Step 1 and the “Seed Source” set to the
+   <strong>
+    Contour
+   </strong>
+   filter. Change the “Vectors” option to “Velocity”, the “Integration Direction” to “BACKWARD”, and the “Integration Step Unit” to “Length”.
+  </li>
+  <li>
+   Attach a
+   <strong>
+    Tube
+   </strong>
+   filter to the
+   <strong>
+    Stream Tracer with Custom Source
+   </strong>
+   from Step 5.
+  </li>
+  <li>
+   Attach a
+   <strong>
+    Clip
+   </strong>
+   filter to the
+   <strong>
+    Tube
+   </strong>
+   filter in Step 6. In this step, we’ll clip the stream tubes by the “IntegrationTime” variable. Note that because the integration direction was backward, the “IntegrationTime” variable is non-positive. Change the “Clip Type” option to “Scalar”, the “Scalars” array to “IntegrationTime” and the “Value” option to -0.2. If the resulting tube segments overlap and appear as a single tube, adjust the “Value” property to a smaller number. If the resulting tube segments are spaced too far away, increase the “Value” property.
+  </li>
+  <li>
+   Finally, attach a
+   <strong>
+    Glyph
+   </strong>
+   filter to the
+   <strong>
+    Contour
+   </strong>
+   filter created in Step 4. To get a cone at the end of the tube segments, change the “Glyph Type” to “Arrow” and the “Tip Length” to 1. To get the glyphs to match the size of the tube, or to be slightly larger, turn “Scale Mode” to off and adjust the “Scale Factor” to 1. If the cone is too long in comparison to its base, you might need to increase the “Tip Radius” and decrease the “Scale Factor” to squash the cones.
+  </li>
+ </ol>
+ <p>
+  The end result should be an image similar to the top image above.
+ </p>
+ <p>
+  Note that there are a couple of limitations to this technique. If the tube segments are very short, the cones at the tips may overlap because their lengths are not changed. Variations of this technique could deal with this by changing the Contour filter in Step 4 to an array that gives the length of the streamline generated in Step 3, but then density would no longer correspond to vector magnitude.
+ </p>
+ <p>
+  The ParaView state file for the example shown here is attached
+  <a href="https://blog.kitware.com/wp-content/uploads/2014/08/CurvedGlyphs.pvsm_.txt">
+   CurvedGlyphs.pvsm
+  </a>
+  . Note that the state file has an extension of “.txt” to work around security restrictions in WordPress. Please remove this extension after download. The state file requires the disk_out_ref.ex2 data file available
+  <a href="http://www.paraview.org/gitweb?p=ParaViewData.git;a=blob;f=Data/disk_out_ref.ex2;h=cac2445c9dc54e8b3ba4dbf03a14ed0b1352efe0;hb=1fa9dce1c623e2d467c44b5337ba3a8378a6a537">
+   here
+  </a>
+  .
+ </p>
+</div>

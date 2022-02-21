@@ -1,0 +1,80 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <em>
+   (This is the second article in a two part series. It shows how to perform point interpolation using ParaView. The first article describes how to
+   <a href="https://blog.kitware.com/point-and-smoothed-particle-hydrodynamics-sph-interpolation-in-vtk/">
+    perform point interpolation using VTK
+   </a>
+   .)
+  </em>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   Introduction
+  </span>
+ </h2>
+ <p>
+  In the
+  <a href="https://blog.kitware.com/point-and-smoothed-particle-hydrodynamics-sph-interpolation-in-vtk/">
+   first article
+  </a>
+  in this two-part series, we provided background and described the implementation of point interpolation in VTK. Both general point interpolation and smoothed-particle hydrodynamics SPH methods were addressed. In this article, we describe how to use ParaView to perform point interpolation, which of course uses VTK under the hood, but provides a simple and powerful integrated application GUI to perform the interpolation.
+ </p>
+ <p>
+  The basic procedure is fairly simple. After first reading or creating data with points and associated data attributes (e.g., scalars, vectors, and so on), select Filters-&gt;Points Interpolation as illustrated below.
+ </p>
+ <p>
+  <img alt="PV-FiltersPointInterpolation" class="alignnone wp-image-15526 aligncenter" height="327" sizes="(max-width: 554px) 100vw, 554px" src="https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-300x177.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-300x177.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-768x453.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-220x130.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-250x147.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-355x209.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-730x431.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation-90x53.jpg 90w, https://blog.kitware.com/wp-content/uploads/2016/08/PV-FiltersPointInterpolation.jpg 907w" width="554"/>
+ </p>
+ <p>
+  Depending on the type of point data and interpolation process to use (i.e., either generalized or SPH) and whether you want to resample the point data onto a volume, plane or line, six choices are available as shown. Resampling onto a volume means that volume rendering and standard 3D visualization techniques such as isocontouring can be used on the resulting volume. Plane resampling, which along with the associated plane widget, enables the user to rapidly slice through the data and show a heat map on the resulting plane. Finally, plotting along a resampled line supports detailed analysis of data values. Each of these three approaches are shown in the next subsections.
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   SPH Volume Interpolation
+  </span>
+ </h2>
+ <p>
+  The figure below shows the initial point cloud which is from the VTK test data repository; it’s fairly small in size at only ~175,000 points (SPH_Points.vtu). Note that it is not particularly dense, and the initial visualization is less than compelling as shown.
+ </p>
+ <p>
+  <img alt="SPH-Points" class="alignnone wp-image-15527 aligncenter" height="329" sizes="(max-width: 555px) 100vw, 555px" src="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-300x178.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-300x178.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-768x455.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-1024x606.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-220x130.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-250x148.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-355x210.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-730x432.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-Points-90x53.jpg 90w" width="555"/>
+ </p>
+ <p>
+  To visualize this cloud with a volume, once read in a SPH Volume Interpolator is created. This brings up an interactive widget which positions a 3D volume into the bounding box of the point cloud (and which can be adjusted as desired). It’s very important to set the correct spatial step size as this smoothing length is central to the spline formulation of the SPH interpolating kernel. Also you’ll want to specify the density array, and volume resolution. You can also optionally select a different kernel than the default quintic formulation, and select with arrays to interpolate (or not). The dimension of the data is 3, as this is space in which the points are located. Note that a custom color transfer function has been created for the rendered image below.
+ </p>
+ <p>
+  <img alt="SPH-3D" class="alignnone wp-image-15528 aligncenter" height="329" sizes="(max-width: 554px) 100vw, 554px" src="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-300x178.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-300x178.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-768x455.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-1024x606.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-220x130.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-250x148.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-355x210.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-730x432.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-3D-90x53.jpg 90w" width="554"/>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   SPH Plane Interpolation
+  </span>
+ </h2>
+ <p>
+  Interpolating across a plane is equally easy. Simply select SPH Plane Interpolator, position the plane with the interactive widget, set the spatial step size, resolution and other parameters as before. The result will be similar to what is shown below.
+ </p>
+ <p>
+  <img alt="SPH-2D" class="alignnone wp-image-15529 aligncenter" height="330" sizes="(max-width: 556px) 100vw, 556px" src="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-300x178.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-300x178.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-768x455.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-1024x606.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-220x130.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-250x148.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-355x210.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-730x432.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-2D-90x53.jpg 90w" width="556"/>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   SPH Line Interpolation
+  </span>
+ </h2>
+ <p>
+  The line interpolation process is similar to the plane and volume interpolation process described previously. The biggest difference is that it produces an x-y plot of the various interpolated data attributes. Here the density variable Rho, pressure Press, and Shepard Summation are plotted. Note that in the SPH formulation, the Shepard (or interpolating) coefficients when summed should be approximately equal to one. However near the boundary the coefficient summation falls towards zero.
+ </p>
+ <p>
+  <img alt="SPH-1D" class=" wp-image-15530 aligncenter" height="330" sizes="(max-width: 556px) 100vw, 556px" src="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-300x178.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-300x178.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-768x455.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-1024x606.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-220x130.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-250x148.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-355x210.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-730x432.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/08/SPH-1D-90x53.jpg 90w" width="556"/>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   Conclusion
+  </span>
+ </h2>
+ <p>
+  Interpolating data from discrete data points to one or more sampled positions is a core visualization operation. While VTK and ParaView provide a wealth of interpolation functions as embodied in vtkCells and its subclasses, this process requires an explicit topological articulation to interpolate data. Alternatively, interpolation directly from neighborhood points is possible. Such situations occur when processing point clouds, or when alternative formulations different than that provided by standard cell functions is required. VTK, and the application ParaView now provide fast and flexible tools for interpolating point data. Not only are generalized interpolation processes using specification of various kernels possible, but advanced methods based on spline formulations of smoothed-particle hydrodynamics SPH are too. Further ParaView provides a simple, interactive user interface to sample point data and produce compelling visualizations in 1-, 2-, and 3-dimensions.
+ </p>
+</div>

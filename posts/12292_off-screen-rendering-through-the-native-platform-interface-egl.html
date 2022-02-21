@@ -1,0 +1,239 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h2>
+  Motivation
+ </h2>
+ <p>
+  ParaView can run on a supercomputer with thousands of nodes to provide visualization and analysis of very large datasets. In this configuration, the same version of the ParaView analysis pipeline runs on each node to process a piece of the data, the results are rendered in software using
+  <a href="http://www.mesa3d.org/osmesa.html">
+   Off-Screen Mesa
+  </a>
+  and composited into a final image which is send to the ParaView client for display.
+ </p>
+ <p>
+  Software rendering is used because, until recently, supercomputer nodes did not provide graphic cards as they were used mainly for computation. This is beginning to change with the release of new GPU Accelerators cards, such as NVIDIA Tesla, which can be used for both computation and off-screen rendering.
+ </p>
+ <p>
+  The Native Platform Interface (EGL) provides means to render to a native windowing system, such as Android, X Windows or Microsoft Windows, or to an off-screen buffer (without a need of a windowing system). For rendering API, one can choose
+  <span style="line-height: 1.6em">
+   OpenGL
+  </span>
+  ES, OpenVG
+  <span style="line-height: 1.6em">
+   or, starting with
+  </span>
+  EGL
+  <span style="line-height: 1.6em">
+   version 1.4, full OpenGL.
+  </span>
+ </p>
+ <p>
+  <span style="line-height: 1.6em">
+   We enable the VTK and the ParaView server (
+   <strong>
+    pvserver
+   </strong>
+   ) to render to an EGL off-screen buffer. Through this work we allow server-side hardware-accelerated rendering without the need to install a windowing system.
+  </span>
+ </p>
+ <h2>
+  Configuration parameters
+ </h2>
+ <p>
+  <span style="line-height: 1.6em">
+   To compile
+  </span>
+  VTK
+  <span style="line-height: 1.6em">
+   or
+  </span>
+  ParaView
+  <span style="line-height: 1.6em">
+   for
+  </span>
+  off-screen
+  <span style="line-height: 1.6em">
+   rendering through
+  </span>
+  EGL
+  <span style="line-height: 1.6em">
+   you will need:
+  </span>
+ </p>
+ <ol>
+  <li>
+   A graphics card driver that supports OpenGL rendering through EGL (full OpenGL rendering is supported only in EGL version 1.4 or later). We have tested our code with the
+   <a href="http://www.nvidia.com/Download/driverResults.aspx/90393/en-us">
+    NVIDIA driver version 355.11
+   </a>
+   .
+  </li>
+  <li>
+   You might need the EGL headers as they did not come with the Nvidia driver used in our tests. You can download them from
+   <a href="https://www.khronos.org/registry/egl/">
+    Khronos EGL Registry
+   </a>
+   .
+  </li>
+  <li>
+   <span style="line-height: 1.6em">
+    Set VTK advanced configuration option
+   </span>
+   <strong>
+    VTK_USE_OFFSCREEN_EGL​
+   </strong>
+   .
+  </li>
+ </ol>
+ <p>
+  You’ll get a configuration error if any of the windowing systems is enabled:
+  <strong>
+   VTK_USE_X
+  </strong>
+  or
+  <strong>
+   VTK_USE_COCOA
+  </strong>
+  so you’ll have to disable your windowing system. You’ll also get an error if you are on
+  <strong>
+   WIN32
+  </strong>
+  ​,
+  <strong>
+   ANDROID
+  </strong>
+  or
+  <strong>
+   APPLE_IOS
+  </strong>
+  .
+ </p>
+ <p>
+  If you have several graphics cards on you system you may need to set the index of the graphics card you want to use, if that is different than the default card chosen by the driver. You can do that if your driver supports
+  <strong>
+   EGL_EXT_platform_device
+  </strong>
+  and
+  <strong>
+   EGL_EXT_device_base
+  </strong>
+  extensions.
+ </p>
+ <p>
+  You can set the default graphics card used by the render window in VTK by setting the advanced configuration option
+  <strong>
+   VTK_EGL_DEVICE_INDEX
+  </strong>
+  ​ to an integer such as
+  <strong>
+   0
+  </strong>
+  or
+  <strong>
+   1
+  </strong>
+  for two cards installed on a system. By default, this variable is set to
+  <strong>
+   0
+  </strong>
+  which means that the default graphics card is used. We are investigating using a more user friendly mechanism such as the name of the graphics card. We note that the index of the graphics card you need to pass is the same as the index of the card returned by the following command
+  <strong>
+   nvidia-smi.
+  </strong>
+ </p>
+ <h2>
+  Runtime parameters
+ </h2>
+ <p>
+  For a system with more then one graphics card installed, you can choose the graphics card used for rendering at runtime, in case it is different that the card setup at configuration time.
+ </p>
+ <h3>
+  VTK
+ </h3>
+ <p>
+  If you want to change the graphics card set through the configuration process, you can call
+  <strong>
+   vtkRenderWindow::GetNumberOfDevices()
+  </strong>
+  to query the number of devices available on a system and
+  <strong style="line-height: 1.6em">
+   vtkRenderWindow::SetDeviceIndex(deviceIndex)​
+  </strong>
+  <span style="line-height: 1.6em">
+   to set the device you want to be used for rendering.
+  </span>
+ </p>
+ <h3>
+  ParaView
+ </h3>
+ <p>
+  To start
+  <strong>
+   pvserver
+  </strong>
+  ​ with rendering set on a graphics card different than the card set through the configuration process, you have to pass the following command line parameter:
+ </p>
+ <p>
+  <strong>
+   –egl-device-index=&lt;device_index&gt;
+  </strong>
+  , where &lt;device_index&gt; is the graphics card index.
+ </p>
+ <p>
+  To check if you are rendering to the correct graphics card in ParaView you can use Help, About, Connection Information, OpenGL Renderer.
+ </p>
+ <h2>
+  Troubleshooting
+ </h2>
+ <ol>
+  <li>
+   Make sure that
+   <b>
+    EGL_INCLUDE_DIR
+   </b>
+   ,
+   <b>
+    EGL_LIBRARY
+   </b>
+   ,
+   <b>
+    EGL_gldispatch_LIBRARY
+   </b>
+   ,
+   <b>
+    EGL_opengl_LIBRARY
+   </b>
+   point to valid headers and libraries. On Ubuntu 16.04 with NVidia driver version 361.42 the libraries are: /usr/lib/nvidia-361/libEGL.so, /usr/lib/nvidia-361/libGLdispatch.so.0 and /usr/lib/nvidia-361/libOpenGL.so.
+  </li>
+  <li>
+   Pass
+   <b>
+    –disable-xdisplay-test
+   </b>
+   to
+   <b>
+    pvserver
+   </b>
+   if this option exists. We have seen a case when this test creates problems with the EGL rendering
+  </li>
+ </ol>
+ <p>
+  We hope you enjoy this new feature. It is available in the VTK and ParaView git repositories.
+ </p>
+ <p>
+  Acknowledgment:
+ </p>
+ <p>
+  Thanks to Peter Messmer from NVidia for answering all our EGL questions.
+ </p>
+ <h2>
+  Update 7/17/2017
+ </h2>
+ <p>
+  We recently changed some of the parameter names described in this article. For more information see
+  <a href="https://www.paraview.org/ParaView/Doc/Nightly/www/cxx-doc/Offscreen.html">
+   ParaView and Offscreen Rendering
+  </a>
+  in the ParaView Documentation.
+ </p>
+</div>

@@ -1,0 +1,137 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <div class="document" id="stay-in-sync-with-upstream-with-git-subtree-s">
+  <div class="section" id="staying-in-sync-with-upstream">
+   <h1>
+    Staying in sync with upstream
+   </h1>
+   <p>
+    Working with upstream is a critical open source software practice that ensures long term success.
+   </p>
+   <p>
+    It is important to stay in sync with upstream to
+   </p>
+   <ul class="simple">
+    <li>
+     get upstream bug fixes.
+    </li>
+    <li>
+     take advantage of new upstream features.
+    </li>
+    <li>
+     avoid refactoring local changes.
+    </li>
+    <li>
+     do the right thing and support the upstream from which you benefit.
+    </li>
+   </ul>
+   <p>
+    Since software is constantly evolving and improving, an efficient process to both pull and push changes upstream is key to high quality software.
+   </p>
+   <p>
+    This post discusses how
+    <a class="reference external" href="http://itk.org">
+     ITK
+    </a>
+    uses
+    <a class="reference external" href="https://www.kernel.org/pub/software/scm/git/docs/howto/using-merge-subtree.html">
+     Git subtree's
+    </a>
+    to help both pull and push changes to upstream third party libraries.
+   </p>
+   <p>
+    There are other methods to track third party libraries, like
+    <a class="reference external" href="http://www.git-scm.com/book/en/v2/Git-Tools-Submodules">
+     Git submodules
+    </a>
+    and the
+    <a class="reference external" href="http://www.cmake.org/cmake/help/git-master/module/ExternalProject.html">
+     CMake ExternalProject
+    </a>
+    module. The different approaches have their own strengths and weaknesses. The Git subtree approach is used here so that
+   </p>
+   <ul class="simple">
+    <li>
+     Everything needed is bundled in the ITK repository.
+    </li>
+    <li>
+     No extra version control commands are needed with checkouts.
+    </li>
+    <li>
+     We can maintain local modifications that should not be pushed upstream.
+    </li>
+    <li>
+     All CMake information is consistently passed to the third party libraries.
+    </li>
+   </ul>
+  </div>
+  <div class="section" id="pulling-changes">
+   <h1>
+   </h1>
+   <h1>
+    Pulling changes
+   </h1>
+   <p>
+    An
+    <cite>
+     UpdateFromUpstream.sh
+    </cite>
+    script, kept in the third party module's directory, is executed to merge in the latest changes from subtree libraries. The subtree libraries currently are
+    <a class="reference external" href="https://sourceforge.net/projects/gdcm/">
+     GDCM
+    </a>
+    ,
+    <a class="reference external" href="http://public.kitware.com/KWSys.git">
+     KWSys
+    </a>
+    , and
+    <a class="reference external" href="https://github.com/Kitware/MetaIO">
+     MetaIO
+    </a>
+    .
+   </p>
+   <p>
+    This
+    <a class="reference external" href="http://itk.org/gitweb?p=ITK.git;a=blob;f=Modules/ThirdParty/GDCM/UpdateFromUpstream.sh;h=ee6667fa851e36bb146c76d7b33e27a86af631b0;hb=HEAD">
+     UpdateFromUpstream.sh
+    </a>
+    script contains project specific information like the Git repository URL. A subset of directories or files and a redaction command can be configured to limit the content imported.
+   </p>
+   <p>
+    All of the commands to automate the process are kept in a common
+    <a class="reference external" href="http://itk.org/gitweb?p=ITK.git;a=blob;f=Utilities/Maintenance/UpdateThirdPartyFromUpstream.sh;h=da788cc631e4d289f39f35374fd5496eb5669ede;hb=HEAD">
+     UpdateThirdPartyFromUpstream.sh
+    </a>
+    script written by Brad King and Brian Helba. Subtree snapshots of the upstream repository are kept on their own branch, separate from the main repository branches. This subtree is then merged into the ITK
+    <cite>
+     master
+    </cite>
+    branch in a nested directory. The tip of the snapshot branch is located with an identifier in the commit message; a named branch does not need to be exposed. The script currently support snapshots of upstream Git repositories; although, it could be extended to support
+    <a class="reference external" href="https://github.com/Kitware/KWStyle/blob/master/Utilities/updateBoost.sh">
+     other snapshot revision types
+    </a>
+    .
+   </p>
+  </div>
+  <div class="section" id="pushing-changes">
+   <p>
+    <a href="/blog/files/152_1104869692.png" target="_blank">
+     <img alt="Git Subtree Merges" src="https://blog.kitware.com/blog/files/Small.152_1104869692.png" style="height: 600px; width: 327px;"/>
+    </a>
+   </p>
+   <h1>
+    Pushing changes
+   </h1>
+   <p>
+    When modifications are made to third party libraries, a
+    <a class="reference external" href="http://itk.org/gitweb?p=ITK.git;a=blob;f=Utilities/Hooks/post-commit;h=28e46984391b2e592745b6f9a9f4300e2f750dfd;hb=HEAD">
+     Git post-commit hook
+    </a>
+    will present a command to create a patch file from the subtree commit content. This patch file can be emailed or applied to a repository. When possible, the developer is also directed to the URL that documents upstream's contribution process.
+   </p>
+   <p>
+    Happy contributing!
+   </p>
+  </div>
+ </div>
+</div>

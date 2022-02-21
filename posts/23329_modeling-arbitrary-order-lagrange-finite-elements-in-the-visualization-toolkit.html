@@ -1,0 +1,1600 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Two techniques that are used by simulations are geometric refinement (also known as hierarchical refinement, or h-refinement) and polynomial refinement (also known as p-refinement). Traditional simulations often apply geometric refinement, which splits cells with low accuracy to resolve finer spatial features. More recent finite element simulations may also apply polynomial refinement. This technique enhances existing cells, so they can fit a higher-order polynomial to the simulation solution. As a result, the cells can represent more complex functions.
+ </p>
+ <p>
+  Cells that experience polynomial refinement have an order greater than one. For many years, the Visualization Toolkit (VTK) has handled different orders with different cell types. More specifically, it has complete sets of linear (order one) and quadratic (order two) cells for all cell types. Until recently, VTK only supported cells of order greater than two on a case-by-case basis. Thanks to support for new cells, called Lagrange cells, VTK can now render approximations to curves, triangles, quadrilaterals, tetrahedra, hexahedra and wedges of any order up to 10. VTK can also manage cells of order greater than 10 with simple, compile-time changes.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_23330" style="width: 2136px">
+  <img alt="" class="size-full wp-image-23330" height="1261" sizes="(max-width: 2126px) 100vw, 2126px" src="http://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge.png 2126w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-300x178.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-768x456.png 768w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-1024x607.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-220x130.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-250x148.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-355x211.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-730x433.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesAndWedge-90x53.png 90w" width="2126"/>
+  <p class="wp-caption-text">
+   A wireframe outlines several Lagrange cells—two hexahedra, two quadrilaterals and one wedge—along with isocontours of ellipsoidal scalar functions defined by the cells.
+  </p>
+ </div>
+ <p>
+  The new cells in VTK use Lagrange polynomials, which are common in mathematics. The polynomials allow VTK to recursively evaluate shape functions for arbitrary orders. Depending on the polynomial order, the number of points for edges, faces and volumes may vary in Lagrange cells. Thus, Lagrange cells differ from their pre-existing analogues, which expect a fixed number of points in a predetermined order.
+ </p>
+ <h2>
+  Lagrange Cells
+ </h2>
+ <p>
+  The number of points in a Lagrange cell determines the order over which they are iterated relative to the parametric coordinate system of the cell. The first points that are reported are vertices. They appear in the same order in which they would appear in linear cells. Mid-edge points are reported next. They are reported in sequence. For two- and three-dimensional (3D) cells, the following set of points to be reported are face points. Finally, 3D cells report points interior to their volume.
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-23392" height="132" sizes="(max-width: 750px) 100vw, 750px" src="http://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1.png 750w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1-300x53.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1-220x39.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1-250x44.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1-355x62.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1-730x128.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig1-90x16.png 90w" width="750"/>
+ </p>
+ <p>
+  For simplicial shapes such as triangles, edge points are reported in a counterclockwise order. This order matches the order in which the points would appear in standard representations. Face points are reported next. They are reported as the points of a lower-degree Lagrange triangle. Vertices on this lower-degree triangle are reported first, followed by edge points and then face points, as described above. For higher orders, the process of reporting face points repeats until no points remain.
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-23393" height="132" sizes="(max-width: 750px) 100vw, 750px" src="http://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2.png 750w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2-300x53.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2-220x39.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2-250x44.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2-355x62.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2-730x128.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig2-90x16.png 90w" width="750"/>
+ </p>
+ <p>
+  Like triangles, tetrahedra are simplicial shapes. Therefore, tetrahedral points are reported using the same method of recursion that is used to report triangular points.
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-23394" height="132" sizes="(max-width: 750px) 100vw, 750px" src="http://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3.png 750w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3-300x53.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3-220x39.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3-250x44.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3-355x62.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3-730x128.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig3-90x16.png 90w" width="750"/>
+ </p>
+ <p>
+  For higher orders, the process of reporting face points repeats per triangular face. To report volume points, the outer shell of vertices, edge points and face points is removed. What remains is a lower-order Lagrange tetrahedron. Vertices on this inner tetrahedron are reported first, followed by edge points and face points. The process of removing shells repeats until no points remain. In this manner, reporting points is like peeling an onion.
+ </p>
+ <p>
+  For prismatic shapes such as curves, quadrilaterals and hexahedra, edge points are reported from the lowest r, s or t parameter to the highest. Face points and volume points are also reported this way.
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-23395" height="132" sizes="(max-width: 750px) 100vw, 750px" src="http://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4.png 750w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4-300x53.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4-220x39.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4-250x44.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4-355x62.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4-730x128.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig4-90x16.png 90w" width="750"/>
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-23396" height="132" sizes="(max-width: 750px) 100vw, 750px" src="http://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5.png 750w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5-300x53.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5-220x39.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5-250x44.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5-355x62.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5-730x128.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig5-90x16.png 90w" width="750"/>
+ </p>
+ <p>
+  Wedges adopt the prismatic cell ordering with two exceptions: one for triangular faces and one for quadrilateral faces. On triangular faces, edge points are ordered counterclockwise. On quadrilateral faces, face points are reported in axis order. The axis that connects the first two points on each face can be traced from quadrilateral to quadrilateral on a path that proceeds counterclockwise around the triangular faces.
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-full wp-image-23397" height="132" sizes="(max-width: 750px) 100vw, 750px" src="http://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6.png 750w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6-300x53.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6-220x39.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6-250x44.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6-355x62.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6-730x128.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/arbOrder_fig6-90x16.png 90w" width="750"/>
+ </p>
+ <h2>
+  Example Code
+ </h2>
+ <p>
+  The pre-existing eXtensible Markup Language-based (XML-based) readers/writers in VTK have been extended to handle Lagrange cells. An example file is located on https://data.kitware.com in the Lagrange Cell Examples collection. While some elements in the example have a curved shape, every element has a curved (ellipsoidal) scalar function that is defined over each cell. This scalar function illustrates that higher-order cells can have interior minima, maxima and other critical points, unlike many linear cells.
+ </p>
+ <p>
+  The following Python code describes how to create individual cells and add them to an unstructured grid to make a Lagrange tetrahedron.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e88d095d1404116230" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import math 
+import vtk
+
+# Let’s make a sixth-order tetrahedron 
+order = 6
+# The number of points for a sixth-order tetrahedron is 
+nPoints = (order + 1) * (order + 2) * (order + 3) / 6;
+
+# Create a tetrahedron and set its number of points. Internally, Lagrange cells
+ # compute their order according to the number of points they hold. 
+tet = vtk.vtkLagrangeTetra() 
+tet.GetPointIds().SetNumberOfIds(nPoints) 
+tet.GetPoints().SetNumberOfPoints(nPoints)
+tet.Initialize()
+
+point = [0.,0.,0.]
+barycentricIndex = [0, 0, 0, 0]
+
+# For each point in the tetrahedron...
+for i in range(nPoints):
+  # ...we set its id to be equal to its index in the internal point array. 
+  tet.GetPointIds().SetId(i, i)
+
+  # We compute the barycentric index of the point... 
+  tet.ToBarycentricIndex(i, barycentricIndex)
+
+  # ...and scale it to unity.
+  for j in range(3):
+      point[j] = float(barycentricIndex[j]) / order
+
+  # A tetrahedron comprised of the above-defined points has straight
+  # edges.
+  tet.GetPoints().SetPoint(i, point[0], point[1], point[2])
+
+# Add the tetrahedron to a cell array 
+tets = vtk.vtkCellArray() 
+tets.InsertNextCell(tet)
+ 
+# Add the points and tetrahedron to an unstructured grid 
+uGrid =vtk.vtkUnstructuredGrid() 
+uGrid.SetPoints(tet.GetPoints())
+uGrid.InsertNextCell(tet.GetCellType(), tet.GetPointIds())
+
+# Visualize
+mapper = vtk.vtkDataSetMapper() 
+mapper.SetInputData(uGrid)
+
+actor = vtk.vtkActor() 
+actor.SetMapper(mapper)
+
+renderer = vtk.vtkRenderer() 
+renderWindow = vtk.vtkRenderWindow() 
+renderWindow.AddRenderer(renderer)
+renderWindowInteractor = vtk.vtkRenderWindowInteractor()
+renderWindowInteractor.SetRenderWindow(renderWindow)
+
+renderer.AddActor(actor) 
+renderer.SetBackground(.2, .3, .4)
+
+renderWindow.Render() 
+renderWindowInteractor.Start()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-42">
+        42
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-43">
+        43
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-44">
+        44
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-45">
+        45
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-46">
+        46
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-47">
+        47
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-48">
+        48
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-49">
+        49
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-50">
+        50
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-51">
+        51
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-52">
+        52
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-53">
+        53
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-54">
+        54
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-55">
+        55
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-56">
+        56
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-57">
+        57
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-58">
+        58
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-59">
+        59
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-60">
+        60
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e88d095d1404116230-61">
+        61
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         math
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-2">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-4">
+        <span class="crayon-p">
+         # Let’s make a sixth-order tetrahedron
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-5">
+        <span class="crayon-v">
+         order
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         6
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-6">
+        <span class="crayon-p">
+         # The number of points for a sixth-order tetrahedron is
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-7">
+        <span class="crayon-v">
+         nPoints
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         order
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         order
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         order
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         6
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-9">
+        <span class="crayon-p">
+         # Create a tetrahedron and set its number of points. Internally, Lagrange cells
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # compute their order according to the number of points they hold.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-11">
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkLagrangeTetra
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-12">
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetPointIds
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfIds
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         nPoints
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-13">
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         nPoints
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-14">
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Initialize
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-16">
+        <span class="crayon-v">
+         point
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0.
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-cn">
+         0.
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-cn">
+         0.
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-17">
+        <span class="crayon-v">
+         barycentricIndex
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-18">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-19">
+        <span class="crayon-p">
+         # For each point in the tetrahedron...
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-20">
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         i
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         range
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         nPoints
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # ...we set its id to be equal to its index in the internal point array.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetPointIds
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetId
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-23">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # We compute the barycentric index of the point...
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-25">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ToBarycentricIndex
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         barycentricIndex
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-26">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # ...and scale it to unity.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-28">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         j
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         range
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-29">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         point
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         j
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         barycentricIndex
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         j
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         order
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-30">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # A tetrahedron comprised of the above-defined points has straight
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-32">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # edges.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-33">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetPoint
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         i
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         point
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         point
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         point
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-34">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-35">
+        <span class="crayon-p">
+         # Add the tetrahedron to a cell array
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-36">
+        <span class="crayon-v">
+         tets
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkCellArray
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-37">
+        <span class="crayon-v">
+         tets
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         InsertNextCell
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-38">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-39">
+        <span class="crayon-p">
+         # Add the points and tetrahedron to an unstructured grid
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-40">
+        <span class="crayon-v">
+         uGrid
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkUnstructuredGrid
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-41">
+        <span class="crayon-v">
+         uGrid
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-42">
+        <span class="crayon-v">
+         uGrid
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         InsertNextCell
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetCellType
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetPointIds
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-43">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-44">
+        <span class="crayon-p">
+         # Visualize
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-45">
+        <span class="crayon-v">
+         mapper
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkDataSetMapper
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-46">
+        <span class="crayon-v">
+         mapper
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         uGrid
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-47">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-48">
+        <span class="crayon-v">
+         actor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkActor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-49">
+        <span class="crayon-v">
+         actor
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetMapper
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         mapper
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-50">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-51">
+        <span class="crayon-v">
+         renderer
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkRenderer
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-52">
+        <span class="crayon-v">
+         renderWindow
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkRenderWindow
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-53">
+        <span class="crayon-v">
+         renderWindow
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         AddRenderer
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         renderer
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-54">
+        <span class="crayon-v">
+         renderWindowInteractor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkRenderWindowInteractor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-55">
+        <span class="crayon-v">
+         renderWindowInteractor
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetRenderWindow
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         renderWindow
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-56">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-57">
+        <span class="crayon-v">
+         renderer
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         AddActor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         actor
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-58">
+        <span class="crayon-v">
+         renderer
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetBackground
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-59">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-60">
+        <span class="crayon-v">
+         renderWindow
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Render
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e88d095d1404116230-61">
+        <span class="crayon-v">
+         renderWindowInteractor
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Start
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0015 seconds] -->
+ <p>
+ </p>
+ <p class="">
+  Presently, the unstructured grid stores the X-Y-Z coordinate data, point field values and offsets for each point in data arrays. The overhead for this storage increases quickly with order. For hexahedra of order N along each axis, the overhead is (N + 1)
+  <sup>
+   3
+  </sup>
+  .
+ </p>
+ <p class="">
+  In the future, it may be possible to condense connectivity storage to a fixed size per cell shape. It may also be possible to specify order per axis rather than infer it from the number of points that define a cell. If order is explicitly specified, the following can be defined in memory: the offset to the first point and the order over which the points are iterated relative to the parametric coordinate system of the cell.
+ </p>
+ <p class="">
+  The VTK development team has already taken the first step toward these possibilities by keeping points for edges and faces together in Lagrange cells. After further steps are taken, the ability to relate points to a particular boundary will allow VTK to refer to the points with a single offset. This will allow VTK to significantly reduce its memory footprint.
+ </p>
+ <h2 class="">
+  Unit Tests
+ </h2>
+ <p class="">
+  VTK offers unit tests for Lagrange cells. Some C++ unit tests are available in Common/DataModel/Testing/Cxx. LagrangeInterpolation.cxx, for example, evaluates the shape function that is common to tensor product shapes such as curves, quadrilaterals, hexahedra and wedges. Alternatively, TestLagrangeTetra.cxx, TestLagrangeTriangle.cxx and LagrangeHexahedron.cxx contain unit tests for inherited cell functions.
+ </p>
+ <p class="">
+  Python integration tests are located in Filters/Geometry/Testing/Python/LagrangeGeometricOperations.py.
+  <br/>
+  These tests demonstrate how to read in new cells from an XML file, intersect the cells with lines, glyph the resulting points and run filters on the unstructured grid that contains the cells. One such filter is vtkUnstructuredGridGeometryFilter. It has been extended to demonstrate high-fidelity polynomial refinement. The technique renders representations that reveal the smooth nature of elements.
+ </p>
+ <h2 class="">
+  Adaptive Tessellation
+ </h2>
+ <p class="">
+  To further reveal the true shape of elements, VTK performs adaptive tessellation. This technique is executed by vtkTessellatorFilter. The filter adaptively subdivides edges according to tolerances that are specified on the chord error and field value differences. The resulting isocontours are smoother than those produced with the default option. The reason why vtkTessellatorFilter is not the default option is because it is computationally expensive.
+ </p>
+ <p class="">
+  In addition to VTK, vtkTessellatorFilter can be used in ParaView. ParaView is a VTK-based open source software platform. As a result of recent changes, it now also supports Lagrange cells.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_23348" style="width: 2136px">
+  <img alt="" class="size-full wp-image-23348" height="1261" sizes="(max-width: 2126px) 100vw, 2126px" src="http://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth.png 2126w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-300x178.png 300w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-768x456.png 768w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-1024x607.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-220x130.png 220w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-250x148.png 250w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-355x211.png 355w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-730x433.png 730w, https://blog.kitware.com/wp-content/uploads/2018/08/HexesQuadsWedge-ContourSmooth-90x53.png 90w" width="2126"/>
+  <p class="wp-caption-text">
+   The filter for adaptive tessellation in VTK produces curvy outlines and an improved approximation to the volumetric function.
+  </p>
+ </div>
+ <h2 class="">
+  Acknowledgment
+ </h2>
+ <p class="">
+  For funding the work on the Lagrange cells, the authors thank the Data Analysis and Assessment Center (DAAC) of the Department of Defense. Information on DAAC is available on
+  <a href="https://daac.hpc.mil" rel="noopener" target="_blank">
+   https://daac.hpc.mil
+  </a>
+  . DAAC has generously licensed the work so that others can benefit from it through the license for VTK. The license is detailed on
+  <a href="https://www.vtk.org/licensing" rel="noopener" target="_blank">
+   https://www.vtk.org/licensing
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="wp-image-23331 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="http://blog.kitware.com/wp-content/uploads/2018/08/corona_tj.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj.jpg 2400w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-240x300.jpg 240w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-768x960.jpg 768w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-819x1024.jpg 819w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-220x275.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-250x313.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-355x444.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-730x913.jpg 730w, https://blog.kitware.com/wp-content/uploads/2018/08/corona_tj-90x113.jpg 90w" width="100"/>
+   Thomas J. Corona
+  </strong>
+  is a senior R&amp;D engineer at Kitware. Among his interests are computational electromagnetics, mesh generation and high-performance computing.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="wp-image-23332 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="http://blog.kitware.com/wp-content/uploads/2018/08/thompson.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2018/08/thompson.jpg 2400w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-240x300.jpg 240w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-768x960.jpg 768w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-819x1024.jpg 819w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-220x275.jpg 220w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-250x313.jpg 250w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-355x444.jpg 355w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-730x913.jpg 730w, https://blog.kitware.com/wp-content/uploads/2018/08/thompson-90x113.jpg 90w" width="100"/>
+  </strong>
+ </p>
+ <p>
+  <strong>
+   David Thompson
+  </strong>
+  is a staff R&amp;D engineer at Kitware. His interests include computational simulation and visualization, conceptual design, solid modeling and mechatronics.
+ </p>
+ <a class="btn-sourcepdf" href="https://blog.kitware.com/wp-content/uploads/2018/09/Source_Issue_43.pdf" target="_blank">
+  Source Issue
+ </a>
+</div>

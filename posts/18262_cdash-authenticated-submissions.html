@@ -1,0 +1,153 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Up until now, CDash has always accepted submissions without requiring authentication.   To support open-source collaborative development, we wanted to make it quick and easy for developers and users to share build results with each other.   This leads to the quick identification and resolution of problems related to building and testing software.
+ </p>
+ <p>
+  However, we recognize that situations may arise where you need to restrict who is allowed to submit to your CDash project.  For this reason, we are proud to announce support for
+  <em>
+   <strong>
+    authenticated submissions
+   </strong>
+  </em>
+  to CDash.  This feature is currently available in CDash and CMake master, and it will be included in our upcoming releases of CDash (2.6) and CMake (3.9).
+ </p>
+ <h1>
+  Instructions for use
+ </h1>
+ <p>
+  A CDash project admin will need to configure the project to only accept submissions from authorized users.  You can access the “Edit Project” page by clicking on “Project” in the “Settings” drop-down menu.
+ </p>
+ <p>
+  <img alt='Navigate to the "Edit Project" page' class="size-large wp-image-18263" height="325" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/05/settings-1024x325.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/settings-1024x325.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/05/settings-300x95.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/settings-768x244.png 768w, https://blog.kitware.com/wp-content/uploads/2017/05/settings-220x70.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/settings-250x79.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/settings-355x113.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/settings-730x232.png 730w, https://blog.kitware.com/wp-content/uploads/2017/05/settings-90x29.png 90w" width="1024"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  Check the
+  <strong>
+   Authenticate Submissions
+  </strong>
+  box and click the
+  <strong>
+   Update Project
+  </strong>
+  button.
+ </p>
+ <p>
+  <img alt="" class="size-large wp-image-18264" height="437" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-1024x437.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-1024x437.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-300x128.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-768x328.png 768w, https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-220x94.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-250x107.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-355x151.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-730x311.png 730w, https://blog.kitware.com/wp-content/uploads/2017/05/auth_setting-90x38.png 90w" width="1024"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  Now you need to generate a new authentication token to be able to submit to your project.  Click on the “My CDash” link in the upper-left corner of the page.  Your user page now displays a new section:
+  <strong>
+   Authentication Tokens
+  </strong>
+  .  Enter a description for this new token, such as what site it will be used from, or what project it will be used for, and click
+  <strong>
+   Generate Token
+  </strong>
+  .  Be sure to copy the newly generated token before leaving this page.
+ </p>
+ <p>
+  <img alt="" class="aligncenter size-large wp-image-18265" height="143" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-1024x143.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-1024x143.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-300x42.png 300w, https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-768x108.png 768w, https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-220x31.png 220w, https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-250x35.png 250w, https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-355x50.png 355w, https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-730x102.png 730w, https://blog.kitware.com/wp-content/uploads/2017/05/generate_token-90x13.png 90w" width="1024"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  Next, tell CTest to present this token when submitting files to CDash.  This is accomplished by using the new
+  <span style="font-family: 'courier new', courier">
+   HTTPHEADER
+  </span>
+  argument to
+  <a href="https://cmake.org/cmake/help/git-master/command/ctest_submit.html">
+   ctest_submit
+  </a>
+  .  Here’s an example of how to do this:
+ </p>
+ <p class="p1">
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span class="s1" style="color: #ff6600">
+     set
+    </span>
+    <span class="s2" style="color: #33cccc">
+     (_auth_token
+    </span>
+    <span class="s3" style="color: #ff0000">
+     “9c7310ae191c88aebad212f79c2d0b5b”
+    </span>
+    <span class="s2" style="color: #33cccc">
+     )
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p class="p1">
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span class="s1">
+     ctest_submit
+    </span>
+    <span style="color: #33cccc">
+     <span class="s2">
+      (HTTPHEADER
+     </span>
+     <span style="color: #ff0000">
+      <span class="s3">
+       “Authorization: Bearer
+      </span>
+      <span class="s4" style="color: #99cc00">
+       ${_auth_token}
+      </span>
+      <span class="s3">
+       “
+      </span>
+     </span>
+     <span class="s2">
+      )
+     </span>
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+ </p>
+ <p>
+  If you don’t specify a valid token, CDash will reject the submission:
+ </p>
+ <p>
+  <span class="s1">
+   <span style="font-family: 'courier new', courier">
+    Error when uploading file: Build.xml
+   </span>
+  </span>
+ </p>
+ <p class="p1">
+  <span class="s1" style="font-family: 'courier new', courier">
+   Error message was: The requested URL returned error: 401 Unauthorized
+  </span>
+ </p>
+ <h1>
+  Notes
+ </h1>
+ <p>
+  By default, tokens expire six months after creation.  This time frame is defined by
+  <span class="s1" style="font-family: 'courier new', courier">
+   $
+  </span>
+  <span class="s2">
+   <span style="font-family: 'courier new', courier">
+    CDASH_TOKEN_DURATION
+   </span>
+   in config.php.  If you set this variable to 0 then tokens will not expire.
+  </span>
+ </p>
+ <p>
+  Authentication tokens are associated with the user that created them, not with any particular project.  If you wish to stop a particular submission you should revoke that user’s access to your project.  Any tokens they’ve generated will still exist, but these tokens will no longer grant access to your project.
+ </p>
+ <p>
+  Because authentication tokens are presented each time CTest submits to CDash, this feature should only be used when submitting to a CDash instance that uses HTTPS.
+ </p>
+</div>

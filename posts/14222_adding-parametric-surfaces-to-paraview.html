@@ -1,0 +1,1707 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h2>
+  Introduction
+ </h2>
+ <p>
+  VTK has a collection of parametric surfaces that are both orientable (e.g. Torus) and non-orientable (e.g. Möbius Strip). If you launch ParaView and look in
+  <strong>
+   Sources
+  </strong>
+  you will see that these surfaces are not there.
+ </p>
+ <p>
+  This article will show you how to bring these surfaces into ParaView and how to access these surfaces from the
+  <strong>
+   Sources
+  </strong>
+  menu.
+ </p>
+ <p>
+  By the end of the article you should be able to load a library of classic parametric surfaces that you can then explore in ParaView.
+ </p>
+ <p>
+  One of the really nice features of ParaView is its extensibility through the use of plugins. We will take advantage of this by creating Server Manager XML that allows the Parametric Surfaces found in VTK to be loaded into ParaView.
+ </p>
+ <p>
+  For more background information on writing ParaView plugins, see the
+  <a href="http://www.paraview.org/Wiki/ParaView/Plugin_HowTo">
+   ParaView/Plugin HowTo
+  </a>
+  .
+ </p>
+ <p>
+  To see how ParaView’s Server Manager Plugins work, we will start with a quick example using the Klein Bottle, then demonstrate how to add parameters using Boy’s Surface. Finally we will provide a complete XML file for the VTK Parametric Surfaces.
+ </p>
+ <h2>
+  A quick example
+ </h2>
+ <p>
+  Here is a skeleton file to get you started. This will add an entry called
+  <strong>
+   Parametric Surfaces
+  </strong>
+  to the
+  <strong>
+   Sources
+  </strong>
+  drop-down list in ParaView.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8418bc24789905914" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&amp;lt;?xml version="1.0" encoding="UTF-8"?&amp;gt;
+&amp;lt;ServerManagerConfiguration&amp;gt;
+ &amp;lt;ProxyGroup name="parametric_functions"&amp;gt;
+ &amp;lt;Proxy name="Klein bottle" class="vtkParametricKlein"&amp;gt;
+ &amp;lt;!-- Any parameters that need to be set go here. --&amp;gt;
+ &amp;lt;/Proxy&amp;gt;
+ &amp;lt;/ProxyGroup&amp;gt;
+
+ &amp;lt;ProxyGroup name="sources"&amp;gt;
+ &amp;lt;SourceProxy name="ParametricSurfaces" class="vtkParametricFunctionSource"
+ label="Parametric Surfaces"&amp;gt;
+ &amp;lt;!-- Any parameters that need to be set go here. --&amp;gt;
+ &amp;lt;ProxyProperty
+ command="SetParametricFunction"
+ name="ParametricFunction"
+ label="Parametric Surfaces"&amp;gt;
+ &amp;lt;ProxyListDomain name="proxy_list"&amp;gt;
+ &amp;lt;!-- Here we add the surfaces defined in the proxy group called parametric_functions. --&amp;gt;
+ &amp;lt;!-- These will appear as a drop-down list in ParaView named "Parametric Surfaces". --&amp;gt;
+ &amp;lt;Proxy group="parametric_functions" name="Klein bottle" /&amp;gt;
+ &amp;lt;/ProxyListDomain&amp;gt;
+ &amp;lt;/ProxyProperty&amp;gt;
+ &amp;lt;/SourceProxy&amp;gt;
+ &amp;lt;/ProxyGroup&amp;gt;
+&amp;lt;/ServerManagerConfiguration&amp;gt;
+</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc24789905914-26">
+        26
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-1">
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-sy">
+         ?
+        </span>
+        <span class="crayon-e">
+         xml
+        </span>
+        <span class="crayon-v">
+         version
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "1.0"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         encoding
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "UTF-8"
+        </span>
+        <span class="crayon-sy">
+         ?
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-2">
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-v">
+         ServerManagerConfiguration
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         ProxyGroup
+        </span>
+        <span class="crayon-v">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "parametric_functions"
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Proxy
+        </span>
+        <span class="crayon-v">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "Klein bottle"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "vtkParametricKlein"
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         !
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Any
+        </span>
+        <span class="crayon-e">
+         parameters
+        </span>
+        <span class="crayon-e">
+         that
+        </span>
+        <span class="crayon-e">
+         need
+        </span>
+        <span class="crayon-st">
+         to
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         be
+        </span>
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-e">
+         go
+        </span>
+        <span class="crayon-v">
+         here
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Proxy
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ProxyGroup
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         ProxyGroup
+        </span>
+        <span class="crayon-v">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "sources"
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         SourceProxy
+        </span>
+        <span class="crayon-v">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "ParametricSurfaces"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "vtkParametricFunctionSource"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         label
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "Parametric Surfaces"
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         !
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Any
+        </span>
+        <span class="crayon-e">
+         parameters
+        </span>
+        <span class="crayon-e">
+         that
+        </span>
+        <span class="crayon-e">
+         need
+        </span>
+        <span class="crayon-st">
+         to
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         be
+        </span>
+        <span class="crayon-e">
+         set
+        </span>
+        <span class="crayon-e">
+         go
+        </span>
+        <span class="crayon-v">
+         here
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         ProxyProperty
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-14">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-v">
+         command
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "SetParametricFunction"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "ParametricFunction"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         label
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "Parametric Surfaces"
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         ProxyListDomain
+        </span>
+        <span class="crayon-v">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "proxy_list"
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         !
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Here
+        </span>
+        <span class="crayon-e">
+         we
+        </span>
+        <span class="crayon-e">
+         add
+        </span>
+        <span class="crayon-e">
+         the
+        </span>
+        <span class="crayon-e">
+         surfaces
+        </span>
+        <span class="crayon-e">
+         defined
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         the
+        </span>
+        <span class="crayon-e">
+         proxy
+        </span>
+        <span class="crayon-e">
+         group
+        </span>
+        <span class="crayon-e">
+         called
+        </span>
+        <span class="crayon-v">
+         parametric_functions
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         !
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         These
+        </span>
+        <span class="crayon-e">
+         will
+        </span>
+        <span class="crayon-e">
+         appear
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         a
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         drop
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-e">
+         down
+        </span>
+        <span class="crayon-e">
+         list
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ParaView
+        </span>
+        <span class="crayon-i">
+         named
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Parametric Surfaces"
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Proxy
+        </span>
+        <span class="crayon-v">
+         group
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "parametric_functions"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "Klein bottle"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ProxyListDomain
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ProxyProperty
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         SourceProxy
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ProxyGroup
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-25">
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         ServerManagerConfiguration
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc24789905914-26">
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0052 seconds] -->
+ <p>
+  To use this, download
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/04/Skeleton.zip" rel="">
+   Skeleton
+  </a>
+  and unzip it into a folder.
+  <br/>
+  Now:
+ </p>
+ <ul>
+  <li>
+   Open ParaView.
+  </li>
+  <li>
+   Select
+   <strong>
+    Tools|Manage Plugins
+   </strong>
+   , click on
+   <strong>
+    Load New
+   </strong>
+   and navigate to where you downloaded this file.
+  </li>
+  <li>
+   You will need to change the file type to
+   <em>
+    Server Manager XML (\*.xml)
+   </em>
+   .
+  </li>
+  <li>
+   Select
+   <strong>
+    Skeleton.xml
+   </strong>
+   and click
+   <strong>
+    OK.
+   </strong>
+   You should see a plugin called
+   <strong>
+    Skeleton
+   </strong>
+   , press
+   <strong>
+    Close
+   </strong>
+   .
+  </li>
+  <li>
+   Now click on
+   <strong>
+    Sources
+   </strong>
+   and select
+   <strong>
+    Parametric Surfaces
+   </strong>
+   .
+  </li>
+  <li>
+   In the Properties tab you will see a drop-down list called
+   <strong>
+    Parametric Surface
+   </strong>
+   s with one entry called
+   <strong>
+    Klein Bottle
+   </strong>
+   .
+  </li>
+  <li>
+   Click
+   <strong>
+    Apply
+   </strong>
+   and a Klein Bottle will appear.
+  </li>
+ </ul>
+ <div class="wp-caption alignnone" id="attachment_14227" style="width: 1173px">
+  <img alt="Klein.png" class="size-medium wp-image-14227" height="781" sizes="(max-width: 1163px) 100vw, 1163px" src="https://blog.kitware.com/wp-content/uploads/2016/04/Klein-300x201.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/Klein-300x201.png 300w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein-768x516.png 768w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein-1024x688.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein-220x148.png 220w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein-250x168.png 250w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein-355x238.png 355w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein-730x490.png 730w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein-90x60.png 90w, https://blog.kitware.com/wp-content/uploads/2016/04/Klein.png 1163w" width="1163"/>
+  <p class="wp-caption-text">
+   Klein Bottle
+  </p>
+ </div>
+ <p>
+  At this point, feel free to experiment with the surface in ParaView. For example, try a Point Gaussian Representation or a Wireframe, this will give you a good idea of the complexity of the surface.
+ </p>
+ <h2>
+  Dealing with Parameters
+ </h2>
+ <p>
+  The Klein bottle really does not have any parameters that need to be set in order to get a good picture. So we will use a different surface, Boy’s Surface, as an example that shows how to incorporate parameters.
+ </p>
+ <p>
+  Firstly we need to know that the parameters are distributed over two classes:
+ </p>
+ <ol>
+  <li>
+   The
+   <em>
+    vtkParametric&lt;SurfaceName&gt;
+   </em>
+   classes, found in
+   <em>
+    Common/ComputationalGeometry
+   </em>
+   in the VTK source, actually generate the points and derivatives from the parametric equations. These parameters control the mapping of the surface from the u-v space to the x-y-z space.
+  </li>
+  <li>
+   The second class we need is
+   <em>
+    vtkParametricFunctionSource
+   </em>
+   found in
+   <em>
+    Filters/Sources
+   </em>
+   in the VTK source. This takes the points and derivatives from the parametric surface and triangulates the surface adding in normals. It also adds in some predefined scalars. This is done because, for non-orientable surfaces, it is necessary to generate normals and scalars at this stage since the usual normal generation only works for orientable surfaces.
+  </li>
+ </ol>
+ <p>
+  To illustrate how the classes work together here is a python example called
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/04/BoysSurface.zip" rel="">
+   BoysSurface
+  </a>
+  . Unzip this file into a folder. In this file, these lines show how the two classes work together:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8418bc30363311202" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+    boy = vtk.vtkParametricBoy()
+    boy.SetZScale(zScale)
+    source = vtk.vtkParametricFunctionSource()
+    source.SetParametricFunction(boy)
+    source.SetScalarModeToModulus()
+    source.Update()
+</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8418bc30363311202-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc30363311202-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc30363311202-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc30363311202-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc30363311202-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc30363311202-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8418bc30363311202-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8418bc30363311202-1">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         boy
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkParametricBoy
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc30363311202-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         boy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetZScale
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         zScale
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc30363311202-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         source
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkParametricFunctionSource
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc30363311202-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         source
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetParametricFunction
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         boy
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc30363311202-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         source
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetScalarModeToModulus
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc30363311202-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         source
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8418bc30363311202-7">
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  Here we are setting the ZScale in the surface generation and telling vtkParametricFunctionSource to insert a modulus value as a scalar when the points are generated.
+  <br/>
+  When you run this example the initial display should look like this:
+ </p>
+ <div class="wp-caption alignnone" id="attachment_14234" style="width: 802px">
+  <img alt="Boy's Surface" class="size-medium wp-image-14234" height="602" sizes="(max-width: 792px) 100vw, 792px" src="https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-300x228.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-300x228.png 300w, https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-768x584.png 768w, https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-220x167.png 220w, https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-250x190.png 250w, https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-355x270.png 355w, https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-730x555.png 730w, https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py-90x68.png 90w, https://blog.kitware.com/wp-content/uploads/2016/04/Boy_py.png 792w" width="792"/>
+  <p class="wp-caption-text">
+   Boy’s Surface
+  </p>
+ </div>
+ <p>
+  Now, if you look at Skeleton.xml (above) you will see that there are comments indicating where we set the parameters. Also note the two proxy groups:
+ </p>
+ <ol>
+  <li>
+   In
+   <strong>
+    ProxyGroup name=”parametric_functions”
+   </strong>
+   we insert proxies for each of the vtk parametric classes along with their parameters.
+  </li>
+  <li>
+   In
+   <strong>
+    ProxyGroup name=”sources”
+   </strong>
+   we define the source proxy corresponding to the class
+   <strong>
+    vtkParametricFunctionSource
+   </strong>
+   . Within the source proxy we will define any parameters specific to
+   <strong>
+    vtkParametricFunctionSource
+   </strong>
+   . Additionally there is a
+   <strong>
+    ProxyProperty
+   </strong>
+   section that lists each of the parametric functions that we need to include, this is done in the
+   <strong>
+    ProxyListDomain
+   </strong>
+   .
+  </li>
+ </ol>
+ <p>
+  Keeping these points in mind, we modify Skeleton.xml calling it BoysSurface.xml adding in parameters for vtkParametricBoy and vtkParametricFunctionSource. Download and unzip this file
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/04/BoysSurface_xml.zip" rel="">
+   BoysSurface.zip
+  </a>
+  .
+  <br/>
+  In this file you will see that we have set a Z-scale for Boy’s Surface and enumerated the scalar modes in ParametricSource.
+  <br/>
+  Once you have downloaded this file, do:
+ </p>
+ <ul>
+  <li>
+   Open ParaView.
+  </li>
+  <li>
+   Select
+   <strong>
+    Tools|Manage Plugins
+   </strong>
+   , and, if it exists, click on
+   <strong>
+    Skeleton
+   </strong>
+   then click on
+   <strong>
+    Remove
+   </strong>
+   , then click on
+   <strong>
+    Close
+   </strong>
+   .
+  </li>
+  <li>
+   Select
+   <strong>
+    Tools|Manage Plugins
+   </strong>
+   , click on
+   <strong>
+    Load New
+   </strong>
+   and navigate to where you downloaded this file.
+  </li>
+  <li>
+   You will need to change the file type to
+   <em>
+    Server Manager XML (\*.xml)
+   </em>
+   .
+  </li>
+  <li>
+   Select
+   <strong>
+    BoysSurface.xml
+   </strong>
+   and press
+   <strong>
+    OK
+   </strong>
+   , you should see a plugin called
+   <strong>
+    BoysSurface
+   </strong>
+   , press
+   <strong>
+    Close
+   </strong>
+   .
+  </li>
+  <li>
+   Now click on
+   <strong>
+    Sources
+   </strong>
+   and select
+   <strong>
+    Parametric Surfaces
+   </strong>
+   .
+  </li>
+  <li>
+   In the
+   <strong>
+    Properties
+   </strong>
+   tab you will see a drop-down list called
+   <strong>
+    Parametric Surfaces
+   </strong>
+   with one entry called
+   <strong>
+    Boy’s Surface
+   </strong>
+   .
+  </li>
+  <li>
+   Click
+   <strong>
+    Apply
+   </strong>
+   and Boy’s surface will appear.
+  </li>
+ </ul>
+ <div class="wp-caption alignnone" id="attachment_14237" style="width: 1173px">
+  <img alt="ParaView_Boy" class="size-medium wp-image-14237" height="781" sizes="(max-width: 1163px) 100vw, 1163px" src="https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-300x201.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-300x201.png 300w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-768x516.png 768w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-1024x688.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-220x148.png 220w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-250x168.png 250w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-355x238.png 355w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-730x490.png 730w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy-90x60.png 90w, https://blog.kitware.com/wp-content/uploads/2016/04/ParaView_Boy.png 1163w" width="1163"/>
+  <p class="wp-caption-text">
+   Boy’s Surface
+  </p>
+ </div>
+ <p>
+  Note the following:
+ </p>
+ <ul>
+  <li>
+   You can change the resolution for U and V.
+  </li>
+  <li>
+   You can select a scalar mode from a drop down list, currently “None”.
+  </li>
+  <li>
+   You can change the Z Scale, currently 0.125.
+  </li>
+  <li>
+   You can also change the ordering of the triangles … try it and see what happens.
+  </li>
+  <li>
+   Don’t forget to press
+   <strong>
+    Apply
+   </strong>
+   if you change parameters.
+  </li>
+ </ul>
+ <p>
+  As an exercise, see if you can replicate a similar image to that in the Python example. Additionally, apply the Glyph filter to see where the normals point on the surface.
+ </p>
+ <p>
+  <em>
+   Hint
+  </em>
+  : Modulus would be a good start for scalar mode, do
+  <strong>
+   Apply
+  </strong>
+  and then select
+  <strong>
+   Scalars
+  </strong>
+  in
+  <strong>
+   Coloring
+  </strong>
+  , then find a suitable color map.
+ </p>
+ <h2>
+  The Complete Implementation
+ </h2>
+ <p>
+  Now that all the hard work has been done … download and unzip
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/04/ParametricSurfaces.zip" rel="">
+   ParametricSurfaces
+  </a>
+  into a folder. This file incorporates and extends all that we have learned, allowing you to select any one of the 21 Parametric Surfaces in VTK.
+ </p>
+ <p>
+  After downloading and unzipping you will have a file called ParametricSurfaces.zip. To use it, follow these instructions:
+ </p>
+ <ul>
+  <li>
+   Open ParaView.
+  </li>
+  <li>
+   Select
+   <strong>
+    Tools|Manage Plugins
+   </strong>
+   , and, if
+   <strong>
+    Skeleton
+   </strong>
+   and or
+   <strong>
+    BoysSurface
+   </strong>
+   exist, click on
+   <strong>
+    Remove
+   </strong>
+   to remove them, then click on
+   <strong>
+    Close
+   </strong>
+   .
+  </li>
+  <li>
+   Select
+   <strong>
+    Tools|Manage Plugins
+   </strong>
+   , click on
+   <strong>
+    Load New
+   </strong>
+   and navigate to where you downloaded this file.
+  </li>
+  <li>
+   You will need to change the file type to
+   <em>
+    Server Manager XML (\*.xml)
+   </em>
+   .
+  </li>
+  <li>
+   Select
+   <strong>
+    ParametricSurfaces.xml
+   </strong>
+   and press
+   <strong>
+    OK
+   </strong>
+   , you should see a plugin called
+   <strong>
+    ParametricSurfaces
+   </strong>
+   , press
+   <strong>
+    Close
+   </strong>
+   .
+  </li>
+  <li>
+   Now click on
+   <strong>
+    Sources
+   </strong>
+   and select
+   <strong>
+    Parametric Surfaces
+   </strong>
+   .
+  </li>
+  <li>
+   In the
+   <strong>
+    Properties
+   </strong>
+   tab you will see a drop-down list called
+   <strong>
+    Parametric Surfaces
+   </strong>
+   with 21 surfaces listed.
+  </li>
+  <li>
+   Select one, click
+   <strong>
+    Apply
+   </strong>
+   and the surface will appear.
+  </li>
+ </ul>
+ <p>
+  If you want, you can put this file in
+  <em>
+   bin/plugins
+  </em>
+  in the ParaView directory. If this is done, it will be loaded automatically.
+ </p>
+ <p>
+  I hope you enjoy exploring these beautiful surfaces using the many features of the ParaView interface. ParaView renderers these surfaces much better than the examples on the web. It is good fun to see if you can emulate what is displayed on the web.
+ </p>
+ <p>
+  The beauty of Mathematics through ParaView.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

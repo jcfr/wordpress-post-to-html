@@ -1,0 +1,63 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Ever wondered why opening the Python shell in ParaView for the very first time, or doing "from paraview.simple import *" in
+  <strong>
+   pvpython
+  </strong>
+  shell makes your disk spin? It's because of the loading of shared libraries and *.py files related to both, ParaView modules as well as Python itself (including optional dependencies such as
+  <em>
+   numpy
+  </em>
+  and
+  <em>
+   matplotlib
+  </em>
+  . While this is not a huge deal for most users, when running massively parallel jobs on HPC systems with testy (aka parallel) file systems, it can be a major bottleneck and prohibitively affect the startup times. The curious can try using
+  <a href="http://en.wikipedia.org/wiki/Strace">
+   strace
+  </a>
+  on a pvpython running a simple Python script that simply imports the paraview.simple module to see the number of filesystem accesses to understand the scale of this problem. While Python support is totally optional, are more and more capabilities (such as math-text rendering, data querying, programmable filters) start requiring Python, a ParaView build without Python can start appearing like a bird with clipped wings.
+ </p>
+ <h3>
+  Solution Part I – Building ParaView statically
+ </h3>
+ <p>
+  Several of the file accesses during initialization are for loading the shared libraries for the Python wrapping for the ParaView/VTK components. One way to overcome those is to build ParaView statically (with CMake variable
+  <strong>
+   BUILD_SHARED_LIBS
+  </strong>
+  to OFF). Starting with ParaView 3.98 (if I remember correctly), it is possible to build ParaView statically even with Python support enabled. What this does is links all the Python module libraries with the executables and initializes Python so that whenever any *.py file tries to import the library it will simply call the init function linked into the executable — in a matter of speaking. While this overcomes several of the *.so (or *.dll, *.dylib) accesses, *.py accesses still remain.
+ </p>
+ <h3>
+  Solution Part II – Freezing Python
+ </h3>
+ <p>
+  To address the *.py file access issue, we now have a new alternative – freezing Python. The concept is not new and supported by
+  <a href="http://wiki.python.org/moin/Freeze">
+   utility scripts
+  </a>
+  in Python, starting with ParaView 4.1, ParaView will support freezing Python at compile time (users can use the development version to try this functionality out before the release). For this, on unix-based platforms, users can simply turn on CMake variable
+  <strong>
+   PARAVIEW_FREEZE_PYTHON
+  </strong>
+  . When ON, during the build process, we run the Python's freeze utility to embed the ParaView Python modules as well as other basic set of Python modules within the executable itself. While at the time of writing this blog post, we don't support freezing Python packages such as numpy, that's something that will be addressed in near future, so stay tuned.
+ </p>
+ <p>
+  Developers can look at
+  <em>
+   ThirdParty/FreezePython/vtkFreezePython.cmake
+  </em>
+  and
+  <em>
+   Utilities/PythonInitializer/CMakeLists.txt
+  </em>
+  within the ParaView source tree for implementation details.
+ </p>
+ <h3>
+  Coda
+ </h3>
+ <p>
+  Despite building statically and freezing Python, there will still be other Python-related shared library accesses for Python's libraries (including the shared libraries for the Python modules). These can be overcome by building Python statically, but that's another blog post.
+ </p>
+</div>

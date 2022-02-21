@@ -1,0 +1,604 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  In ParaView, color presets provide a way for user to access of palette of predefined color maps that can be used for pseudocoloring datasets using data variables. Management of presets in ParaView has been revamped for ParaView 4.4 There were several major focuses of this new work including making the UI easier to use, adding support for opacity transfer functions in presets, and ability to access the presets in Python scripts. In this article we take a fresh look at presets.
+ </p>
+ <h2>
+  Accessing the presets
+ </h2>
+ <hr/>
+ <p>
+  Presets can be accessed using the
+  <strong>
+   Color Map Editor
+  </strong>
+  panel. When the active source is being colored (or pseudocolored) using a data variable in the active view, the
+  <strong>
+   Color Map Editor
+  </strong>
+  panel can be used to fine tune the scalar to colors (or opacities) mapping. While you can always manually setup the color and opacity transfer functions, you can also load a preset. To popup the
+  <strong>
+   Choose Preset
+  </strong>
+  dialog, you use the
+  <img src="https://blog.kitware.com/blog/files/48_2036108009.png" style="height: 18px; width: 18px;"/>
+  icon. It’s shown under the
+  <strong>
+   <em>
+    Mapping Data
+   </em>
+  </strong>
+  group  (Figure 1: left) or
+  <strong>
+   <em>
+    Annotations
+   </em>
+  </strong>
+  group (Figure 1: right), if using categorical color mapping.
+ </p>
+ <p>
+  <a href="/blog/files/48_730758275.png" rel="noopener" style="line-height: 1.6em;" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_730758275.png" width="45%"/>
+  </a>
+  <span style="line-height: 1.6em;">
+  </span>
+  <a href="/blog/files/48_503753310.png" rel="noopener" style="line-height: 20.7999992370605px;" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.48_503753310.png" style="opacity: 0.9;" width="45%"/>
+  </a>
+ </p>
+ <p>
+  <center>
+   <strong>
+    Figure 1
+   </strong>
+   : Color Map Editor panel showing the
+   <em>
+    Choose Preset
+   </em>
+   button to access the
+   <strong>
+    Preset
+   </strong>
+   dialog.
+  </center>
+ </p>
+ <h2>
+ </h2>
+ <h2>
+  Navigating the Choose Preset dialog
+ </h2>
+ <hr/>
+ <p>
+  <center>
+   <br/>
+   <a href="/blog/files/48_2073564343.png" rel="noopener" target="_blank">
+    <img src="https://blog.kitware.com/blog/files/48_2073564343.png" width="70%"/>
+   </a>
+  </center>
+  The preset dialog how support searching for presets by name. You can enter text in the
+  <strong>
+   <em>
+    Search
+   </em>
+  </strong>
+  box to filter the list of presets shown, similar to
+  <em>
+   Properties Panel
+  </em>
+  and such other panels in ParaView. To select (or activate) a preset, you must click on it in the
+  <strong>
+   <em>
+    Presets
+   </em>
+  </strong>
+  table. Selecting or activating a preset doesn’t result in loading the preset. To load or
+  <em>
+   apply
+  </em>
+  the preset to the transfer function, you can double-click on it in the
+  <strong>
+   <em>
+    Presets
+   </em>
+  </strong>
+  ​ table or select it and then use the
+  <strong>
+   <em>
+    Apply
+   </em>
+  </strong>
+  button. When applying a preset, the checkboxes under
+  <strong>
+   <em>
+    Options to load:
+   </em>
+  </strong>
+  control how the preset gets loaded.
+  <strong>
+   <em>
+    Colors
+   </em>
+  </strong>
+  is enabled for presets that provide a color transfer function i.e. a color map. Check/uncheck
+  <strong>
+   <em>
+    Colors
+   </em>
+  </strong>
+  to load/not-load the color control points.
+  <strong>
+   <em>
+    Opacities
+   </em>
+  </strong>
+  is enabled for presets that have provide an opacity transfer function. Check/uncheck
+  <strong>
+   <em>
+    Opacities
+   </em>
+  </strong>
+  to control whether opacity mapping is loaded from the preset or not. Presets are often written for a specific scalar range. When applying a present, you generally want the current scalar range to be preserved and the preset scaled to match the current range. If that’s not the case, and you saved a preset for specific scalar range in mind, simply check the
+  <strong>
+   <em>
+    Use preset range
+   </em>
+  </strong>
+  check box. That will preserve the range from the present and override the current transfer function range, as needed.
+ </p>
+ <p>
+  The
+  <strong>
+   <em>
+    Import/Export
+   </em>
+  </strong>
+  buttons allow you to import or export preset. To export presets, simple select one or muliple presets in the
+  <strong>
+   <em>
+    Presets
+   </em>
+  </strong>
+  table and then click the Export button. Presets are exported in a JSON format that is consistent with the format used for
+  <a href="https://blog.kitware.com/new-in-paraview-specifying-custom-default-values/">
+   settings
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <em>
+    Remove
+   </em>
+  </strong>
+  can be used to remove an imported preset. The button is not enabled for any of the builtin presets.
+ </p>
+ <p>
+  The
+  <strong>
+   <em>
+    Choose Preset
+   </em>
+  </strong>
+  dialog is quite similar for categories color maps, the only difference is that the
+  <strong>
+   <em>
+    Options to load:
+   </em>
+  </strong>
+  list is different.
+ </p>
+ <p>
+  <center>
+   <a href="/blog/files/48_1131362185.png" rel="noopener" target="_blank">
+    <img src="https://blog.kitware.com/blog/files/48_1131362185.png" width="80%"/>
+   </a>
+  </center>
+  <strong>
+   <em>
+    Annotations
+   </em>
+  </strong>
+  is enabled if the preset has
+  <a href="https://blog.kitware.com/using-the-color-map-editor-in-paraview-the-categorical-colors/">
+   annotation labels
+  </a>
+  available and checking/unchecking it will load/not-load such annotations when the preset is applied.
+ </p>
+ <h2>
+  Saving a preset
+ </h2>
+ <hr/>
+ <p>
+  You can save your current color (and opacity) maps as a preset using the
+  <img src="https://blog.kitware.com/blog/files/48_2099406072.png" style="height: 18px; width: 18px;"/>
+  button on the
+  <strong>
+   <em>
+    Color Map Editor
+   </em>
+  </strong>
+  . That will pop up the
+  <strong>
+   <em>
+    Save Preset Options
+   </em>
+  </strong>
+  dialog that allows you to pick whether to save the opacity map with the preset as well. Check the
+  <strong>
+   <em>
+    Save opacities
+   </em>
+  </strong>
+  checkbox to save opacities along with the color in the present. While saving a preset doesn’t provide the option to now save color map, users can always pick to load only opacities when applying a preset.
+ </p>
+ <p>
+ </p>
+ <p>
+  <center>
+   <a href="/blog/files/48_927218629.png" rel="noopener" target="_blank">
+    <img src="https://blog.kitware.com/blog/files/48_927218629.png" width="30%"/>
+   </a>
+  </center>
+  If a preset has opacities, the
+  <strong>
+   <em>
+    Choose Preset
+   </em>
+  </strong>
+  dialog overlay a representation of the opacity transfer function on the color map as shown below.
+ </p>
+ <p>
+  <center>
+   <a href="/blog/files/48_2020198723.png" rel="noopener" target="_blank">
+    <img src="https://blog.kitware.com/blog/files/48_2020198723.png" width="70%"/>
+   </a>
+  </center>
+ </p>
+ <h2>
+  Python API
+ </h2>
+ <hr/>
+ <p>
+  ParaView 4.4 how supports an
+  <a href="http://www.paraview.org/ParaView3/Doc/Nightly/www/cxx-doc/classvtkSMTransferFunctionProxy.html#a8e9e5c4161797990da2f6b6f08209e5d">
+   API
+  </a>
+  to load presets through Python. You can simply use the
+  <a href="https://blog.kitware.com/new-in-paraview-python-trace-on-the-fly/">
+   tracing
+  </a>
+  capabilities to determine the calls to make to load a specific preset (assuming a unique name).
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e82e63541637010429" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+from paraview.simple import *
+
+# get color transfer function/color map for 'RTData'
+rTDataLUT = GetColorTransferFunction('RTData')
+
+# get opacity transfer function/opacity map for 'RTData'
+rTDataPWF = GetOpacityTransferFunction('RTData')
+
+#------------------------------------------------
+# Loading a color map alone
+#------------------------------------------------
+# Apply a preset using its name. Note this may not work as expected when presets have duplicate names.
+rTDataLUT.ApplyPreset('Rainbow Desaturated', True)
+
+#----------------------------------------------------------
+# Loading a color and opacity map and preserve preset ranges
+#----------------------------------------------------------
+# Apply a preset using its name. Note this may not work as expected when presets have duplicate names.
+rTDataLUT.ApplyPreset('My Preset', False)
+
+# Apply a preset using its name. Note this may not work as expected when presets have duplicate names.
+rTDataPWF.ApplyPreset('My Preset', False)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e82e63541637010429-22">
+        22
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-1">
+        <span class="crayon-st">
+         from
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         simple
+        </span>
+        <span class="crayon-r">
+         import
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-3">
+        <span class="crayon-c">
+         # get color transfer function/color map for 'RTData'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-4">
+        <span class="crayon-v">
+         rTDataLUT
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         GetColorTransferFunction
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'RTData'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-6">
+        <span class="crayon-c">
+         # get opacity transfer function/opacity map for 'RTData'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-7">
+        <span class="crayon-v">
+         rTDataPWF
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         GetOpacityTransferFunction
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'RTData'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-9">
+        <span class="crayon-c">
+         #------------------------------------------------
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-10">
+        <span class="crayon-c">
+         # Loading a color map alone
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-11">
+        <span class="crayon-c">
+         #------------------------------------------------
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-12">
+        <span class="crayon-c">
+         # Apply a preset using its name. Note this may not work as expected when presets have duplicate names.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-13">
+        <span class="crayon-v">
+         rTDataLUT
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ApplyPreset
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'Rainbow Desaturated'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         True
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-14">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-15">
+        <span class="crayon-c">
+         #----------------------------------------------------------
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-16">
+        <span class="crayon-c">
+         # Loading a color and opacity map and preserve preset ranges
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-17">
+        <span class="crayon-c">
+         #----------------------------------------------------------
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-18">
+        <span class="crayon-c">
+         # Apply a preset using its name. Note this may not work as expected when presets have duplicate names.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-19">
+        <span class="crayon-v">
+         rTDataLUT
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ApplyPreset
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'My Preset'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         False
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-20">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-21">
+        <span class="crayon-c">
+         # Apply a preset using its name. Note this may not work as expected when presets have duplicate names.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e82e63541637010429-22">
+        <span class="crayon-v">
+         rTDataPWF
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ApplyPreset
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'My Preset'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         False
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0162 seconds] -->
+ <p>
+ </p>
+</div>

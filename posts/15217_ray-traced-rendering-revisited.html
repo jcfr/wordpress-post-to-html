@@ -1,0 +1,1510 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  For years, applications that employ the Visualization Toolkit (VTK) have used OpenGL almost exclusively to draw scenes. OpenGL rasterizes polygons onto pixels. Rasterization serves as the most commonly used rendering algorithm today. Alternatives to rasterization exist, and these alternatives have their own merits. Such alternatives include ray tracing. Ray tracing offers built-in effects, such as translucency and reflectance, as well as performance that scales logarithmically with geometric complexity. Intel® and Kitware have recently completed a project that tightly integrates ray tracing with VTK. The result, which will first appear in VTK 7.1 and already appears in ParaView 5.1, adds the Intel® OSPRay ray-tracing engine to VTK.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Background
+   </strong>
+  </span>
+ </p>
+ <p>
+  One reason why rasterization is prevalent in the field of scientific visualization is that, until recently, ray tracing performed too slowly to interactively explore data that changes frequently. To render data, ray tracers first spatially sort it through an O(n) operation. OSPRay, which has highly optimized the sort, can process over a hundred million polygons per second. Once ray tracers sort the data, they employ a faster O(log N) search operation in which the frame rate is largely independent of the scene size. This search operation optimizes interactive rendering performance on central processing units (CPUs) and scales up to the limits of system memory.
+ </p>
+ <p>
+  For the ray-tracing engine in VTK, the development team chose the OSPRay ray tracer. OSPRay is an open-source, scalable, and portable ray-tracing engine that produces high-performance, high-fidelity visualizations on Intel® CPUs. OSPRay provides a powerful, fast, and easy-to-use rendering library. The library runs well on everything from laptops, to workstations, to distributed compute nodes in high-performance computing (HPC) systems. In addition, OSPRay enables applications that combine interactive surface- and volume-based visualizations.
+ </p>
+ <p>
+  OSPRay takes advantage of the inherent parallelism found in ray tracing. It maps data onto single instruction, multiple data (SIMD) vector units through the process of vectorization and onto multiple compute cores through the process of multithreading. To vectorize shading operations, OSPRay employs the Intel® Single program, multiple data Program Compiler (ISPC). ISPC abstracts away specific vector sizes from various instruction sets such as Streaming SIMD Extensions (SSE), Advanced Vector Extensions (AVX), and AVX-512. To perform multithreading, OSPRay takes advantage of Threading Building Blocks (TBB) from Intel®. TBB is a highly optimized library that implements a sophisticated task-stealing system to balance rendering workloads across all available cores. Together, ISPC and TBB allow OSPRay to use all of the available compute power found in Intel® CPU hardware. This compute power optimizes rendering performance.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15218" style="width: 560px">
+  <img alt="An image of a synthetic data set demonstrates ambient occlusion. OSPRay rendered the data set and scaled the implicit cylinders within ParaView." class="size-full wp-image-15218" height="368" sizes="(max-width: 550px) 100vw, 550px" src="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1.jpg 550w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1-235x156.jpg 235w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1-300x201.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1-220x147.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1-250x167.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1-355x238.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig1-90x60.jpg 90w" width="550"/>
+  <p class="wp-caption-text">
+   An image of a synthetic data set demonstrates ambient occlusion. OSPRay rendered the data set and scaled the implicit cylinders within ParaView.
+  </p>
+ </div>
+ <p>
+  Recently, the Texas Advanced Computing Center (TACC) connected VTK to OSPRay within the
+  <span style="font-family: courier new,courier;">
+   pvOSPRay
+  </span>
+  ParaView plug-in. Like the
+  <span style="font-family: courier new,courier;">
+   pvManta
+  </span>
+  ParaView plug-in, the core of
+  <span style="font-family: courier new,courier;">
+   pvOSPRay
+  </span>
+  consists of a set of concrete VTK rendering subclasses. These subclasses use a new underlying rendering application programming interface (API).
+ </p>
+ <p>
+  The
+  <span style="font-family: courier new,courier;">
+   pvOSPRay
+  </span>
+  plug-in is somewhat similar to the OpenGL 2 backend, with which users can compile VTK to get a new set of updated OpenGL interface classes. Unlike in OpenGL 2, in
+  <span style="font-family: courier new,courier;">
+   pvOSPRay
+  </span>
+  , the class names are distinct from their OpenGL 1 counterparts. As a result, applications can simultaneously use OpenGL classes and ray-tracing classes. Nevertheless, to use
+  <span style="font-family: courier new,courier;">
+   pvOSPRay
+  </span>
+  , the application code must be changed. In addition,
+  <span style="font-family: courier new,courier;">
+   pvOSPRay
+  </span>
+  does not permit two sets of rendering subclasses to share a rendering state.
+ </p>
+ <p>
+  To address these issues and to better realize the capabilities of OSPRay within ParaView and other VTK-enabled applications, Intel® and Kitware more tightly integrated the core of the
+  <span style="font-family: courier new,courier;">
+   pvOSPRay
+  </span>
+  plug-in with VTK. To make it easier for application writers to use OSPRay, VTK delivers the new code in an optional module instead of in an external repository. Regression tests evaluate the module with the rest of the toolkit.
+ </p>
+ <p>
+  Now, instead of having a set of subclasses, VTK automatically instantiates the right helper classes. The
+  <span style="font-family: courier new,courier;">
+   vtkRenderPass
+  </span>
+  class is responsible for the instantiations. This encapsulation makes it trivial to use OSPRay in applications, and it allows applications to swap back and forth between ray-tracing and rasterizing images at runtime.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Guide to OSPRay in VTK
+   </strong>
+  </span>
+ </p>
+ <p>
+  The Rendering/OSPRay sub-directory or “Module” of the master branch of VTK houses the source code for the new OSPRay interface. The first step to make use of the interface is to activate the
+  <span style="font-family: courier new,courier;">
+   vtkRenderingOSPRay
+  </span>
+  module in CMake. Note that VTK requires OSPRay version 0.10.0 or newer. This requirement implies the utilization of C++11 settings to compile the toolkit. Once VTK compiles, OSPRay-related regression tests can run in the toolkit. Rendering/OSPRay/Testing houses the source code for these tests. The following code demonstrates how VTK implements ray tracing:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c71e4de17267883236" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include "vtkOSPRayPass.h"
+...
+vtkOSPRayPass* osprayPass = vtkOSPRayPass::New();
+...
+if (useOSPRay)
+  {
+  renderer-&amp;gt;SetPass(osprayPass);
+  }
+else
+  {
+  renderer-&amp;gt;SetPass(NULL);
+  }</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de17267883236-12">
+        12
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-1">
+        <span class="crayon-p">
+         #include "vtkOSPRayPass.h"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-2">
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-3">
+        <span class="crayon-e ">
+         vtkOSPRayPass*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         osprayPass
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayPass
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-4">
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-5">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         useOSPRay
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderer
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         SetPass
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         osprayPass
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-9">
+        <span class="crayon-st">
+         else
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderer
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         SetPass
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         NULL
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de17267883236-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  The interface in VTK remains the same regardless of whether the toolkit uses the legacy OpenGL rendering backend or the new OpenGL 2 backend. VTK can quickly swap between rasterizing and rendering images. VTK takes less than two-hundredths of a second to draw the dragon model from Stanford University on a laptop, and it takes less than four-hundredths of a second to draw the Lucy model from Stanford University on a laptop.
+ </p>
+ <p>
+  For complex scenes with hundreds of millions of primitives, it may take a few seconds for OSPRay to create its acceleration structures on the first swap. Subsequent swaps, however, take very little time, as
+  <span style="font-family: courier new,courier;">
+   osprayPass
+  </span>
+  maintains an internal scene-graph representation in-between swaps. In addition, on every render, VTK reuses the unchanged parts of the representation from the previous frame.
+ </p>
+ <p>
+  By default, the appearance of the scene with OSPRay looks very similar to the appearance of the scene with OpenGL. As
+  <span style="font-family: courier new,courier;">
+   TestOSPRayRenderMesh
+  </span>
+  demonstrates, the new backend preserves standard VTK rendering options as much as possible. These options include surface, wire-frame, and points representations; colors; color mapping; and lighting, texture, and geometric transformations. Nevertheless, ray-traced images will be distinct from rasterized images.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15220" style="width: 560px">
+  <img alt="VTK renders with OpenGL (left) and OSPRay (right)." class="size-full wp-image-15220" height="251" sizes="(max-width: 550px) 100vw, 550px" src="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig2.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig2.jpg 550w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig2-300x137.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig2-220x100.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig2-250x114.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig2-355x162.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig2-90x41.jpg 90w" width="550"/>
+  <p class="wp-caption-text">
+   VTK renders with OpenGL (left) and OSPRay (right).
+  </p>
+ </div>
+ <p>
+  As with the
+  <span style="font-family: courier new,courier;">
+   pvManta
+  </span>
+  plug-in, OSPRay draws lines and points as cylinders and spheres. The use of a world-space sizing heuristic that is one-thousandth of the diagonal of an object produces images that are close to what the use of
+  <span style="font-family: courier new,courier;">
+   vtkProperty::LineWidth
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   PixelSize
+  </span>
+  default settings for OpenGL produce. The selection of different rendering options can further adjust the sizes. OSPRay can scale all points and lines to constant sizes. OSPRay can also now scale spheres and cylinders according to point-aligned scalar quantities. A transfer function can optionally map scalar values. The following code applies a ray-tracing point-scaling function:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c71e4de20541709725" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+mapperInfo = mapper-&amp;gt;GetInformation();
+mapperInfo-&amp;gt;Set(
+  vtkOSPRayActorNode::ENABLE_SCALING(), 1);
+mapperInfo-&amp;gt;Set(
+  vtkOSPRayActorNode::SCALE_ARRAY_NAME(), 
+  "name of a scalar array");
+vtkPiecewiseFunction *scaleFunction = 
+  vtkPiecewiseFunction::New();
+scaleFunction-&amp;gt;AddPoint(0.0, 0.0);
+scaleFunction-&amp;gt;AddPoint(0.1, 2.0);
+...
+mapperInfo-&amp;gt;Set(
+  vtkOSPRayActorNode::SCALE_FUNCTION(), 
+  scaleFunction);</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de20541709725-14">
+        14
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-1">
+        <span class="crayon-v">
+         mapperInfo
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         mapper
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetInformation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-2">
+        <span class="crayon-v">
+         mapperInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayActorNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         ENABLE_SCALING
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-4">
+        <span class="crayon-v">
+         mapperInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayActorNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         SCALE_ARRAY_NAME
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "name of a scalar array"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-7">
+        <span class="crayon-e ">
+         vtkPiecewiseFunction *
+        </span>
+        <span class="crayon-v">
+         scaleFunction
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkPiecewiseFunction
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-9">
+        <span class="crayon-v">
+         scaleFunction
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         AddPoint
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-10">
+        <span class="crayon-v">
+         scaleFunction
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         AddPoint
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0.1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-11">
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-12">
+        <span class="crayon-v">
+         mapperInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayActorNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         SCALE_FUNCTION
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de20541709725-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         scaleFunction
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0004 seconds] -->
+ <p>
+ </p>
+ <p>
+  Interaction is particularly fast with a single sample and without advanced rendering effects. The use of advanced settings improve the image quality but slow render times. Advanced settings include the number of anti-aliasing samples per pixel, the number of ambient-occlusion shading samples, and the number of alpha-blending render stages. The below code provides an example:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c71e4de23082527965" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+rendererInfo = renderer-&amp;gt;GetInformation();
+if (realTimeRender)
+  {
+  rendererInfo-&amp;gt;Set(
+    vtkOSPRayRendererNode::SAMPLES_PER_PIXEL(), 1);
+  rendererInfo-&amp;gt;Set(
+    vtkOSPRayRendererNode::AMBIENT_SAMPLES(), 0);
+  rendererInfo-&amp;gt;Set(
+    vtkOSPRayRendererNode::MAX_FRAMES(), 1);
+  }
+else
+  {
+  rendererInfo-&amp;gt;Set(
+    vtkOSPRayRendererNode::SAMPLES_PER_PIXEL(), 4);
+  rendererInfo-&amp;gt;Set(
+    vtkOSPRayRendererNode::AMBIENT_SAMPLES(), 4);
+  rendererInfo-&amp;gt;Set(
+    vtkOSPRayRendererNode::MAX_FRAMES(), 2);
+  }</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c71e4de23082527965-19">
+        19
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-1">
+        <span class="crayon-v">
+         rendererInfo
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderer
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         GetInformation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-2">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         realTimeRender
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rendererInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayRendererNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         SAMPLES_PER_PIXEL
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rendererInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayRendererNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         AMBIENT_SAMPLES
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rendererInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayRendererNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         MAX_FRAMES
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-11">
+        <span class="crayon-st">
+         else
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rendererInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayRendererNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         SAMPLES_PER_PIXEL
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rendererInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayRendererNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         AMBIENT_SAMPLES
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         4
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         rendererInfo
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkOSPRayRendererNode
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         MAX_FRAMES
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c71e4de23082527965-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0006 seconds] -->
+ <p>
+ </p>
+ <p>
+  In OSPRay, the use of space-sorting acceleration structures eliminates unnecessary intersection tests. Above a certain ratio of scene primitives to image resolution, the frame rate for camera motion will exceed the frame rate for OpenGL rasterization. That is to say, the frame rate of the ray tracer depends on the number of pixels in a scene. The frame rate of the rasterizer, however, depends on the number of primitives in the scene. Therefore, above a certain number of polygons, the ray tracer will render images faster.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15222" style="width: 517px">
+  <img alt="raytrace_results" class="wp-image-15222 size-full" height="379" sizes="(max-width: 507px) 100vw, 507px" src="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_results.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_results.jpg 507w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_results-300x224.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_results-220x164.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_results-250x187.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_results-355x265.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_results-90x67.jpg 90w" width="507"/>
+  <p class="wp-caption-text">
+   Results from the
+   <span style="font-family: courier new,courier;">
+    manyspheres.py
+   </span>
+   benchmark in ParaView on two machines compare frame times for OpenGL and OSPRay, as screen resolution and data resolution double.
+  </p>
+ </div>
+ <p>
+  Aesthetics are important too, especially for showcase-type images and movies. OSPRay can support ambient occlusion lighting queries to effectively convey the meso-scale structure of complex objects. With ambient occlusion, features like internal cavities stand out much more clearly. These features appear darker than outward-facing regions, which acquire more light.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_15221" style="width: 560px">
+  <img alt="A prototype of a new version of ParaView generates a path-traced OSPRay rendering of a data set, which pertains to magnetic reconnection." class="size-full wp-image-15221" height="339" sizes="(max-width: 550px) 100vw, 550px" src="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig3.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig3.jpg 550w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig3-300x185.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig3-220x136.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig3-250x154.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig3-355x219.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/raytrace_fig3-90x55.jpg 90w" width="550"/>
+  <p class="wp-caption-text">
+   A prototype of a new version of ParaView generates a path-traced OSPRay rendering of a data set, which pertains to
+   <br/>
+   magnetic reconnection.
+  </p>
+ </div>
+ <p>
+  The VTK development team is working to bring photo-realistic rendering capabilities to VTK. To accomplish this, the team is exposing the path-tracing option in OSPRay and adding controls to define the shape, color, and placement of advanced light sources.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Implementation
+   </strong>
+  </span>
+ </p>
+ <p>
+  Overall, VTK now offers a more complete separation of rendering state and rendering implementation than of
+  <span style="font-family: courier new,courier;">
+   Rendering/Core
+  </span>
+  classes and
+  <span style="font-family: courier new,courier;">
+   Rendering/OpenGL*
+  </span>
+  classes. The separation makes it possible to swap in different rendering backends at runtime at minimal cost.
+ </p>
+ <p>
+  A new
+  <span style="font-family: courier new,courier;">
+   vtkRenderPass
+  </span>
+  class manages the process of swapping backends. During the process, render passes take over responsibility for or augment the standard rendering pipeline of VTK. The standard pipeline asks rendering classes in the Rendering/SceneGraph module (e.g.,
+  <span style="font-family: courier new,courier;">
+   vtkRenderer
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   vtkCamera
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   vtkLight
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   vtkActor
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   vtkVolume
+  </span>
+  , and
+  <span style="font-family: courier new,courier;">
+   vtkMapper
+  </span>
+  ) to traverse the connected hierarchy, while they make OpenGL calls that correspond to the internal rendering state. The
+  <span style="font-family: courier new,courier;">
+   Rendering/SceneGraph
+  </span>
+  module provides a new standard for examining the rendering state in VTK and executing arbitrary operations on it. At the moment, the module contains operations that construct the scene graph, update the scene graph to reflect the core rendering state, and make calls to draw the scene graph, respectively. The module hands off the details of the operations to subclasses such as the
+  <span style="font-family: courier new,courier;">
+   Rendering/OSPRay
+  </span>
+  subclasses.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Conclusion
+   </strong>
+  </span>
+ </p>
+ <p>
+  The new OSPRay-VTK interface streamlines the steps it takes to obtain ray-traced imagery from VTK. Especially for point sprite visualizations, OSPRay brings a new level of visual fidelity to VTK. The new fast, scalable, software-based rendering engine in VTK is important for many HPC-class machines as well.
+ </p>
+ <p>
+  The development team is actively working to bring the volume-rendering capability of OSPRay to the new
+  <span style="font-family: courier new,courier;">
+   Rendering/SceneGraph
+  </span>
+  module. As mentioned above, the team is also working to expose the high-fidelity path-tracing option in OSPRay within the new VTK framework.
+ </p>
+ <p>
+  OSPRay has opened up many doors. It allows VTK to implicitly draw spheres and cylinders. In the future, it will also enable VTK to directly render isosurfaces and constructive solid geometry data, which will reduce the need for intermediary mesh representations. Finally, the ability to make very fast ray queries within VTK has great potential to aid data-processing filters that do not have close relations to rendering.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Acknowledgement
+   </strong>
+  </span>
+ </p>
+ <p>
+  This work is part of the Intel® Software Defined Visualization initiative. Learn more at
+  <a href="http://www.sdvis.org">
+   http://www.sdvis.org
+  </a>
+  .
+ </p>
+ <p>
+  <img alt="dave_headshot" class="size-full wp-image-15223 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/dave_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/dave_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/dave_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   David DeMarle
+  </strong>
+  is a staff research and development engineer at Kitware, where he contributes to both ParaView and VTK. He teaches professional development and training courses for these product applications
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="ken_headshot" class="size-full wp-image-15224 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/ken_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/ken_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/ken_headshot-90x113.jpg 90w" width="100"/>
+ </p>
+ <p>
+  <strong>
+   Ken Martin
+  </strong>
+  is chairman and chief financial officer of Kitware. He is a developer of VTK and a coauthor of the textbook “The Visualization Toolkit: An Object Oriented Approach to Computer Graphics.”
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="carson_headshot" class="size-full wp-image-15225 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/carson_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/carson_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/carson_headshot-90x113.jpg 90w" width="100"/>
+  <strong>
+   Carson Brownlee
+  </strong>
+  is a member of the research and engineering group that develops the OSPRay ray-tracing framework at Intel®.  He focuses on large-scale interactive ray tracing. He has worked on various ray-tracing
+  <br/>
+  implementations in major scientific visualization packages.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img alt="jefferson_headshot" class="size-full wp-image-15226 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/07/jefferson_headshot.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/jefferson_headshot.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/07/jefferson_headshot-90x113.jpg 90w" width="100"/>
+ </p>
+ <p>
+  <strong>
+   Jefferson Amstutz
+  </strong>
+  is a part of the Software Defined Visualization team at Intel®. He  mainly contributes to the OSPRay project. His research interests focus on multi-hit ray-traversal algorithms and applications. He also enjoys the lifelong journey of learning to express code that is suitable for human consumption.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

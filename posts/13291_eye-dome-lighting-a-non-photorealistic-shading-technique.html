@@ -1,0 +1,202 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Eye-Dome Lighting (EDL) is a non-photorealistic, image-based shading technique designed to improve depth perception in scientific visualization images. It relies on efficient post-processing passes implemented on the GPU with GLSL shaders in order to achieve interactive rendering. Solely projected depth information is required to compute the shading function, which is then applied to the colored scene image. EDL can, therefore, be applied to any kind of data regardless of their geometrical features (isosurfaces, streamlines, point sprites, etc.), except to those requiring transparency-based rendering.
+ </p>
+ <p>
+  In this article, we first briefly describe EDL and then give some details about how it has been integrated into ParaView. EDL was developed by Christian Boucheny during his Ph.D [1]. Its original aim was to improve depth perception in the visualization of large 3D datasets representing complex industrial facilities or equipments for Electricité de France (EDF). Indeed, EDF is a major European electrical company where engineers visualize, on a daily basis, complex data such as 3D scans of power plants or results from multi-physics numerical simulations.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+     What is eye-dome lightning?
+    </strong>
+   </span>
+  </span>
+  <br/>
+  Shading occupies a special place among the visual mechanisms serving to perceive complex scenes. Global illumination models, including a physically inspired ambient occlusion term, are often used to emphasize the relief of surfaces and disambiguate spatial relationships. However, applying such models remains costly, as it often requires heavy pre-computations, and is thus not suited for an exploratory process in scientific visualization. On the other hand, image-based techniques, such as edge enhancement or halos based on depth differences, provide useful cues for the comprehension of complex scenes. Subtle spatial relationships that might not be visible with realistic illumination models can be strengthened with these non-photorealistic techniques.
+ </p>
+ <p>
+  The non-photorealistic shading technique we present here, EDL, relies on the following key ideas.
+ </p>
+ <p>
+  Image-based lighting: Our method is inspired by ambient occlusion or skydome lighting techniques, with the addition of viewpoint dependency. Contrary to the standard application of these techniques, in our approach the computations are performed in image coordinate space, using only the depth buffer information, like in Crytek Screen-Space Ambient Occlusion (SSAO) [2]. These techniques do not require representation in object coordinate space, and thus there is no need for knowledge of the geometry of the visualized data or for any preprocessing step.
+ </p>
+ <p>
+  Locality: The shading of a given pixel should rely predominantly on its close neighborhood in image space, as the effects of long range interactions will not likely be initially detected by the viewers.
+  <br/>
+  Interactivity: Our primary concern is to avoid costly operations that would slow interactive exploration and thus limit the comprehension of the data. Due to the evolution of graphics hardware, a limited set of operations performed on fragments appears to be the most efficient approach.
+ </p>
+ <p>
+  Figure 1 presents a diagram of the architecture that integrates EDL. The algorithm requires a projected color image of the 3D scene and its corresponding depth buffer. The depth buffer is the input of the EDL algorithm, which generates a shadow image to be combined with the color rendering of the scene (e.g., by multiplying each pixel’s RGB components by its EDL-shading value).
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="102" src="https://blog.kitware.com/source/files/4_1988303135_gif" style="border: 0pt none;" width="301"/>
+ </p>
+ <p>
+  <em>
+   Figure 1. Depiction of the rendering architecture integrating Eye Dome Lighting. A 3D scene (left colored surface) is first projected using an off-screen OpenGL rendering. The resulting color and depth images are stored in two 2D textures. The depth image is then used to calculate the shading by applying the EDL algorithm. The result is used to modulate the color image that is finally drawn on the screen (e.g., by multiplying each pixel’s RGB components by its EDL-shading value).
+  </em>
+ </p>
+ <p>
+  The basic principle of the EDL algorithm is to consider a half-sphere (the dome) centered at each pixel p. This dome is bounded by “a horizontal plane,” which is perpendicular to the observer direction at point p. The shading is a function of the amount of this dome visible at p, or conversely, it is inversely determined by the amount of this dome hidden by the neighbors of p (those being taken on a ring around p in image space). In other words, a neighbor pixel will reduce the lighting at p if its depth is lower (i.e. closer to the viewer) than the one of p. This procedure defines a shading amount that depends solely on the depth values of the close neighbors. To achieve a better shading that takes into account farther neighbor pixels, a multi-scale approach is implemented, with the same shading function being applied at lower resolutions (typically half and quarter image size). Those shaded images are then filtered in order to limit aliasing induced by lower resolution, using a cross bilateral filter [3] (Gaussian blur modulated by depth differences), and then merged together with the full resolution shaded image. This approach is graphically represented in Figure 2. This figure presents two levels of resolution corresponding to the ParaView implementation. In general, more multi-resolution levels can be used if desired.
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="129" src="https://blog.kitware.com/source/files/4_2044056622_gif" style="border: 0pt none;" width="300"/>
+ </p>
+ <p>
+  <em>
+   Figure 2. The shading function is computed at full resolution and a lower resolution.
+   <br/>
+   The final rendering (right) is a weighted sum of the two shading images, with a cross bilateral filter applied to the
+   <br/>
+   lower resolution (Gaussian blur modulated by depth differences) map to prevent aliasing and achieve a “halo” effect.
+  </em>
+ </p>
+ <p style="text-align: center;">
+  <img alt="" height="178" src="https://blog.kitware.com/source/files/4_555666719_gif" style="border: 0pt none;" width="300"/>
+ </p>
+ <p>
+  <em>
+   Figure 3. An image produced on EDF physical simulation data rendered with point sprites
+   <br/>
+   illustrates the effect of EDL (left) compared to basic Phong shading (right).
+  </em>
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    <span style="font-size: small;">
+     Compiling and Using EDL in ParaView
+    </span>
+   </span>
+  </strong>
+  <br/>
+  Eye-Dome Lighting shading is implemented in ParaView as a plugin. The code can be found in the ParaView source tree in Plugins/EyeDomeLighting. Before the build of the system is performed, a new variable PARAVIEW_BUILD_PLUGIN_EyeDomeLighting, must be switched to ON in the CMake interface to allow its construction.
+ </p>
+ <p>
+  Once the system is built, the plugin can be loaded by using Manage Plugings in the tools menu. The dynamic library of the EDL plugin is currently called “libRenderPassEyeDomeLightingView.” When loading it, a new type of view, named “Render View + Eye Dome Lighting,” will appear in the list of available views.  Simply select it and any 3D data loaded in the view will be shaded with EDL. As an example, Figure 3 shows the visualization in  ParaView of point sprites for a mechanical simulation performed at EDF R&amp;D. Note that up to now, the EDL shading function is superimposed on the classical view (Gouraud shading), because of the ParaView specific material pipeline. Modifying the latter would permit the definition of  miscellaneous shadings with a greater degree of flexibility.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: small;">
+     Plugin Architecture in ParaView
+    </span>
+   </strong>
+   <br/>
+  </span>
+  The EDL algorithm is implemented as a vtkImageProcessingPass.  This allows us to call the algorithm from the plugin in the following way:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      void vtkPVRenderViewWithEDL::Initialize
+      <br/>
+      (unsigned int id)
+      <br/>
+      {
+      <br/>
+      this-&gt;Superclass::Initialize(id);
+      <br/>
+      vtkEDLShading* EDLpass =vtkEDLShading::New();
+      <br/>
+      this-&gt;SynchronizedRenderers-&gt;
+      <br/>
+      SetImageProcessingPass(EDLpass);
+      <br/>
+      this-&gt;SynchronizedRenderers-&gt;
+      <br/>
+      SetUseDepthBuffer(true);
+      <br/>
+      EDLpass-&gt;Delete();
+      <br/>
+      }
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Looking at this code, we can already describe some important implementation details.
+ </p>
+ <p>
+  The plugin itself consists of a vtkPVRenderView, which is a ParaView view. The view contains a new method  SetImageProcessingPass that will insert our algorithm in the correct position in the visualization pipeline. This framework for post-processing image passes was recently added by Kitware for EDF R&amp;D . However, the position where the Imaging Pass is inserted does not currently allow transparency to be applied properly. This is due to the more complex pipeline design for transparency rendering, which relies on depth peeling, and further development in VTK should be done if this is needed.
+ </p>
+ <p>
+  A method SetUseDepthBuffer has been added to vtkPVSynchronizedRendered to switch on the use of depth buffers. In fact, EDL uses a depth buffer, but most algorithms do not. Always switching on the use of the buffer could lead to a slowing down of the system when the depth buffer is not needed. To avoid this problem, SetUseDepthBuffer is provided. The user is then responsible for activating the depth buffer if his/her algorithm requires it. Its default value is off.
+ </p>
+ <p>
+  The use of the depth buffer by EDL was a main challenge for the integration of EDL in ParaView. Indeed, the plugin should work in standalone, client-server and parallel-server mode. Moreover, tiled displays are also taken into account. Some developments were performed to allow parallel compositing of the depth-buffer using IceT (the parallel library used in ParaView for parallel compositing operations). Exposing this functionality from IceT to the render passes was the main object of a collaboration between EDF R&amp;D and Kitware for the proper implementation of EDL.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    <span style="font-size: small;">
+     Shading algorithms
+    </span>
+   </span>
+  </strong>
+  <br/>
+  The  vtkEDLShading is based in another class called vtkDepthImageProcessingPass. This class contains  some general methods that are not specific to the EDL algorithm and can be used to implement other algorithms. For instance, we implemented an image-based ambient occlusion shading algorithm (based on Crytek SSAO) and a ParaView view based on it (not currently included in the plugin). Thus, any user could derive a class from vtkDepthImageProcessingPass to implement this kind of algorithm.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Acknowledgements
+    </span>
+   </strong>
+  </span>
+  <br/>
+  The EDL algorithm is the result of joint work by Electricité de France, CNRS, Collège de France and Université J. Fourier as part of the Ph.D. thesis of Christian BOUCHENY.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+  <br/>
+  [1] Boucheny, C. (2009). “Interactive scientific visualization of large datasets: towards a perceptive-based approach”
+  <br/>
+  PhD, Université Joseph Fourier (in French only).
+  <br/>
+  [2] Kajalin, V. (2009). “Screen Space Ambient Occlusion.”  In W. Engel (Ed.), ShaderX7 – Advanced Rendering
+  <br/>
+  Techniques. Charles River Media.
+  <br/>
+  [3] Eisemann, E., and Durand, F. (2004) “Flash photography enhancement via intrinsic relighting.”
+  <br/>
+  In ACM Transactions on Graphics, 23(3):673-678.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_2001477953_gif" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Alejandro Ribés is currently working in scientific visualization at EDF R&amp;D. He has experience at the Univerity of Oxford, U.K; the French Atomic Energy Commission, Orsay, France; and the National Yang-Ming University, Taipei, Taiwan. He received his Ph.D. from the Ecole Nationale Supérieure des Télécommunications, Paris, France.
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_1042334702_gif" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Christian Boucheny is a research engineer at EDF R&amp;D, France, specialized in scientific visualization and virtual reality for maintenance and training. He received his Ph.D. in 2009  from the University of Grenoble, where he worked on perceptual issues related the visualization of large datasets.
+ </p>
+</div>

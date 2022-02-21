@@ -1,0 +1,216 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Particle trackers and streamlines serve as important tools in multiple scientific domains such as fluid dynamics, thermodynamics, medicine, and biology. Since the creation of the Visualization Toolkit (VTK) and ParaView, support for these tools has improved. Tools such as the
+  <span style="font-family: courier new,courier;">
+   StreamTracer
+  </span>
+  filter in ParaView have become widely used in the VTK and ParaView communities of users. Such tools have specific uses, and they are not quite configurable in terms of equations. VTK and ParaView have a new filter, however, called
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  , which offers a completely configurable implementation of the Lagrangian Particle Tracking (LPT) algorithm.
+ </p>
+ <p>
+  The idea behind particle tracking is to inject, integrate, record, and display particle trajectories. The work for the new filter focused on providing a particle-centered implementation of the LPT algorithm that includes a dynamic equation model and optional surface interactions, among other features.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17056" style="width: 1060px">
+  <img alt="" class="size-full wp-image-17056" height="916" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-300x262.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-768x670.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-1024x893.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-220x192.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-250x218.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-355x310.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-730x637.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig1-90x79.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   <br/>
+   In this simple illustration of particle tracking, t=0, t=1, t=2, and t=3 correspond to particle positions at different integration times.
+  </p>
+ </div>
+ <p>
+  The inputs of the filter include the following: seed (source) input, flow input, and optional surface input. Seed input contains a dataset with a point on which to generate particles, any kind of data object, and support for distributed input. This input only uses the first leaf of a composite dataset. Flow input contains a volumetric dataset that integrates with particles, any kind of data object, and support for distributed input. Optional surface input contains a dataset that interacts with particles, any kind of data object, and support for distributed input.
+ </p>
+ <p>
+  To begin the process of particle tracking, seed input injects particles in the flow. The particles then integrate with specific equations and with data from flow input. Particle tracking continues until the particles meet terminal conditions and stop.
+ </p>
+ <p>
+  In addition to three inputs,
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  has two outputs:
+  <span style="font-family: courier new,courier;">
+   ParticlePaths
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   ParticleInteractions
+  </span>
+  .
+  <span style="font-family: courier new,courier;">
+   ParticlePaths
+  </span>
+  is a
+  <span style="font-family: courier new,courier;">
+   vtkPolyData
+  </span>
+  data object of polylines that shows the paths of particles in the flow.
+  <span style="font-family: courier new,courier;">
+   ParticleInteractions
+  </span>
+  is a
+  <span style="font-family: courier new,courier;">
+   vtkPolyData
+  </span>
+  data object of vertices with the same composite layout of surface input.
+  <span style="font-family: courier new,courier;">
+   ParticleInteractions
+  </span>
+  shows all interactions between particles and surface input. It remains empty if no surface input exists.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Dynamic Integration Model
+   </strong>
+  </span>
+ </p>
+ <p>
+  The main parameter of
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  is its integration model. VTK already implements a model,
+  <span style="font-family: courier new,courier;">
+   vtkLagrangianMatidaIntegrationModel
+  </span>
+  [1]. While it is possible to implement other models within the toolkit, one of the design strengths of
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  is that it allows developers to create their own models as ParaView plug-ins, load them into ParaView, and use them on the go.
+ </p>
+ <div class="wp-caption alignnone" id="attachment_17057" style="width: 1060px">
+  <img class="wp-image-17057 size-full" height="900" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-300x257.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-768x658.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-1024x878.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-220x189.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-250x214.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-355x304.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-730x626.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig2-90x77.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   An example shows the use of LagrangianParticleTracker with vtkLagrangianMatidaIntegrationModel.
+  </p>
+ </div>
+ <p>
+  Example plug-ins exist in ParaView that demonstrate how to implement and utilize new models. For instance, the models must inherit code from the base model,
+  <br/>
+  <span style="font-family: courier new,courier;">
+   vtkLagrangianBasicIntegrationModel
+  </span>
+  . In addition, the models must implement their respective
+  <span style="font-family: courier new,courier;">
+   FunctionValues
+  </span>
+  methods to integrate particles.
+  <br/>
+  Integration models make it possible to set which equations to employ. The models also come with various features. While most of these features remain empty in
+  <span style="font-family: courier new,courier;">
+   vtkLagrangianBasicIntegrationModel
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   vtkLagrangianMatidaIntegrationModel
+  </span>
+  , other models can implement them. The features are as follows: user-defined equation variables, free-flight termination,
+  <span style="font-family: courier new,courier;">
+   PreProcess
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   PostProcess
+  </span>
+  methods, manual integration and manual particle-shifting capabilities, access to data from all three inputs, and surface interactions.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17058" style="width: 1060px">
+  <img alt="" class="size-full wp-image-17058" height="724" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-300x207.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-768x530.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-1024x706.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-220x152.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-250x172.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-355x245.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-730x503.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig3-90x62.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   Particles interact with a surface.
+  </p>
+ </div>
+ <p>
+  The surface interactions that the base model supports include terminate, bounce, break up, and pass through. Terminate stops the integration of a particle when it reaches a terminating surface. Bounce makes the particle ricochet off the surface with basic reflection code. Break up derives from bounce. Break up terminates the initial particle and creates two new particles. Pass through allows a particle to go undisturbed and records its advance in surface interaction output.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17059" style="width: 1060px">
+  <img alt="" class="size-full wp-image-17059" height="860" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-300x246.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-768x629.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-1024x839.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-220x180.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-250x205.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-355x291.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-730x598.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig4-90x74.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   Particle paths demonstrate pass through.
+  </p>
+ </div>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Additional Features
+   </strong>
+  </span>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  supports many other features. The filter makes it possible to select the type of integrators to use as well as the type of locator to use to find cells in flow input and surface input. The filter also makes it possible to select different types of cell-length computation (e.g., a divergence theorem-based algorithm) to plan when to integrate particles. In addition,
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  supports reseeding, which means that it can use the surface interaction output from one case of particle tracking as seed input for a second case of particle tracking.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17060" style="width: 1060px">
+  <img alt="" class="size-full wp-image-17060" height="572" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-300x163.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-768x418.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-1024x558.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-220x120.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-250x136.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-355x193.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-730x398.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig5-90x49.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   LagrangianParticleTracker exemplifies reseeding.
+  </p>
+ </div>
+ <p>
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  also has a parallel implementation, which streams particles between domains and offers ghost cell management. For this parallel implementation,
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  can distribute seed input, surface input, and flow input and make any necessary reductions.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17061" style="width: 1060px">
+  <img alt="" class="size-full wp-image-17061" height="586" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-300x167.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-768x429.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-1024x571.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-220x123.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-250x140.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-355x198.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-730x407.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/vtk_fig6-90x50.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   LagrangianParticleTracker uses its parallel implementation.
+  </p>
+ </div>
+ <p>
+  On the ParaView side,
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  comes as a default plug-in that contains helpers. One helper sets the necessary variables on the surface for use as surface input. A second helper interpolates or manually sets variables on the point of a dataset on which particles will generate for use as seed input. Both of these helpers are model dependent; they have dynamic interfaces that adapt to the model in use.
+ </p>
+ <p>
+  For those interested in learning more about and leveraging
+  <span style="font-family: courier new,courier;">
+   LagrangianParticleTracker
+  </span>
+  , Kitware offers consulting and support services for VTK and ParaView. For more information on LPT, please contact
+  <a href="mailto:kitware@kitware.com">
+   kitware@kitware.com
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    References
+   </span>
+  </strong>
+ </p>
+ <p>
+  [1] Matida, Edgar Akio, Warren H. Finlay, Carlos F. Lange, and Biljana Grgic. “Improved numerical simulation of aerosol deposition in an idealized mouth–throat.” Journal of Aerosol Science 35, no. 1 (January 2004): 1-19. doi:
+  <a href="http://dx.doi.org/10.1016/S0021-8502(03)00381-1">
+   http://dx.doi.org/10.1016/S0021-8502(03)00381-1
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17062 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/westphal_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/westphal_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/westphal_headshot-90x113.png 90w" width="100"/>
+   Mathieu Westphal
+  </strong>
+  is developer for VTK and ParaView. His areas of experience include fluid dynamics, adaptive optics, and visualization pipelines.
+ </p>
+</div>

@@ -1,0 +1,2265 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="http://www.tomviz.org">
+   <span style="font-weight: 400">
+    Tomviz
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   is an application for visualizing, processing, and analyzing large datasets from transmission and scanning transmission electron microscopes. It is based on the
+  </span>
+  <a href="http://www.paraview.org">
+   <span style="font-weight: 400">
+    ParaView
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   platform and includes the
+  </span>
+  <a href="http://www.itk.org">
+   <span style="font-weight: 400">
+    Insight Segmentation and Registration Toolkit (ITK)
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   . ParaView provides advanced visualization while ITK provides a wealth of image processing and analysis algorithms. Together they provide powerful capabilities for analyzing and understanding images in the materials science domain.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In this post, I will walk through how to use ITK within Tomviz and end by describing one of Tomviz’s ITK-based data operators to provide a particular image processing capability.
+  </span>
+ </p>
+ <h2>
+  ITK
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   ITK is a C++ library with deep roots in medical image processing and analysis, but its use is far from limited to medical imaging applications. ITK provides a host of general purpose image processing and analysis algorithms for tasks such as image smoothing, morphology operations, image resampling, basic math operations, automated thresholding, segmentation, optimization routines, level sets, edge detection, Fourier analysis, and I/O for a large number of file formats. These image-oriented analysis features complement the visualization and analysis capabilities in the ParaView platform.
+  </span>
+  <br/>
+  <span style="font-weight: 400">
+   ITK’s Python language bindings make it quite accessible from a Python scripting environment like the one in Tomviz. Tomviz offers Python scripting as a first-class way to define data processing operations and includes Python bindings for ITK and VTK. The bindings for each library can be used in a Python script, enabling a mix of VTK and ITK functions to be used in a custom data processing algorithm. NumPy and SciPy are included as well, along with bridges from NumPy to ITK and VTK.
+  </span>
+ </p>
+ <h2>
+  ITK Basics
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Let’s take a quick look at some ITK fundamentals. The template class
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image
+  </span>
+  <span style="font-weight: 400">
+   is the basic image data unit in ITK. It is templated by image voxel type and image dimension. As an example,
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image&lt;unsigned int, 3&gt;
+  </span>
+  <span style="font-weight: 400">
+   specifies an image with unsigned int voxels in three dimensions. An
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image
+  </span>
+  <span style="font-weight: 400">
+   also contains metadata such as the number of voxels in each dimension, the starting voxel index, the position of the origin of the image, the voxel spacing, and the orientation of the image.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   ITK typically operates on
+  </span>
+  <span style="font-weight: 400">
+   <span style="font-family: 'courier new', courier">
+    itk::Image
+   </span>
+   instances
+  </span>
+  <span style="font-weight: 400">
+   via filters. A filter takes one or more
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image
+  </span>
+  <span style="font-weight: 400">
+   instances  as input and produces one or more
+  </span>
+  <span style="font-weight: 400">
+   <span style="font-family: 'courier new', courier">
+    itk::Image
+   </span>
+   instances
+  </span>
+  <span style="font-weight: 400">
+   as output. Filters can be chained together in succession to perform complex processing and analysis algorithms. Most ITK filters are templated by input and output image types, e.g.,
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::GradientAnisotropicDiffusionImageFilter&lt;InputImageType, OutputImageType&gt;
+  </span>
+  <span style="font-weight: 400">
+   where
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   InputImageType
+  </span>
+  <span style="font-weight: 400">
+   and
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   OutputImageType
+  </span>
+  <span style="font-weight: 400">
+   are convenient typedefs for the fully expanded template instantiation of the input and output image types.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   There is a nice mapping between instantiation of an ITK filter in C++ and instantiation in Python. In C++, one writes:
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b44b282056711" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include &lt;itkImage.h&gt;
+#include &lt;itkGradientAnisotropicDiffusionImageFilter.h&gt;
+
+typedef itk::Image&lt;unsigned char, 3&gt; InputImageType;
+typedef itk::Image&lt;float, 3&gt; OutputImageType;
+typedef itk::GradientAnisotropicDiffusionImageFilter&lt;
+  InputImageType, OutputImageType&gt; DiffusionFilterType;
+
+DiffusionFilterType* filter = DiffusionFilterType::New();</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b44b282056711-9">
+        9
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-1">
+        <span class="crayon-p">
+         #include &lt;itkImage.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-2">
+        <span class="crayon-p">
+         #include &lt;itkGradientAnisotropicDiffusionImageFilter.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-4">
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Image
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         unsigned
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         char
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         InputImageType
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-5">
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Image
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         3
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         OutputImageType
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-6">
+        <span class="crayon-r">
+         typedef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         GradientAnisotropicDiffusionImageFilter
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         InputImageType
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         OutputImageType
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         DiffusionFilterType
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b44b282056711-9">
+        <span class="crayon-e ">
+         DiffusionFilterType*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         filter
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         DiffusionFilterType
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   This C++ code defines three types: an
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image
+  </span>
+  <span style="font-weight: 400">
+   instantiation for an input 3D image with
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   unsigned char
+  </span>
+  <span style="font-weight: 400">
+   voxels, an output 3D image with
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   float
+  </span>
+  <span style="font-weight: 400">
+   voxels, and an ITK filter that performs anistropic diffusion. The last line shows the object instantiation of the filter.
+  </span>
+ </p>
+ <p>
+  In Python, creating the equivalent filter can be done with
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b452491137724" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import itk
+
+input_type = itk.Image.UC3
+output_type = itk.Image.F3
+DiffusionFilterType = itk.GradientAnisotropicDiffusionImageFilter[
+  input_type, output_type]
+diffusion_filter = DiffusionFilterType.New()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b452491137724-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b452491137724-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b452491137724-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b452491137724-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b452491137724-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b452491137724-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b452491137724-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b452491137724-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         itk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b452491137724-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b452491137724-3">
+        <span class="crayon-v">
+         input_type
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Image
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         UC3
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b452491137724-4">
+        <span class="crayon-v">
+         output_type
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Image
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         F3
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b452491137724-5">
+        <span class="crayon-v">
+         DiffusionFilterType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         GradientAnisotropicDiffusionImageFilter
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b452491137724-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         input_type
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         output_type
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b452491137724-7">
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         DiffusionFilterType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   This Python code does the equivalent of the C++ code. It imports the ITK Python module (
+   <span style="font-family: 'courier new', courier">
+    import itk
+   </span>
+   ), defines the input and output image types, the filter type, and instantiates a filter object. Note the convention of the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk.Image
+  </span>
+  <span style="font-weight: 400">
+   type attributes. The first part stands for the voxel type while the number indicates the dimensionality. In this example, the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   UC
+  </span>
+  <span style="font-weight: 400">
+   stands for
+  </span>
+  <span style="font-weight: 400">
+   unsigned char
+  </span>
+  <span style="font-weight: 400">
+   , the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   F
+  </span>
+  <span style="font-weight: 400">
+   for
+   <span style="font-family: 'courier new', courier">
+    float
+   </span>
+   , and the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   3
+  </span>
+  <span style="font-weight: 400">
+   for 3D images.
+  </span>
+ </p>
+ <h2>
+  Python Data Operators in Tomviz
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Tomviz provides a variety of data processing operations called
+  </span>
+  <i>
+   <span style="font-weight: 400">
+    data operators
+   </span>
+  </i>
+  <span style="font-weight: 400">
+   . A data operator modifies the selected data set and replaces the input data set with the result of the operator. Data operators can be chained together in Tomviz to form complex image analysis pipelines.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   One style of data operator uses a Python script to define its operation. A Python data operator is defined as a single function in a Python script:
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b456407176230" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def transform_scalars(dataset, conductance=1.0, iterations=100, timestep=0.125):
+    # transform dataset here</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b456407176230-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b456407176230-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b456407176230-1">
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         transform_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         conductance
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         iterations
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         100
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         timestep
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         0.125
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b456407176230-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # transform dataset here
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Here,
+   <span style="font-family: 'courier new', courier">
+    dataset
+   </span>
+   is the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   vtkImageData
+  </span>
+  <span style="font-weight: 400">
+   object produced by the prior data operators in the pipeline. The function parameters
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   conductance
+  </span>
+  <span style="font-weight: 400">
+   ,
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   iterations
+  </span>
+  <span style="font-weight: 400">
+   , and
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   timestep
+  </span>
+  <span style="font-weight: 400">
+   are defined in a JSON-formatted description of this data operator, as described in
+  </span>
+  <a href="https://blog.kitware.com/data-operators-in-tomviz/">
+   <span style="font-weight: 400">
+    this blog post
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   . The body of this function is where the data transformation, including any ITK-based processing, is done.
+  </span>
+ </p>
+ <h2>
+  <b>
+   Converting the Data Set to an
+   <span style="font-family: 'courier new', courier">
+    itk::Image
+   </span>
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   To use Tomviz image data in an ITK filter, one must first convert it to an
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image
+  </span>
+  <span style="font-weight: 400">
+   . Tomviz has a convenience function in its
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   tomviz.itkutils
+  </span>
+  <span style="font-weight: 400">
+   module for converting
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   vtkImageData
+  </span>
+  <span style="font-weight: 400">
+   to an
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image
+  </span>
+  <span style="font-weight: 400">
+   type with a suitable voxel type and image dimension.
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b459095024105" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+from tomviz import itkutils
+itk_image = \
+  itkutils.convert_vtk_to_itk_image(dataset)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b459095024105-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b459095024105-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b459095024105-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b459095024105-1">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-e">
+         tomviz
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         itkutils
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b459095024105-2">
+        <span class="crayon-v">
+         itk_image
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b459095024105-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itkutils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         convert_vtk_to_itk_image
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Behind the scenes, a map from VTK image type to ITK image type determines which ITK image type to instantiate. Doing so turns out to be somewhat involved.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   ITK’s use of templates presents some challenges when wrapping it in Python. In C++, ITK is nearly a header-only library due to its heavy use of templates. Templated class definitions are created as needed, and only the code needed to instantiate the desired templated types is compiled into binary form. In Python, however, the story is different. instantiating templated classes at the point they are compiled into bytecode is not possible. As a result, a selection of ITK image and image filter types to instantiate into the wrapped libraries must be defined at the time the wrappings are compiled. The Tomviz build process does just this –  various combinations of filter input and output types are also defined. Unfortunately, the combinatorial explosion that occurs when many voxel types are requested can make the size of the binary library files for ITK’s Python wrapping rather large. To mitigate this, a limited selection of voxel types are used in the wrapping, mainly unsigned integral types and single-precision floats.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   As a consequence of the limited number of voxel types supported in the ITK Python bindings, the Python script may encounter a
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   vtkImageData
+  </span>
+  <span style="font-weight: 400">
+   voxel type that does not have a direct corresponding ITK voxel type available. The solution in Tomviz is to cast the VTK image data to a supported voxel type that can reasonably represent the VTK image data if possible and then convert the image data to an
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk::Image
+  </span>
+  <span style="font-weight: 400">
+   . Usually this involves a type promotion to the next-highest ranking type. For example, if
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   unsigned char
+  </span>
+  <span style="font-weight: 400">
+   is not available but
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   unsigned short
+  </span>
+  <span style="font-weight: 400">
+   is available, then the image data is cast to an
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   unsigned short
+  </span>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In some cases, it is necessary to specify the desired ITK image data type directly. For example, the
+   <span style="font-family: 'courier new', courier">
+    itk::
+   </span>
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   GradientAnisotropicDiffusionImageFilter
+  </span>
+  <span style="font-weight: 400">
+   is instantiated only over
+  </span>
+  <span style="font-weight: 400">
+   float
+  </span>
+  <span style="font-weight: 400">
+   s in the ITK Python bindings, so its input must be a
+  </span>
+  <span style="font-weight: 400">
+   float
+  </span>
+  <span style="font-weight: 400">
+   image. In such cases, the target image voxel type may be given explicitly as an optional second argument:
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b463325081645" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import itkTypes
+itk_image = \
+  itkutils.convert_vtk_to_itk_image(dataset,
+                                    itkTypes.F)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b463325081645-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b463325081645-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b463325081645-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b463325081645-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b463325081645-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         itkTypes
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b463325081645-2">
+        <span class="crayon-v">
+         itk_image
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b463325081645-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itkutils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         convert_vtk_to_itk_image
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b463325081645-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itkTypes
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         F
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0009 seconds] -->
+ <p>
+ </p>
+ <h2>
+  <b>
+   Setting up ITK filters
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Much like VTK, ITK filters can be chained together into a pipeline. The ITK image data converted from the Tomviz image data is typically passed to the first filter in the chain and the output of the last filter is typically converted back to a form that can be copied to the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   dataset
+  </span>
+  <span style="font-weight: 400">
+   object originally passed into the script. In the simplest case, a pipeline consists of a single filter. Continuing with our example from above, we have a pipeline with a single
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk.GradientAnisotropicDiffusionImageFilter
+  </span>
+  <span style="font-weight: 400">
+   instance.
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b467996295950" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+diffusion_filter.SetInput(itk_image)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b467996295950-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b467996295950-1">
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         itk_image
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   The
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   itk.GradientAnisotropicDiffusionImageFilter
+  </span>
+  <span style="font-weight: 400">
+   has several properties we wish to set: conductance, number of iterations, and timestep value. We simply forward the parameters passed into the
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   transform_scalars
+  </span>
+  <span style="font-weight: 400">
+   function to the ITK filter:
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b469761313431" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+diffusion_filter.SetConductanceParameter(conductance)
+diffusion_filter.SetNumberOfIterations(iterations)
+diffusion_filter.SetTimeStep(timestep)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b469761313431-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b469761313431-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b469761313431-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b469761313431-1">
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetConductanceParameter
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         conductance
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b469761313431-2">
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfIterations
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         iterations
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b469761313431-3">
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetTimeStep
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         timestep
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Once all the properties of a filter are set up, it can be executed with
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b46b287173850" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+diffusion_filter.Update()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b46b287173850-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b46b287173850-1">
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  <span style="font-weight: 400">
+   This call executes the filter’s algorithm and updates the output image storing the filter results. Note that in a multi-filter pipeline, only the last filter’s
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   Update()
+  </span>
+  <span style="font-weight: 400">
+   method needs to be called to execute the entire ITK processing pipeline.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The pipeline results are stored in an ITK image of type
+  </span>
+  <span style="font-weight: 400;font-family: 'courier new', courier">
+   output_type
+  </span>
+  <span style="font-weight: 400">
+   . To get these results into a format Tomviz can use, one can invoke
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b46d596994870" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+itkutils.set_array_from_itk_image(dataset, 
+                                  diffusion_filter.GetOutput())</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b46d596994870-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46d596994870-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b46d596994870-1">
+        <span class="crayon-v">
+         itkutils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         set_array_from_itk_image
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46d596994870-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   This function takes the output from the filter and copies it to the VTK image data structure, completing the script.
+  </span>
+ </p>
+ <h2>
+  <b>
+   The Complete Data Operator
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Putting it all together, here is the final Python script for the Perona-Malik Anisotropic Diffusion data operator:
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e8615b46f690524651" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def transform_scalars(dataset, conductance=1.0, iterations=100, timestep=0.125):
+    """This filter performs anisotropic diffusion
+    on an image using the classic Perona-Malik,
+    gradient magnitude-based equation.
+    """
+
+    # Make sure we can import needed modules
+    try:
+        import itk
+        import itkTypes
+        from tomviz import itkutils
+    except Exception as exc:
+        print("Could not import necessary module(s)")
+        print(exc)
+
+    try:
+        # Get the ITK image. The anisotropic diffusion
+        # filter is templated over float pixel types
+        # only, so explicitly request a float ITK
+        # image type.
+        itk_image = \
+          itkutils.convert_vtk_to_itk_image(
+            dataset, itkTypes.F)
+        itk_image_type = type(itk_image)
+
+        DiffusionFilterType = \
+           itk.GradientAnisotropicDiffusionImageFilter[
+             itk_image_type, itk_image_type]
+        diffusion_filter = DiffusionFilterType.New()
+        diffusion_filter.SetConductanceParameter(conductance)
+        diffusion_filter.SetNumberOfIterations(iterations)
+        diffusion_filter.SetTimeStep(timestep)
+        diffusion_filter.SetInput(itk_image)
+        diffusion_filter.Update()
+        itkutils.set_array_from_itk_image(
+            dataset, diffusion_filter.GetOutput())
+    except Exception as exc:
+        print("Exception encountered while running"
+              "PeronaMalikAnisotropicDiffusion")
+        print(exc)
+        raise(exc)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e8615b46f690524651-41">
+        41
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-1">
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         transform_scalars
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         conductance
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         iterations
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         100
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         timestep
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         0.125
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ""
+        </span>
+        <span class="crayon-s">
+         "This filter performs anisotropic diffusion
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-3">
+        <span class="crayon-s">
+         on an image using the classic Perona-Malik,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-4">
+        <span class="crayon-s">
+         gradient magnitude-based equation.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-5">
+        <span class="crayon-s">
+         "
+        </span>
+        <span class="crayon-s">
+         ""
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Make sure we can import needed modules
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         try
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         itk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-10">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         itkTypes
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-11">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-e">
+         tomviz
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         itkutils
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-12">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         except
+        </span>
+        <span class="crayon-e">
+         Exception
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         exc
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "Could not import necessary module(s)"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         exc
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         try
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Get the ITK image. The anisotropic diffusion
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # filter is templated over float pixel types
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # only, so explicitly request a float ITK
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # image type.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk_image
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itkutils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         convert_vtk_to_itk_image
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itkTypes
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         F
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk_image_type
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         type
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         itk_image
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-25">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         DiffusionFilterType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         GradientAnisotropicDiffusionImageFilter
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-28">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk_image_type
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itk_image_type
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-29">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         DiffusionFilterType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         New
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-30">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetConductanceParameter
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         conductance
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfIterations
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         iterations
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-32">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetTimeStep
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         timestep
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-33">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         itk_image
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-34">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-35">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         itkutils
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         set_array_from_itk_image
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-36">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         dataset
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         diffusion_filter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-37">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         except
+        </span>
+        <span class="crayon-e">
+         Exception
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         exc
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-38">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "Exception encountered while running"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-39">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "PeronaMalikAnisotropicDiffusion"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-40">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         exc
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e8615b46f690524651-41">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         raise
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         exc
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0009 seconds] -->
+ <p>
+ </p>
+ <h2>
+  <b>
+   Looking Forward
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   This post covers one example of exposing one ITK filter’s functionality in Tomviz. Half a dozen other ITK-based data operators are now available in Tomviz as of version 0.9.4. In the future, the Tomviz development team will work on expanding the types of ITK filters that can be used in Tomviz. As one example, we will look into adding intuitive 3D placement of seed points for image analysis algorithms that need them.
+  </span>
+ </p>
+ <p>
+  <i>
+   The Tomviz project is developed as part of a collaboration between Kitware and Cornell University under DOE Office of Science contract DE-SC0011385. This is a community project, and we are very pleased to take input and contributions from all in the community.
+  </i>
+ </p>
+</div>

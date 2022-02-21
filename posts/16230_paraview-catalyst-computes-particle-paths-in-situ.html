@@ -1,0 +1,230 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Rotorcraft, such as helicopters, exhibit cyclic behavior as they fly in their respective wakes. This behavior makes it difficult for analysts to evaluate results from computational fluid dynamics (CFD) simulations. Other factors that make rotorcraft difficult to evaluate include unsteady, vortex-dominated flow; reverse flow; compressibility; yawed flow; and flow separation. The complex flow fields of rotorcraft simulations hinder analysts as they attempt to set accurate initial conditions. In practice, several rotor blade revolutions must occur before the undesired transients that result from the poor initial conditions attenuate out. Due to all of the above complicating factors, the simulations often take long to run.
+ </p>
+ <p>
+  Particle paths, or path lines, track particles in fluid flows. The paths provide critical information to help analysts understand CFD simulation results. In particular, particle paths allow analysts to better comprehend unsteady flow. Analysts have used particle paths to assess model configurations and flight maneuvers for the HELIcopter Overset Simulations (HELIOS) code. This code stemmed from the Computational Research and Engineering Acquisition Tools and Environments – Air Vehicles (CREATE™-AV) effort of the Department of Defense High Performance Computing Modernization Program (HPCMP).
+ </p>
+ <p>
+  Although particle paths have offered analysts important insights, the post hoc computation of these paths has historically required significant resources. The computation calls for analysts to save large numbers of files to obtain appropriate fidelity in the output results. Since the input and output of files have often constituted the slowest parts of simulation runs, analysts have rarely saved simulation results for every time step, even on moderately sized problems.
+ </p>
+ <p>
+  To make matters worse, post hoc computation also calls for analysts to post-process results. To do so, analysts must load files back in from disk. While analysts have found it problematic to load and save data on workstations, they have experienced even more issues on high-performance computing (HPC) machines, as the compute to input/output (I/O) disparity increases.
+ </p>
+ <p>
+  To reduce file I/O, analysts have utilized in situ computation. In situ computation occurs during simulation runs, so it efficiently uses computer resources. With in situ computation, analysts can access visualization and analysis results from all time steps, and they can produce desired information, potentially without performing any additional post-processing. (Bauer et al. [1] discuss in situ computation.)
+ </p>
+ <p>
+  To compute particle paths in situ, analysts can employ ParaView Catalyst [2]. ParaView Catalyst uses ParaView as a library. It allows analysts to decide which ParaView functionalities they want to insert directly into parallel simulation codes such as HELIOS. Thus, ParaView Catalyst offers unprecedented production-quality capabilities, and it saves significant computational resources.
+ </p>
+ <p>
+  ParaView Catalyst did not always contain all of the necessary functionalities to compute particle paths in situ, so the development team worked to add them. This article highlights these functionalities.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    In Situ Computation With ParaView Catalyst
+   </strong>
+  </span>
+ </p>
+ <p>
+  To enable ParaView Catalyst to compute particle paths in situ, the development team needed to add four key functionalities to ParaView. These functionalities specify the initial time step for particle path computation, clear the particle history, cache the previous time step, and restart the simulations, respectively.
+ </p>
+ <p>
+  The team did not, however, want to complicate the computation process in the ParaView graphical user interface (GUI). Accordingly, the team added a special class to ParaView,
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  . The following sections detail the use of the class to compute particle paths in situ.
+ </p>
+ <p>
+  <strong>
+   Specifying the Initial Time Step for Particle Path Computation
+  </strong>
+ </p>
+ <p>
+  As mentioned earlier, rotorcraft simulations like HELIOS can take a non-trivial amount of time to attenuate out poor initial conditions. Analysts need a particle path filter to inject particles into simulation flows after a certain number of time steps to avoid the computation of useless and possibly confusing results. For post hoc analysis, this means that the filter must process data from files with time steps of interest. For in situ analysis, however, the respective filter must inject particle paths and advect them only after a certain time step. The
+  <span style="font-family: courier new,courier;">
+   SetFirstTimeStep()
+  </span>
+  method in the
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  class specifies this time step.
+ </p>
+ <p>
+  <strong>
+   Clearing the Particle History
+  </strong>
+ </p>
+ <p>
+  In post-processing particle paths in ParaView, the file I/O cost dwarfs the actual computation cost. Accordingly, the particle path filter outputs the full time-dependent history for each particle for subsequent analysis and visualization. When computing particle paths in situ, file I/O does not pose an issue, since the resident memory already contains all of the information necessary to compute the paths.
+ </p>
+ <p>
+  With in situ computation, the difficulty stems from high temporal fidelity, as in situ analysis considers every time step, while post hoc analysis typically considers every tenth-or-greater time step. Storing the full history of each particle path can become memory-intensive rather quickly, especially for long-running simulations that contain many injected particles. Accordingly, the
+  <span style="font-family: courier new,courier;">
+   SetClearCache()
+  </span>
+  method in the
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  class only stores the current locations of the particle paths in memory.
+ </p>
+ <p>
+  <strong>
+   Caching the Previous Time Step
+  </strong>
+ </p>
+ <p>
+  When ParaView post-processes results, the particle path filter and the pipeline mechanics control the iteration through time steps. When ParaView Catalyst post-processes results, the particle path filter normally only has access to the current time step. In order to compute the time advance of each particle, ParaView Catalyst must cache the previous time step. The
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  class automatically stores this cache.
+ </p>
+ <p>
+  <strong>
+   Restarting the Simulations
+  </strong>
+ </p>
+ <p>
+  HELIOS simulations typically run for several or more days. To extend beyond the limits of HPC queues, analysts will periodically restart their simulations from previously computed time steps. To make the particle path results from in situ computation useful, the
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  class must evaluate the results independent of whether or not the analysts restarted the simulations.
+ </p>
+ <p>
+  In order to restart, simulations must save information about simulation state. Similarly, ParaView Catalyst must save information about
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  state. When simulations restart, the
+  <span style="font-family: courier new,courier;">
+   AddRestartConnection()
+  </span>
+  method in the
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  class uses a reader to load previously saved information about particle state. The
+  <span style="font-family: courier new,courier;">
+   vtkInSituPParticlePathFilter
+  </span>
+  class then continues to compute particle paths without any noticeable difference in output.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16232" style="width: 710px">
+  <img alt="ParaView Catalyst generates in situ output." class="wp-image-16232" height="485" sizes="(max-width: 700px) 100vw, 700px" src="https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1.png 1032w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-300x208.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-768x532.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-1024x709.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-220x152.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-250x173.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-355x246.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-730x506.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-1-90x62.png 90w" width="700"/>
+  <p class="wp-caption-text">
+   ParaView Catalyst generates in situ output.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_16234" style="width: 710px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-2.bmp">
+   <img alt="Catalyst 2" class="wp-image-16234" height="463" src="https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-2.bmp" width="700"/>
+  </a>
+  <p class="wp-caption-text">
+   ParaView Catalyst generates in situ output for a subsequent time step.
+  </p>
+ </div>
+ <div class="wp-caption aligncenter" id="attachment_16235" style="width: 710px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-3.bmp">
+   <img alt="ParaView Catalyst generates in situ output for a later time step." class="wp-image-16235" height="458" src="https://blog.kitware.com/wp-content/uploads/2016/10/Catalyst-3.bmp" width="700"/>
+  </a>
+  <p class="wp-caption-text">
+   ParaView Catalyst generates in situ output for a later time step.
+  </p>
+ </div>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Results
+   </span>
+  </strong>
+ </p>
+ <p>
+  HELIOS ran with an experimental configuration called Higher-harmonic control Aeroacoustics Rotor Test II (HART-II). Many modelers and code developers find this configuration interesting, as it contains a good validation database. The setup for the simulation included a total of 14,400 time steps on 576 Message Passing Interface (MPI) processes on a Cray XC30 supercomputer. The setup process divided the simulation into two separate run stages. Each run stage simulated 7,200 time steps. Both run stages required roughly 38 hours of wall-clock run time.
+ </p>
+ <p>
+  In situ computations began at time step 720 and included analyses for the particle paths and the rotorcraft geometry. The vtkInSituPParticlePathFilter filter class injected 30 particles at this time step and at every 720th time step that followed. At each time step, the paths of the injected particles updated.
+ </p>
+ <p>
+  A separate set of in situ operations wrote out the particle path locations and the rotorcraft geometry at every 72 time steps. This means that, through ParaView Catalyst, the simulation output results at 191 time steps. The simulation also wrote out the full grid twice (at time steps 0 and 4,320).
+ </p>
+ <p>
+  The total in situ compute time amounted to 54 minutes during the first run stage and 66 minutes during the second run stage. For comparison, the output size of the particle data came to 510 MB (an average of 2.7 MB per output time step), the output size of the rotorcraft geometry came to 7.4 GB (an average of 39 MB per output time step), and the output size of the full data came to 24 GB (an average of 12 GB per output time step). While HELIOS may not classify these as large simulations, they certainly demonstrate the power of in situ computation to reduce the amount of data that analysts must write to disk.
+ </p>
+ <p>
+  ParaView 5.1.2 contains an example problem that analysts and others can use to compute particle paths in situ. To access the example, go to the “Examples/Catalyst/CxxParticlePathExample” source sub-directory. To watch a video on in situ computation with ParaView Catalyst, visit
+  <a href="https://vimeo.com/182893083">
+   https://vimeo.com/182893083
+  </a>
+  .
+ </p>
+ <p>
+  Approved for public release; distribution unlimited.
+ </p>
+ <p>
+  Review completed by the AMRDEC Public Affairs Office (PR2502, 23 Sept 2016)
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    References
+   </span>
+  </strong>
+ </p>
+ <p>
+  [1] Kitware, Inc. “ParaView Catalyst for In situ Analysis.”
+  <a href="http://www.paraview.org/in-situ">
+   http://www.paraview.org/in-situ
+  </a>
+  .
+ </p>
+ <p>
+  [2] Bauer, Andrew, Hasan Abbasi, James Ahrens, Hank Childs, Berk Geveci, Scott Klasky, Kenneth Moreland, Patrick O’Leary, Venkat Vishwanath, Brad Whitlock, and E. Wes Bethel. “In Situ Methods, Infrastructures, and Applications on High Performance Computing Platforms.” Computer Graphics Forum 35 (2016): 577–597.
+ </p>
+ <p>
+  <a href="https://blog.kitware.com/wp-content/uploads/2016/10/Andy-Bauer-Headshot.bmp">
+   <img alt="Andy Bauer Headshot" class="alignleft wp-image-16237" height="125" src="https://blog.kitware.com/wp-content/uploads/2016/10/Andy-Bauer-Headshot.bmp" width="100"/>
+  </a>
+  <strong>
+   Andrew Bauer
+  </strong>
+  is a staff research and development engineer on the scientific computing team at Kitware. He primarily works on enabling tools and technologies for HPC simulations.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <img class="wp-image-16238 size-full alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/10/Wissink-portrait3-e1476974585760.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/Wissink-portrait3-e1476974585760.jpg 100w, https://blog.kitware.com/wp-content/uploads/2016/10/Wissink-portrait3-e1476974585760-90x113.jpg 90w" width="100"/>
+  <strong>
+   Andrew Wissink
+  </strong>
+  is a researcher in the rotorcraft computational aeromechanics group at the U.S. Army Aviation Development Directorate of Aviation and Missile Research, Development, and Engineering Center (AMRDEC). He is also the lead developer of HELIOS.
+ </p>
+ <p>
+ </p>
+ <p>
+  <img class="wp-image-16239 size-full alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2016/10/Potsdam-e1476974619677.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/Potsdam-e1476974619677.png 100w, https://blog.kitware.com/wp-content/uploads/2016/10/Potsdam-e1476974619677-90x113.png 90w" width="100"/>
+  <strong>
+   Mark Potsdam
+  </strong>
+  is a researcher in the rotorcraft computational aeromechanics group at the U.S. Army Aviation Development Directorate of AMRDEC. He specializes in complex, multidisciplinary rotorcraft simulations that use HPC.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img class="wp-image-16240 size-full alignleft" height="125" src="https://blog.kitware.com/wp-content/uploads/2016/10/JayaramanB-e1476974665991.jpg" width="100"/>
+   Buvana Jayaraman
+  </strong>
+  is a part of the HELIOS development team. She is responsible for the development of the HELIOS GUI and for the validation of HELIOS.
+ </p>
+</div>

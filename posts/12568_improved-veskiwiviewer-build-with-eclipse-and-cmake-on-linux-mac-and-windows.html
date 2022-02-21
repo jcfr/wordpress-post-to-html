@@ -1,0 +1,240 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  ** This is the continuation (or improved version) of our previous post  on this topic:
+  <a href="https://blog.kitware.com/how-to-build-ves-and-kiwiviewer-for-android-on-linux-and-mac/">
+   http://www.kitware.com/blog/home/post/546
+  </a>
+  .
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Introduction
+  </strong>
+ </p>
+ <p>
+  VES (
+  <a href="http://ves.vtk.org/">
+   http://ves.vtk.org
+  </a>
+  ) is VTK for Embedded Systems. It is a C++ rendering library for mobile devices using OpenGL ES 2.0. VES integrates with the
+  <a href="http://www.vtk.org/Wiki/VTK">
+   Visualization Toolkit (VTK)
+  </a>
+  to deliver:
+ </p>
+ <ul>
+  <li>
+   Scientific and medical visualization capabilities
+  </li>
+  <li>
+   Remote rendering and/or data hosting
+  </li>
+  <li>
+   Modern/novel/new/collaborative interaction techniques
+  </li>
+ </ul>
+ <p>
+  Recently, we made improvements to building VES (specifically KiwiViewer) for Android on Linux and Mac and Windows using CMake and Eclipse. The build procedure requires Android NDK, Android SDK, and Java JDK  to be installed on the system.  VES includes an example application called KiwiViewer.  This blog will describe how to build VES, and then build KiwiViewer. The blog will also cover how to install and setup the correct Android development environment.
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   Installing the development environment
+  </strong>
+ </p>
+ <p>
+  Download and install the Android SDK from here:
+  <a href="http://developer.android.com/sdk/index.html">
+   http://developer.android.com/sdk/index.html
+  </a>
+  . For Windows, you should download and install the ADT Bundle for Windows (a .zip file).  There is no executable installer.  You will just have to unzip this into a directory.  For this example, the file is unzipped o C:/Users/hoffman/android-windows. Also, download and install the NDF from here:
+  <a href="http://developer.android.com/tools/sdk/ndk/index.html">
+   http://developer.android.com/tools/sdk/ndk/index.html
+  </a>
+  .
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   You will also need Java JDK as well.  In our setup, it is installed here: c:/Program\ Files\ \(x86\)/Java/. Below are the steps for building VES.
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   1. Get a copy of VES
+  </em>
+ </p>
+ <p>
+  &gt; git clone git://vtk.org/stage/VES.git
+ </p>
+ <p>
+  &gt; git checkout master
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   2. Open a VS Command Prompt and then type following commands.
+  </em>
+ </p>
+ <p>
+  &gt; set ANDROID_NDK=c:\Users\hoffman\android-windows\android-ndk-r9
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   3. Run cmake-gui from command line.
+  </em>
+ </p>
+ <p>
+  &gt; “\Program Files (x86)\CMake 2.8\bin\cmake-gui.exe”
+ </p>
+ <p>
+ </p>
+ <p>
+  <em>
+   4. Turn on VES_ANDROID_SUPERBUILD
+  </em>
+ </p>
+ <p dir="ltr" style="line-height: 1.15; margin-top: 0pt; margin-bottom: 0pt;">
+  <img height="496px;" src="https://lh5.googleusercontent.com/eOfa9s8N2rZZ6HoKH0ru2QYEHNaOuY2xPpR0H3GbxxR0gbslwrLHgiz_BQvcRz_jbtt6iDtpmm_kqh3XMf979asCem5cVw2-9XASLGe_AohFFYyyQmplnfK55-Oo" style="border: none; transform: rotate(0.00rad); -webkit-transform: rotate(0.00rad);" width="624px;"/>
+ </p>
+ <p>
+ </p>
+ <p>
+  5. Run jom in build directory or nmake if you want to wait.  🙂
+ </p>
+ <p>
+  &gt; cd ‘build dir from above’
+ </p>
+ <p>
+  &gt; \Users\hoffman\jom\jom.exe
+ </p>
+ <p>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   6. Build Kiwi.
+  </span>
+ </p>
+ <p>
+  Run cmake-gui on Kiwi, be sure to use toolchain option.
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   &gt; CMAKE_TOOLCHAIN_FILE:FILEPATH=C:/Users/hoffman/Work/VES/CMake/toolchains/android.toolchain.cmake
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+  7. Use the cache it creates.
+ </p>
+ <p>
+  &gt; c:\Users\hoffman\Work\VES4\VES-build\Apps\KiwiAndroid&gt;”\Program Files (x86)\CMake 2.8\bin\cmake-gui.exe” ..\..\..\VES\Apps\Android\Kiwi
+  <span style="line-height: 1.6em;">
+   ANDROID_EXECUTABLE:FILEPATH=C:/Users/hoffman/android-windows/adt-bundle-windows-x86_64-20130917/sdk/tools/android.bat
+  </span>
+  <span style="line-height: 1.6em;">
+   ANT_EXECUTABLE:FILEPATH=C:/Users/hoffman/android-windows/adt-bundle-windows-x86_64-20130917/eclipse/plugins/org.apache.ant_1.8.3.v201301120609/bin/ant.bat
+  </span>
+ </p>
+ <p>
+  You will have to set VTK_DIR and VES_DIR appropriately. Set it to the VES and VTK build directories created by the superbuild.
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   8. Put javac in the PATH and set JAVA_HOME
+  </span>
+ </p>
+ <p>
+  &gt; set PATH=%PATH%;c:\Program Files (x86)\Java\jdk1.7.0_03/bin
+ </p>
+ <p>
+  &gt; set JAVA_HOME=c:\Program Files (x86)\Java\jdk1.7.0_03
+ </p>
+ <p>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   9. Prevent java from running out of memory during compile.
+  </span>
+ </p>
+ <p>
+  &gt; set _JAVA_OPTIONS=”-Xmx256M”
+ </p>
+ <p>
+ </p>
+ <p>
+  11. Run nmake or jom in build tree and then run eclipse from the command line
+ </p>
+ <p>
+  &gt; \Users\hoffman\eclipse\eclipse\eclipse.exe
+ </p>
+ <p>
+ </p>
+ <p>
+  That’s all to it.  AndroidManifest.xml is only done at configure time, this needs to be moved to build time, so that clean works.
+  <span style="font-size: 13px; line-height: 1.6em;">
+   On Ubuntu you will need 32 bit libs:
+  </span>
+  <a href="http://developer.android.com/sdk/installing/index.html" style="font-size: 13px; line-height: 1.6em;">
+   http://developer.android.com/sdk/installing/index.html
+  </a>
+  <span style="font-size: 13px; line-height: 1.6em;">
+   . If you need help installing and configuring Java on your development machine, you might find these resources helpful:
+  </span>
+ </p>
+ <p>
+  <a href="https://help.ubuntu.com/community/Java">
+   https://help.ubuntu.com/community/Java
+  </a>
+ </p>
+ <p>
+  <a href="https://help.ubuntu.com/community/Java">
+   https://help.ubuntu.com/community/JavaInstallation
+  </a>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   Here are the steps to install Java and Eclipse, prior to installing the Android SDK and ADT Plugin. If you are running a 64-bit distribution on your development machine, you need to install the ia32-libs package using apt-get:
+  </span>
+ </p>
+ <p>
+  &gt; apt-get install ia32-libs
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   Next, install Java.
+  </span>
+ </p>
+ <p>
+  &gt; apt-get install sun-java6-jdk
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   The Ubuntu package manager does not currently offer an Eclipse 3.6 version for download, so we recommend that you download Eclipse from eclipse.org (
+  </span>
+  <a href="http://www.eclipse.org/downloads/" style="line-height: 1.6em;">
+   http://www.eclipse.org/ downloads/
+  </a>
+  <span style="line-height: 1.6em;">
+   ). A Java or RCP version of Eclipse is recommended.
+  </span>
+  <span style="line-height: 1.6em;">
+   Follow the steps given in previous sections to install the SDK and the ADT plugin.
+  </span>
+  <a href="http://developer.android.com/sdk/installing/index.html" style="font-size: 13px; line-height: 1.6em;">
+   Information for other platforms
+  </a>
+  .
+ </p>
+ <p>
+ </p>
+</div>

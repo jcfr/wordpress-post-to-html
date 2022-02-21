@@ -1,0 +1,532 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400">
+   This blog article presents an overview of the work presented recently in our ISBI 2018 conference
+  </span>
+  <a href="https://blog.kitware.com/wp-content/uploads/2018/01/2017_ISBI_CancerGradingPersistenceHomology.pdf">
+   <span style="font-weight: 400">
+    paper
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   entitled “Vectorized Persistent Homology Representations for Characterizing Glandular Architecture for Cancer Diagnosis in Histology Images”. This work was done through a ongoing collaboration between the researchers of Kitware and Emory University and is funded through an NIH ITCR U24 grant (
+  </span>
+  <a href="http://grantome.com/grant/NIH/U24-CA194362-01">
+   <span style="font-weight: 400">
+    U24-CA194362-01
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   ) for the development of informatics tools for web-based management, visualization, and analysis of digital histopathology data that are briefly described in this
+  </span>
+  <a href="https://blog.kitware.com/digital-slide-archive-large-image-and-histomicstk-open-source-informatics-tools-for-management-visualization-and-analysis-of-digital-histopathology-data/">
+   <span style="font-weight: 400">
+    blog post
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+ <p>
+  <b>
+   Introduction
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Histopathology refers to the microscopic examination of thin sections of biopsied disease tissue. It is regarded as the gold standard in clinical diagnosis and grading of most types of cancer.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   For adenocarcinomas, tumors originating in glandular structures of epithelial tissue such as prostate, pancreatic, and colorectal cancers, the differentiability of glandular architecture in histopathology images conveys significant information about the presence and degree of malignancy.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Here, we investigate a new set of features for quantifying the glandular architecture based on two recently developed persistent homology representations called persistence images [1] and persistence landscapes [2] and show their effectiveness in automated colorectal cancer diagnosis.
+  </span>
+ </p>
+ <p>
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture.png">
+   <img alt="" class="aligncenter size-full wp-image-22442" height="648" sizes="(max-width: 2010px) 100vw, 2010px" src="http://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture.png 2010w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-300x97.png 300w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-768x248.png 768w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-1024x330.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-220x71.png 220w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-250x81.png 250w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-355x114.png 355w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-730x235.png 730w, https://blog.kitware.com/wp-content/uploads/2018/05/glandular_architecture-90x29.png 90w" width="2010"/>
+  </a>
+ </p>
+ <p>
+  <b>
+   Brief background on persistent homology
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In this section, we present a brief background on some fundamental concepts of persistent homology and the two recently proposed vectorized persistent homology representations: persistence image and persistence landscape.
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    Given a point cloud dataset, persistent homology can be seen as a theoretical tool to detect and characterize prominent topological features (e.g. connected components, loops, voids) at multiple scales [3].
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <b>
+    Simplex:
+   </b>
+   <span style="font-weight: 400">
+    A p-simplex σ
+   </span>
+   <span style="font-weight: 400">
+    p
+   </span>
+   <span style="font-weight: 400">
+    is defined as the convex hull of p+1 affinely independent points / vertices. A face of a simplex is defined as a subset of its p+1 points/vertices.
+   </span>
+  </li>
+ </ul>
+ <p>
+  <span style="font-weight: 400">
+   <a href="http://blog.kitware.com/wp-content/uploads/2018/05/simplices.png">
+    <img alt="" class="aligncenter wp-image-22443" height="163" src="http://blog.kitware.com/wp-content/uploads/2018/05/simplices.png" width="717"/>
+   </a>
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <b>
+    Simplicial complex:
+   </b>
+   <span style="font-weight: 400">
+    A simplicial complex K is a finite collection of simplices. If a simplex is in K then all its faces are in K. Given a simplicial complex K, a simplicial complex L formed by a subset of its simplices is referred to as the sub-complex of K denoted as 𝐿⊂𝐾.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <b>
+    Filtration:
+   </b>
+   <span style="font-weight: 400">
+    A nested sequence of simplicial complexes 𝜙 ⊂ 𝐾
+   </span>
+   <span style="font-weight: 400">
+    1
+   </span>
+   <span style="font-weight: 400">
+    ⊂ 𝐾
+   </span>
+   <span style="font-weight: 400">
+    2
+   </span>
+   <span style="font-weight: 400">
+    ⊂ ⋯ ⊂ 𝐾
+   </span>
+   <span style="font-weight: 400">
+    n
+   </span>
+   <span style="font-weight: 400">
+    = 𝐾 is called a filtration of K.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <b>
+    Homology groups:
+   </b>
+   <span style="font-weight: 400">
+    A d-dimensional homology group H
+   </span>
+   <span style="font-weight: 400">
+    d
+   </span>
+   <span style="font-weight: 400">
+    (K) of a simplicial complex K is the set of all d-dimensional voids in K and the rank or number of these voids is referred to as the d-dimensional Betti number 𝛽
+   </span>
+   <span style="font-weight: 400">
+    d
+   </span>
+   <span style="font-weight: 400">
+    (𝐾).
+   </span>
+  </li>
+ </ul>
+ <p>
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/05/homology_groups.png">
+   <img alt="" class="aligncenter wp-image-22444" height="160" src="http://blog.kitware.com/wp-content/uploads/2018/05/homology_groups.png" width="715"/>
+  </a>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <b>
+    Vectoris-Rips Filtration:
+   </b>
+   <span style="font-weight: 400">
+    Given a pointset, a simplicial complex VR 𝜎 = {𝜎 ∣ 𝑑𝑖𝑎𝑚 𝜎 ≤ 𝜖} containing simplices of all subsets of its points whose max distance &lt; 𝜖 is called a Vectoris-Rips (VR) complex. An increasing sequence of diameters/scales 𝜖
+   </span>
+   <span style="font-weight: 400">
+    1
+   </span>
+   <span style="font-weight: 400">
+    &lt; 𝜖
+   </span>
+   <span style="font-weight: 400">
+    2
+   </span>
+   <span style="font-weight: 400">
+    &lt; ⋯ &lt; 𝜖
+   </span>
+   <span style="font-weight: 400">
+    n
+   </span>
+   <span style="font-weight: 400">
+    results in a nested sequence of VR complexes 𝑉𝑅(𝜖
+   </span>
+   <span style="font-weight: 400">
+    1
+   </span>
+   <span style="font-weight: 400">
+    ) ⊂ 𝑉𝑅(𝜖
+   </span>
+   <span style="font-weight: 400">
+    2
+   </span>
+   <span style="font-weight: 400">
+    ) ⊂ ⋯𝑉𝑅(𝜖
+   </span>
+   <span style="font-weight: 400">
+    n
+   </span>
+   <span style="font-weight: 400">
+    )  known as the Vectoris-Rips (VR) Filtration.
+   </span>
+  </li>
+ </ul>
+ <ul>
+  <li style="font-weight: 400">
+   <b>
+    Persistence diagram:
+   </b>
+   <span style="font-weight: 400">
+    Given a filtration F, the idea of persistent homology is to track the scales at which each d-dim void appears/disappears as a multiset 𝐵𝐷
+   </span>
+   <span style="font-weight: 400">
+    d
+   </span>
+   <span style="font-weight: 400">
+    = {(𝑏
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    , 𝑑
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    )} of birth-death scales. Plotting them as 2D points produces the persistence diagram (PD) representation.
+   </span>
+  </li>
+ </ul>
+ <ul>
+  <li style="font-weight: 400">
+   <b>
+    Persistence image:
+   </b>
+   <span style="font-weight: 400">
+    Given a multiset of birth-persistence values 𝐵𝐷
+   </span>
+   <span style="font-weight: 400">
+    d
+   </span>
+   <span style="font-weight: 400">
+    (𝐹)={(𝑏
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    , 𝑝
+   </span>
+   <span style="font-weight: 400">
+    𝑖
+   </span>
+   <span style="font-weight: 400">
+    )} of all d-dim voids, the persistence image (PI) representation is generated by discretizing a 2D real-valued function defined as a weighted sum of bivariate gaussian PDFs centered at each birth persistence pair as follows:
+   </span>
+  </li>
+ </ul>
+ <ul>
+  <li style="font-weight: 400">
+   <b>
+    Persistence landscape:
+   </b>
+   <span style="font-weight: 400">
+    Given a multi-set of birth-death pairs { (b
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    , d
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    ) } with a triangular shaped function 𝑓
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    (𝑥) that linearly increases from (b
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    ,0) to ( (b
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    +d
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    )/2, (b
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    +d
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    )/2 ) and then linearly decreases until (d
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    , 0), the persistence landscape is defined as a 2D function 𝜆:𝑁 𝑥 𝑅→[0, ∞] where 𝜆(𝑘,𝑥) is k-th largest value of of { 𝑓
+   </span>
+   <span style="font-weight: 400">
+    i
+   </span>
+   <span style="font-weight: 400">
+    (x) }.
+   </span>
+  </li>
+ </ul>
+ <p>
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_example.png">
+   <img alt="" class="aligncenter wp-image-22445" height="336" src="http://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_example.png" width="726"/>
+  </a>
+ </p>
+ <p>
+  <b>
+   Methodology
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In this section, we present our approach for using persistence image and persistence landscape representations to characterize the glandular epithelium architecture and train a machine learning model for cancer diagnosis.
+  </span>
+ </p>
+ <ol>
+  <li>
+   <b>
+    Detect nuclei centroids:
+   </b>
+   <span style="font-weight: 400">
+    Given a histology image, we first pre-process it using the color normalization method of Reinhard
+   </span>
+   <i>
+    <span style="font-weight: 400">
+     et al
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    [9] to standardize the staining. Next, we use the unsupervised color deconvolution method of Macenko
+   </span>
+   <i>
+    <span style="font-weight: 400">
+     et al
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    [9] to extract the nuclear stain and apply minimum cross entropy thresholding [10] to segment the nuclear foreground. Lastly, we use a fast Difference-of-Gaussian implementation of a scale-adaptive Laplacian-of-Gaussian of Al-Kofahi
+   </span>
+   <i>
+    <span style="font-weight: 400">
+     et al
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    [11] filter to detect nuclei centroids. The aforementioned pipeline of methods were developed using their implementations in
+   </span>
+   <a href="https://blog.kitware.com/digital-slide-archive-large-image-and-histomicstk-open-source-informatics-tools-for-management-visualization-and-analysis-of-digital-histopathology-data/">
+    <span style="font-weight: 400">
+     HistomicsTK
+    </span>
+   </a>
+   <span style="font-weight: 400">
+    an open-source Python toolkit for histopathology image analysis that we are actively developing.
+   </span>
+  </li>
+  <li>
+   <b>
+    Extract persistence homology features:
+   </b>
+   <span style="font-weight: 400">
+    Considering the set of nuclear centroids as a point cloud, we compute the persistence diagram of its Vectoris-Rips filtration for the homological dimension-1 corresponding to 2D loops using a fast multiscale approach developed by a researcher from Kitware named Samuel Gerber [6]. We then compute the persistence image (PI) and persistence landscape (PL) representations to characterize the 2D voids/loops formed by glandular epithelial cell nuclei and use them as features.
+   </span>
+  </li>
+  <li>
+   <b>
+    Train machine learning model for cancer diagnosis:
+   </b>
+   <span style="font-weight: 400">
+    Given a training set of benign/malignant images, we train a random forest classifier based on the aforementioned features. We use principal component analysis (PCA) to reduce the dimensionality of each feature group such that 99% of the variance is preserved.
+   </span>
+  </li>
+ </ol>
+ <p>
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis.png">
+   <img alt="" class="aligncenter wp-image-22446 size-full" height="966" sizes="(max-width: 1940px) 100vw, 1940px" src="http://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis.png 1940w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-300x149.png 300w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-768x382.png 768w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-1024x510.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-220x110.png 220w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-250x124.png 250w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-355x177.png 355w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-730x363.png 730w, https://blog.kitware.com/wp-content/uploads/2018/05/pi_pl_vis-90x45.png 90w" width="1940"/>
+  </a>
+ </p>
+ <p>
+  <b>
+   Results
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   We used the MICCAI 2015 Gland Segmentation Challenge dataset [7] to evaluate the proposed method. This dataset contains 165 images derived from 16 hematoxylin-eosin stained sections of normal and stage T3/T4 colorectal adenocarcinomas digitized using a Zeiss MIRAX MIDI SlideScanner at 20X magnification. An expert pathologist delineated the boundary of all the glands in each image and classified it as benign or malignant based on the overall glandular architecture. The dataset was divided by the challenge organizers into two parts: 85 training images (37 benign, 48 malignant) and 80 test images (37 benign, 43 malignant).
+  </span>
+ </p>
+ <p>
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result.png">
+   <img alt="" class="aligncenter size-full wp-image-22447" height="454" sizes="(max-width: 1992px) 100vw, 1992px" src="http://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result.png 1992w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-300x68.png 300w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-768x175.png 768w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-1024x233.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-220x50.png 220w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-250x57.png 250w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-355x81.png 355w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-730x166.png 730w, https://blog.kitware.com/wp-content/uploads/2018/05/cancer_diagnosis_result-90x21.png 90w" width="1992"/>
+  </a>
+ </p>
+ <p>
+  <b>
+   Conclusion
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Using persistence image and persistence landscape based features to characterize glandular architecture in colorectal tissues, we were able to classify between benign and malignant images with a high degree of accuracy. Our preliminary experiments indicate that the performance of these features is better than state-of-the-art features based on cell graphs. Considering the vectorized nature of persistence image and landscape representations, we are currently evaluating their effectiveness in a deep learning setting.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   For those who seek to leverage our expertise in developing algorithmic solutions to solve complex analytics problems similar to the ones described in this post, Kitware offers
+  </span>
+  <a href="https://www.kitware.com/what-we-offer/">
+   <span style="font-weight: 400">
+    consulting and support services
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   to help tailor our solutions to address user specific needs, create custom software, and/or conduct R&amp;D. To learn more about the services offered by Kitware please contact us at kitware@kitware.com.
+  </span>
+ </p>
+ <p>
+  <b>
+   Acknowledgements
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   This work is funded by the NIH ITCR U24 grant
+  </span>
+  <a href="http://grantome.com/grant/NIH/U24-CA194362-01">
+   <span style="font-weight: 400">
+    U24-CA194362-01
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   entitled “Advanced Development of an Open-source Platform for Web-based Integrative Digital Image Analysis in Cancer” with Dr. David Gutman and Dr. Lee Cooper from Emory University as PIs and Kitware as a subcontractor.
+  </span>
+ </p>
+ <p>
+  <b>
+   References
+  </b>
+ </p>
+ <ol>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    H. Adams, et al., “Persistence Images: A Stable Vector Representation of Persistent Homology,” JMLR, 18(1), 2015.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    P. Bubenik, “Statistical topological data analysis using persistence landscapes,” JMLR, 16(1), 2012.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    X. Zhu, “Persistent homology: An introduction and a new text representation for natural language processing,” in IJCAI, 2013.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    HistomicsTK – An open-source Python toolkit for histopathology image analysis
+   </span>
+   <a href="https://github.com/DigitalSlideArchive/HistomicsTK">
+    <span style="font-weight: 400">
+     https://github.com/DigitalSlideArchive/HistomicsTK
+    </span>
+   </a>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    S. Doyle, et al., “Automated grading of prostate cancer using architectural and textural image features,” in ISBI, 2007.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    S. Gerber, “Fast approximate multiscale persistence homology computation”,
+   </span>
+   <a href="https://bitbucket.org/suppechasper/homology">
+    <span style="font-weight: 400">
+     https://bitbucket.org/suppechasper/homology
+    </span>
+   </a>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    K. Sirinukunwattana, et al.,“Gland segmentation in colon histology images: The glas challenge contest,” Medical Image Analysis, 2017.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    E. Reinhard, M. Ashikhmin, B. Gooch, et al.,   “Color transfer between images,”IEEE Computer  Graphics and Applications, vol. 21, no. 5, pp. 34–41, 2001.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    M. Macenko, M. Niethammer, J. S. Marron, et al.,  “A method for normalizing histology slides for quantitative analysis,” in IEEE International Symposium on Biomedical Imaging: From Nano to Macro, June 2009, pp. 1107–1110.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    H.  Li and  P.K.S. Tam,   “An iterative algorithm  for minimum cross entropy thresholding,”Pattern Recognition Letters, vol. 19, no. 8, pp. 771–776, June 1998.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   Y. Al-Kofahi, W. Lassoued, W. Lee, et al.,  “Improved automatic detection and segmentation of cell nuclei in histopathology images,”IEEE Transactions on Biomedical Engineering, vol. 57, no. 4, pp. 841–852, 2010
+  </li>
+ </ol>
+</div>

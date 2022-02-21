@@ -1,0 +1,1206 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <img alt="" class="aligncenter wp-image-20569 size-large" height="485" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-1024x485.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-300x142.png 300w, https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-768x364.png 768w, https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-220x104.png 220w, https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-250x118.png 250w, https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-355x168.png 355w, https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-730x346.png 730w, https://blog.kitware.com/wp-content/uploads/2017/12/Brodiagram-90x43.png 90w" width="1024"/>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   As 2017 comes to a close, many government contractors are working toward the end-of-the-year deadline for compliance with the National Institute of Standards and Technology (NIST) Special Publication (SP) 800-171.
+   <a href="http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-171r1.pdf">
+    NIST 800-171
+   </a>
+   is a document that specifies how information systems and policies need to be set up in order to protect Controlled Unclassified Information (CUI). This blog addresses section 3.3, “AUDIT AND ACCOUNTABILITY.”
+  </span>
+  <span style="font-weight: 400;">
+   The main goal of this section is to require companies to monitor and audit unlawful, unauthorized, or inappropriate system activity.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   At Kitware, we use
+   <a href="https://www.bro.org/">
+    Bro IDS
+   </a>
+   , an open source C++ software system, to monitor network activity. Bro produces running logs of many kinds of network behavior data, including Secure Sockets Layer (SSL) connections, public key certificates, and Simple Mail Transfer Protocol (SMTP) connections. By analyzing these logs both in real time and after suspicious activity occurs, it is possible to perform certain forensics and send alerts in compliance with NIST requirements.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   To help analyze Bro logs, we
+  </span>
+  <span style="font-weight: 400;">
+   created a Python module called
+  </span>
+  <span style="font-weight: 400;">
+   <a href="https://github.com/Kitware/bat" rel="noopener" target="_blank">
+    Bro Analysis Tools
+   </a>
+  </span>
+  (BAT)
+  <span style="font-weight: 400;">
+   . This post describes how to deploy BAT on a corporate network. The first step is to install Bro.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Installing Bro
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   To install Bro on Ubuntu, you will need the following packages:
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400;">
+   <a href="https://www.kitware.com/platforms/#cmake" rel="noopener" target="_blank">
+    <span style="font-weight: 400;">
+     CMake
+    </span>
+   </a>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    Make
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    G++
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    Flex and Bison
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    libpcap-dev
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    libssl-dev
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    python-dev
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    swig
+   </span>
+  </li>
+  <li style="font-weight: 400;">
+   <span style="font-weight: 400;">
+    zlib1g-dev
+   </span>
+  </li>
+ </ul>
+ <p>
+  <span style="font-weight: 400;">
+   To set up automated report emails, you will want to install Sendmail. You can also install GeoIP to include geolocation information in the reports for hosts with which you interact. On Ubuntu, the GeoIP package is called libgeoip-dev.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   Once you have the above packages, you’re ready to build and install Bro. Start by cloning the Bro Git repository.
+  </span>
+ </p>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e884d1a07064519266" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-sy">
+     $
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-e">
+     git
+    </span>
+    <span class="crayon-r">
+     clone
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-o">
+     --
+    </span>
+    <span class="crayon-e">
+     recursive
+    </span>
+    <span class="crayon-v">
+     git
+    </span>
+    <span class="crayon-o">
+     :
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     git
+    </span>
+    <span class="crayon-e">
+     .bro
+    </span>
+    <span class="crayon-e">
+     .org
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     bro
+    </span>
+   </span>
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   Then, build the software using this classic command sequence.
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e884d1a0f225997720" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ cd bro
+$ ./configure --prefix=/opt/bro
+$ make
+$ make install</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e884d1a0f225997720-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a0f225997720-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a0f225997720-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a0f225997720-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e884d1a0f225997720-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         cd
+        </span>
+        <span class="crayon-i">
+         bro
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a0f225997720-2">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         configure
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         --
+        </span>
+        <span class="crayon-v">
+         prefix
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-i">
+         bro
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a0f225997720-3">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         make
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a0f225997720-4">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         make
+        </span>
+        <span class="crayon-v">
+         install
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  <span style="font-weight: 400;">
+   Next, adjust your PATH.
+  </span>
+ </p>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e884d1a12865245467" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-sy">
+     $
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-e">
+     export
+    </span>
+    <span class="crayon-v">
+     PATH
+    </span>
+    <span class="crayon-o">
+     =
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     opt
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     bro
+    </span>
+    <span class="crayon-o">
+     /
+    </span>
+    <span class="crayon-v">
+     bin
+    </span>
+    <span class="crayon-o">
+     :
+    </span>
+    <span class="crayon-sy">
+     $
+    </span>
+    <span class="crayon-v">
+     PATH
+    </span>
+   </span>
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   Optionally, test if GeoIP is working.
+  </span>
+ </p>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e884d1a14849669485" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-sy">
+     $
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-v">
+     bro
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-o">
+     -
+    </span>
+    <span class="crayon-i">
+     e
+    </span>
+    <span class="crayon-h">
+    </span>
+    “
+    <span class="crayon-e">
+     print
+    </span>
+    <span class="crayon-e">
+     lookup_location
+    </span>
+    <span class="crayon-sy">
+     (
+    </span>
+    <span class="crayon-cn">
+     8.8.8.8
+    </span>
+    <span class="crayon-sy">
+     )
+    </span>
+    <span class="crayon-sy">
+     ;
+    </span>
+    ”
+   </span>
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   You can now edit the Bro configuration file in
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e884d1a15681829799" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      opt
+     </span>
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      bro
+     </span>
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      etc
+     </span>
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      node
+     </span>
+     <span class="crayon-sy">
+      .
+     </span>
+     <span class="crayon-v">
+      cfg
+     </span>
+    </span>
+   </span>
+   to ensure that the correct network interface is listed there.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   Finally, launch the Bro service using the BroControl (broctl) program.
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e884d1a17722038095" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ broctl
+[BroControl] &gt; deploy
+[BroControl] &gt; start
+[BroControl] &gt; exit</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e884d1a17722038095-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a17722038095-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a17722038095-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a17722038095-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e884d1a17722038095-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         broctl
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a17722038095-2">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         BroControl
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         deploy
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a17722038095-3">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         BroControl
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         start
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a17722038095-4">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         BroControl
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         exit
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  <span style="font-weight: 400;">
+   You can see the log files that Bro collects in
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e884d1a19282724288" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      opt
+     </span>
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      bro
+     </span>
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      logs
+     </span>
+     <span class="crayon-o">
+      /
+     </span>
+     <span class="crayon-v">
+      current
+     </span>
+    </span>
+   </span>
+   . These logs will roll over each day at midnight, so you can go back to perform a post-mortem analysis, in case you suspect something was awry on a previous day.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Installing BAT
+  </span>
+ </h2>
+ <p>
+  <a href="https://bat-tools.readthedocs.io/en/latest/" rel="noopener" target="_blank">
+   BAT
+  </a>
+  makes it easier to analyze Bro logs, as it has built-in log readers. These readers allow an analysis script to stream out the rows of a log file for processing. The readers can also be used to dump an entire log file and convert it to a Pandas data frame for use in statistical processing scripts or other analyses.
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   BAT is available in the Python Package Index, so installing it is as simple as this:
+  </span>
+ </p>
+ <p>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e884d1a1b590349408" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-sy">
+     $
+    </span>
+    <span class="crayon-h">
+    </span>
+    <span class="crayon-e">
+     pip
+    </span>
+    <span class="crayon-e">
+     install
+    </span>
+    <span class="crayon-v">
+     bat
+    </span>
+   </span>
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Analyzing Bro Logs
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Using BAT, you can write Python scripts to look for oddities and report them to your system administration team via email. For instance
+  </span>
+  <span style="font-weight: 400;">
+   , the SSL log may contain hosts that claim to be Google, yet they present Let’s Encrypt certificates. This warrants further analysis; while individuals may use Let’s Encrypt to authenticate their own servers, big players like Google don’t use it on their sites.
+  </span>
+  <span style="font-weight: 400;">
+   In this instance, the below script opens the certificate verification log file, scans for certificates that come from the Let’s Encrypt issuer but claim to be Google, and reports them on the console:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e884d1a1d122677817" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import bat
+
+reader = bat.bro_log_reader('/opt/bro/logs/current/x509.log')
+for row in reader.readrows():
+    issuer = row['certificate.issuer']
+    if "Let's Encrypt" in issuer and row['certificate.subject'] == 'CN=google':
+        print('&lt;&lt;&lt; SUSPICIOUS CERTIFICATE FOUND &gt;&gt;&gt;')
+        print(row)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e884d1a1d122677817-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a1d122677817-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a1d122677817-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a1d122677817-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a1d122677817-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a1d122677817-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a1d122677817-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e884d1a1d122677817-1">
+        <span class="crayon-r">
+         import
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         bat
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a1d122677817-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a1d122677817-3">
+        <span class="crayon-v">
+         reader
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         bat
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         bro_log_reader
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         '/opt/bro/logs/current/x509.log'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a1d122677817-4">
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         row
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         reader
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         readrows
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a1d122677817-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         issuer
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         row
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'certificate.issuer'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a1d122677817-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Let's Encrypt"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         issuer
+        </span>
+        <span class="crayon-st">
+         and
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         row
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'certificate.subject'
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'CN=google'
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a1d122677817-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         '&lt;&lt;&lt; SUSPICIOUS CERTIFICATE FOUND &gt;&gt;&gt;'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0004 seconds] -->
+ <p>
+  (You may think this alert filter is a bit too simple to bring Python into the mix, rather than something like Bro scripts — but this is just a simplified example for illustration purposes. We are working on much more complex scenarios involving big data processing and advanced machine learning techniques to detect complex and shifting behaviors as they develop. Stay tuned for future blog posts about those topics.)
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   T
+  </span>
+  <span style="font-weight: 400;">
+   o set up a daily email alert, you can use a job scheduler, such as
+   <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e884d1a20454918589" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+    <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+     <span class="crayon-v">
+      cron
+     </span>
+    </span>
+   </span>
+   on UNIX systems. The job scheduler runs the report script and pipes the results to a Sendmail script like the following:
+  </span>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e884d1a22451958540" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+from subprocess import Popen, PIPE
+import sys
+
+msg = MIMEText(sys.stdin.read())
+msg["From"] = "bro@example.com"
+msg["To"] = "you@example.com"
+msg["Subject"] = "Nightly Report"
+
+p = Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=PIPE, universal_newlines=True)
+p.communicate(msg.as_string())</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e884d1a22451958540-10">
+        10
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-1">
+        <span class="crayon-st">
+         from
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         subprocess
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         import
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Popen
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         PIPE
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-2">
+        <span class="crayon-r">
+         import
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         sys
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-4">
+        <span class="crayon-v">
+         msg
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         MIMEText
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-k ">
+         sys
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         stdin
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         read
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-5">
+        <span class="crayon-v">
+         msg
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         "From"
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "bro@example.com"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-6">
+        <span class="crayon-v">
+         msg
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         "To"
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "you@example.com"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-7">
+        <span class="crayon-v">
+         msg
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         "Subject"
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "Nightly Report"
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-9">
+        <span class="crayon-v">
+         p
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Popen
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         "/usr/sbin/sendmail"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "-t"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "-oi"
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         stdin
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         PIPE
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         universal_newlines
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-t">
+         True
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e884d1a22451958540-10">
+        <span class="crayon-v">
+         p
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         communicate
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         msg
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         as_string
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0031 seconds] -->
+ <p>
+  <span style="font-weight: 400;">
+   You’ll receive a daily email, and your organization can respond accordingly.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400;">
+   Taking the Next Step
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400;">
+   Not only are we setting up our Bro/BAT system in anticipation of meeting NIST deadlines, but we are forming plans to develop more sophisticated detection and reporting routines. As an example, we would like to use machine learning techniques to detect certain kinds of network events as they develop, such as denial-of-service attacks. Real-time reporting that uses machine learning to distinguish true attacks from other sorts of anomalies would allow us to secure and protect our networks more efficiently.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400;">
+   As we refine our approach to provide our system administration team with the best possible security reporting, we are interested to hear from you. Looking at 2018, w
+  </span>
+  hat concerns do you have about your network?
+ </p>
+</div>

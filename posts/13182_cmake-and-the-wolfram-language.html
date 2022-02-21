@@ -1,0 +1,631 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="/source/files/4_165618030.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_165618030.jpg" style="width: 100px; height: 92px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  For the past 25 years, Wolfram has “incubated,” so to speak, the burgeoning Wolfram Language inside its flagship product, Mathematica, in the computation module of the system called the kernel.  These technologies have evolved into the Wolfram Language and the Wolfram Computation Engine, respectively.
+ </p>
+ <p>
+  The following text comes from the Wolfram Language product description:
+  <br/>
+  “The Wolfram Language is a highly developed knowledge-based language that unifies a broad range of programming paradigms and uses its unique concept of symbolic programming to add a new level of flexibility to the very concept of programming. ”
+ </p>
+ <p>
+  In this article, I will describe how the Wolfram team uses CMake to facilitate the development and deployment of new builds of the Wolfram Language and the Wolfram Computation Engine that executes it.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <strong>
+    <span style="color: #000080;">
+     Wolfram Language Software Engineering
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  The Wolfram Language comprises a complex software system made up of several million lines of C/C++, Wolfram Language, and Java code.   Wolfram uses a customized enhancement of C (hereafter called Wolfram-C) that supports object-oriented behavior and customized memory management operations of certain data structures.  The source files written in Wolfram-C are processed by a tool called the precompiler prior to compilation with standard C compilers.  Our build environments can also build the Wolfram-C files as C++ sources.  We do not use the C++ version for production due to the speed enhancements and memory optimizations that are available in the C version.  After compiling the base portion of the Wolfram Engine from Wolfram-C, a large portion of the remainder of the system is processed and implemented in the Wolfram Language itself.  In addition to the primary Wolfram-C sources and the Wolfram Language sources, creating the Wolfram Engine also requires a set of third-party libraries built specifically for each platform.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <strong>
+    <span style="color: #000080;">
+     Development Pipeline
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  Along with developing features and functionality for the Wolfram Language, Wolfram has also strived to develop a streamlined development pipeline, capable of building and delivering versions of Mathematica (and the Wolfram Language) from stable sources in as little time as possible.  In 2008, having narrowed our list of supported platforms to the major three platforms available today, Macintosh, Windows, and Linux, we reached a point where we had to maintain three separate build environments to build the Wolfram Engine.  This ternary build strategy caused no end of trouble for our developers.
+ </p>
+ <p>
+  For example, the addition or deletion of source material required updates in three separate systems.  Developers wasted an inordinate amount of time just communicating changes to sources.
+ </p>
+ <p>
+  Furthermore, over time, each build environment had acquired certain development characteristics and facilities that made it difficult for developers to leave one environment and work on problems on another platform.
+  <br/>
+  Those same idiosyncrasies made it difficult for new developers to get started working on a particular platform.
+  <br/>
+  In addition to overall problems in the development pipeline, each platform’s build environment had its own set of build curios that contributed to problems for developers.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Linux
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  On Linux, we used a build environment based on make, but configured using the X11 project’s Imake  tool.  The Imake-derived build system suffered from various behaviors, which are listed below.
+  <br/>
+  First, the system did not correctly handle source file dependencies, resulting in developers wasting time with unnecessary module rebuilds.
+ </p>
+ <p>
+  Second, Imake configuration, as a combination of C pre-processor syntax and make syntax, eventually led to a system that was too confusing for many developers to change.
+ </p>
+ <p>
+  Third, the Imake-based system did not correctly run builds in parallel.
+ </p>
+ <p>
+  Fourth, the original designer of the Imake-based system created a large monolithic build environment that built every module for each build.  Therefore, it was not easy for the developers of individual modules to only build the modules they needed.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Windows
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  On Windows, we made use of a custom combination of make and Visual Studio.  For each build, the system used make to invoke the precompiler tool on each Wolfram-C source file to create the generic C source suitable for use with the Visual Studio compiler.  After that step, a Visual Studio project drove the compilation of the C portion of the system, and custom scripts drove the processing of the Wolfram Language source files.  This system suffered from several problems.
+ </p>
+ <p>
+  For one, the initial portion required a make environment for pre-processing the Wolfram-C source files with the precompiler tool.  This requirement led most Windows developers to build the C++ version of the Wolfram Engine that did not require the use of the precompiler tool.   Developing the C++ version of the product meant that most Windows developers never built or directly tested the production version of the Wolfram Engine.
+ </p>
+ <p>
+  In addition, the varied stages of this system made it difficult to modify configuration parameters.  The project files
+  <br/>
+  contained the build settings and required spelunking through projects in order to find the correct location to change build settings.
+ </p>
+ <p>
+  Furthermore, the Visual Studio projects did not assemble the software into finished file layouts but, instead, relied on registry entries to point various components to pre-existing layouts constructed by the primary product installer.
+  <br/>
+  Finally, the system lacked cohesive documentation that most often manifested problems in acquiring the correct set of third-party external libraries used to build the Wolfram Engine for Windows.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Macintosh
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The Xcode build of the Wolfram Engine had numerous problems, which are listed below.
+ </p>
+ <p>
+  The Xcode projects only built the C++ version of the Engine.  As a result, Macintosh production builds did not use the Xcode projects. Instead, they used the Imake-configured make system.
+ </p>
+ <p>
+  In addition, Xcode does not provide a mechanism for informing the Xcode build processor that it should compile files with custom extensions as particular languages.  For example, you could not (from inside of Xcode on a global basis) have Xcode compile all .wlc files as C or C++ source files.  In Xcode, you can change the source file type for each file individually, but when you have thousands of source files with custom extensions, the Xcode environment quickly becomes unwieldy, making the develop-&gt;compile-&gt;debug cycle difficult.
+ </p>
+ <p>
+  In order to avoid the first two problems, most Macintosh developers did not use the Xcode project.  As a result, the Xcode project source lists were often out of date.
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Enter CMake
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  I first encountered CMake while experimenting with Kitware’s Insight, Segmentation, and Registration Toolkit for image processing.  I quickly realized that CMake had all the necessary features to solve our build environment problems.  CMake allowed us to merge all three build systems into one system, while still serving the needs of each individual platform.  CMake provided three gigantic productivity gains: 1. The three build platforms all now use the same set of configuration files to enumerate sources and resources (no more communicating source changes), 2. CMake can configure all three build environments to have the same set of features (e.g., they can all easily acquire requisite third-party libraries before builds, they can all build the production version using the precompiler tool and generate file layouts, they can all build the C++ version, etc.), and 3. CMake produces dependency correct build systems that correctly build in parallel in all build environments (where the native build tool can build in parallel), drastically reducing build times for production builds on our build servers.  For example, Linux builds of the Wolfram Engine went from build times of around an hour to build times on the order of five minutes thanks to the ability to leverage multiple processors on the build servers.
+ </p>
+ <p>
+  In addition to addressing the primary problems with our build environments, having standardized on CMake has made transitioning to mobile platforms particularly easy.  CMake’s build description language is flexible enough to allow us to easily extend our support for the Wolfram Engine on iOS and Android, as well as hobbyist systems such as Raspberry Pi and Intel’s new platform, Edison.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <strong>
+    <span style="color: #000080;">
+     Customizing CMake
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  While CMake solved the majority of our needs, we did find the need to customize CMake to handle some portions of our build requirements that the standard CMake implementation did not cover.  For example, we found that we needed to have add_custom_command() syntax that allowed custom commands to vary by build configuration.  We changed the standard add_custom_command() signature to the following:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c25cc8e9a641715613" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+add_custom_command(OUTPUT output1 [output2 ...]
+COMMAND command1 [ARGS] [args1...]
+[COMMAND command2 [ARGS] [args2...] ...]
+[MAIN_DEPENDENCY depend]
+[DEPENDS [depends...]]
+[IMPLICIT_DEPENDS &lt;lang1&gt; depend1
+[&lt;lang2&gt; depend2] ...]
+[WORKING_DIRECTORY dir]
+[COMMENT comment] [VERBATIM] [APPEND]
+——&gt;   [CONFIG Debug | MinSizeRel | Release |
+RelWithDebInfo | ...]
+)
+add_custom_command(TARGET target
+PRE_BUILD | PRE_LINK | POST_BUILD
+COMMAND command1 [ARGS] [args1...]
+[COMMAND command2 [ARGS] [args2...] ...]
+[WORKING_DIRECTORY dir]
+[COMMENT comment] [VERBATIM]
+—-&gt;   [CONFIG Debug | MinSizeRel | Release |
+RelWithDebInfo | ...]
+)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8e9a641715613-21">
+        21
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-1">
+        add_custom_command(OUTPUT output1 [output2 ...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-2">
+        COMMAND command1 [ARGS] [args1...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-3">
+        [COMMAND command2 [ARGS] [args2...] ...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-4">
+        [MAIN_DEPENDENCY depend]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-5">
+        [DEPENDS [depends...]]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-6">
+        [IMPLICIT_DEPENDS &lt;lang1&gt; depend1
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-7">
+        [&lt;lang2&gt; depend2] ...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-8">
+        [WORKING_DIRECTORY dir]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-9">
+        [COMMENT comment] [VERBATIM] [APPEND]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-10">
+        ——&gt;   [CONFIG Debug | MinSizeRel | Release |
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-11">
+        RelWithDebInfo | ...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-12">
+        )
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-13">
+        add_custom_command(TARGET target
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-14">
+        PRE_BUILD | PRE_LINK | POST_BUILD
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-15">
+        COMMAND command1 [ARGS] [args1...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-16">
+        [COMMAND command2 [ARGS] [args2...] ...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-17">
+        [WORKING_DIRECTORY dir]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-18">
+        [COMMENT comment] [VERBATIM]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-19">
+        —-&gt;   [CONFIG Debug | MinSizeRel | Release |
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-20">
+        RelWithDebInfo | ...]
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8e9a641715613-21">
+        )
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  The CONFIG option specifies that the custom command(s) should run only when the given build configuration is active.  This option allows custom commands to have configuration specific behavior.
+ </p>
+ <p>
+  We also had to add changes to CMake to correct various minor problems in the Visual Studio and Xcode generators that prevented the generators from correctly handling certain linker and compiler flags.  Finally, we added support for Objective-C as a fully supported language understood by CMake.  Here is an example of a CMakeLists.txt file configured for building an Objective-C library:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c25cc8ea8896117108" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cmake_minimum_required(VERSION 2.8)
+
+project(ObjectiveKernel OBJC C CXX)
+
+set(OBJECTIVEKERNEL_HEADERS
+ObjectiveKernel.h
+OKExprStackElement.h
+OKKernel.h
+OKKernelDelegate.h
+)
+
+set(OBJECTIVEKERNEL_SOURCES
+OKExprStackElement.m
+OKExprStackElement.h
+OKKernel.m
+OKKernel.h
+OKKernelDelegate.h
+)
+
+set_source_files_properties(
+OKExprStackElement.h
+OKKernel.h
+OKKernelDelegate.h
+PROPERTIES HEADER_FILE_ONLY ON
+)
+
+add_library(ObjectiveKernel
+STATIC
+${OBJECTIVEKERNEL_SOURCES}
+)
+
+install(TARGETS ObjectiveKernel
+ARCHIVE DESTINATION lib
+)
+
+install(FILES ${OBJECTIVEKERNEL_HEADERS}
+DESTINATION include
+)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c25cc8ea8896117108-38">
+        38
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-1">
+        cmake_minimum_required(VERSION 2.8)
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-3">
+        project(ObjectiveKernel OBJC C CXX)
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-5">
+        set(OBJECTIVEKERNEL_HEADERS
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-6">
+        ObjectiveKernel.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-7">
+        OKExprStackElement.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-8">
+        OKKernel.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-9">
+        OKKernelDelegate.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-10">
+        )
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-11">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-12">
+        set(OBJECTIVEKERNEL_SOURCES
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-13">
+        OKExprStackElement.m
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-14">
+        OKExprStackElement.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-15">
+        OKKernel.m
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-16">
+        OKKernel.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-17">
+        OKKernelDelegate.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-18">
+        )
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-19">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-20">
+        set_source_files_properties(
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-21">
+        OKExprStackElement.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-22">
+        OKKernel.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-23">
+        OKKernelDelegate.h
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-24">
+        PROPERTIES HEADER_FILE_ONLY ON
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-25">
+        )
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-26">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-27">
+        add_library(ObjectiveKernel
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-28">
+        STATIC
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-29">
+        ${OBJECTIVEKERNEL_SOURCES}
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-30">
+        )
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-31">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-32">
+        install(TARGETS ObjectiveKernel
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-33">
+        ARCHIVE DESTINATION lib
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-34">
+        )
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-35">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-36">
+        install(FILES ${OBJECTIVEKERNEL_HEADERS}
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-37">
+        DESTINATION include
+       </div>
+       <div class="crayon-line" id="crayon-5c41c25cc8ea8896117108-38">
+        )
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  I am working with the CMake developers to merge these customizations back into the main CMake product.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <strong>
+    <span style="color: #000080;">
+     Conclusion
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  Any organization doing non-trivial, cross-platform development with C, C++, Fortran, Objective-C, or another similar language should seriously consider using CMake to minimize the stress of cross-platform development on the development pipeline.  CMake smoothed out the wrinkles in our development processes and allowed for fast turnaround times on our build servers.   In addition, CMake allowed us to fix platform specific build idiosyncrasies that caused problems for unified development efforts.  On behalf of our developers, I offer thanks to the CMake project and its developers for providing such a useful and productive software development tool.
+ </p>
+ <p>
+  <a href="/source/files/4_1319390264.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1319390264.jpg" style="width: 90px; height: 102px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Steve Wilson
+  </strong>
+  is a Senior Technical Staff Member in the Core Mathematica Engineering group at Wolfram.  He works on communication protocols for the Wolfram Language, as well as software engineering and software infrastructure for the Wolfram Engine.
+ </p>
+</div>

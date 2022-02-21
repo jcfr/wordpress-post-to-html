@@ -1,0 +1,2512 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The
+  <a href="http://www.paraview.org/Wiki/Python_Programmable_Filter">
+   Python Programmable Filter
+  </a>
+  is a powerful tool for data analysis in ParaView, as it enables you to implement ParaView readers and filters using Python. Developing filters with Python has several advantages– it's fast to prototype and easy to share, since there's no compiled code. You can use the convenient features of the standard Python library, and use NumPy to perform fast, vectorized operations on VTK data arrays. However, the Programmable Filter interface presented in the property panel is not user friendly because there is no way to hide the Python implementation details. Most users want to adjust the filter by setting filter property values, not by editing Python source code.  This blog post will show you how to hide the Python implementation details to make the programmable filter easier to use.
+ </p>
+ <p>
+  <a href="/blog/files/174_740462948.png" target="_blank">
+   <img alt="" height="131" src="https://blog.kitware.com/blog/files/Small.174_740462948.png" width="306"/>
+  </a>
+  <a href="/blog/files/174_2118866842.png" target="_blank">
+   <img alt="" height="133" src="https://blog.kitware.com/blog/files/Small.174_2118866842.png" width="275"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  Figure 1. Double Helix Python Programmable Source.  Left: custom properties panel.  Right: visualization with tube filter.  No code compiling required!
+ </p>
+ <p>
+  <strong>
+   Python Programmable Filter with a Custom Property Panel
+  </strong>
+ </p>
+ <p>
+  Aha!  Well, it turns out that you
+  <em>
+   can
+  </em>
+  customize the programmable filter's property panel, but you've got to use the development version of ParaView, or any version of ParaView newer than 4.0.1.  You can download that from the
+  <a href="http://paraview.org/paraview/resources/software.php">
+   ParaView downloads page
+  </a>
+  under the section titled
+  <strong>
+   Nightly Builds
+  </strong>
+  .
+ </p>
+ <p>
+  In Figure 1., I've used the Double Helix programmable source example and created a custom property panel for it.  I took this example from the
+  <a href="http://www.paraview.org/Wiki/Python_Programmable_Filter">
+   Python Programmable Filter
+  </a>
+  wiki page.  Visit that page to find many more example filters and sources.
+ </p>
+ <p>
+  <strong>
+   How it Works
+  </strong>
+ </p>
+ <p>
+  ParaView can load filters from
+  <em>
+   XML plugins
+  </em>
+  .  An
+  <em>
+   XLM plugin
+  </em>
+  is an xml file that describes one-or-more filters using the ParaView server manager xml language.  You can read all about that on the
+  <a href="http://www.paraview.org/Wiki/ParaView/Plugin_HowTo">
+   Plugin HowTo wiki page
+  </a>
+  .
+ </p>
+ <p>
+  Through a neat trick in the server manager xml language, you can declare custom properties that will appear in the properties panel using standard property value entry widgets. The Programmable Filter &amp; Source also have Script properties. These are string properties where you enter the filter implementation as Python source code. The Script properties can be given a hint attribute so that they are marked as advanced properties, which will be hidden by default. That way, the user will not be distracted by the properties, but advanced users still have the option of modifying the Python code. Alternatively, the Script properties can be hidden completely from the properties panel.
+ </p>
+ <p style="text-align: center;">
+  <a href="/blog/files/174_1426834897.png" target="_blank">
+   <img alt="" height="243" src="https://blog.kitware.com/blog/files/Small.174_1426834897.png" style="display: block; margin-left: auto; margin-right: auto;" width="433"/>
+  </a>
+  Figure 2. ParaView screenshot.  The
+  <em>
+   Toggle Advanced Properties
+  </em>
+  button is active so that the Python script property is displayed.
+ </p>
+ <p>
+  <strong>
+   Make it easier — Automatically Generate XML
+  </strong>
+ </p>
+ <p>
+  I developed a tool that generates the XML file for you.  All you have to do is write a Python script that defines the filter function and the filter properties, and other information like the filter name and documentation.  Your Python script is used as input to generate XML automatically.  For example, your Python filter might look like this:
+ </p>
+ <p>
+  <!-- HTML generated using hilite.me -->
+ </p>
+ <div style="background: #ffffff; overflow: auto; width: auto; border: solid gray; border-width: .1em .1em .1em .8em; padding: .2em .6em;">
+  <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+  <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c86061e1e190670216" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+   <div class="crayon-plain-wrap">
+    <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+Name &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;#39;TestFilter&amp;#39;&lt;/span&gt;
+Label &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;#39;Test Filter&amp;#39;&lt;/span&gt;
+Help &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;#39;Help for the Test Filter&amp;#39;&lt;/span&gt;
+
+NumberOfInputs &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="color: #0000dd; font-weight: bold;"&gt;1&lt;/span&gt;
+InputDataType &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;#39;vtkPolyData&amp;#39;&lt;/span&gt;
+OutputDataType &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;#39;vtkPolyData&amp;#39;&lt;/span&gt;
+ExtraXml &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;#39;&amp;#39;&lt;/span&gt;
+
+
+Properties &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="color: #007020;"&gt;dict&lt;/span&gt;(
+  test_bool &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="color: #007020;"&gt;True&lt;/span&gt;,
+  test_int &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="color: #0000dd; font-weight: bold;"&gt;123&lt;/span&gt;,
+  test_int_vector &lt;span style="color: #333333;"&gt;=&lt;/span&gt; [&lt;span style="color: #0000dd; font-weight: bold;"&gt;1&lt;/span&gt;, &lt;span style="color: #0000dd; font-weight: bold;"&gt;2&lt;/span&gt;, &lt;span style="color: #0000dd; font-weight: bold;"&gt;3&lt;/span&gt;],
+  test_double &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="color: #6600ee; font-weight: bold;"&gt;1.23&lt;/span&gt;,
+  test_double_vector &lt;span style="color: #333333;"&gt;=&lt;/span&gt; [&lt;span style="color: #6600ee; font-weight: bold;"&gt;1.1&lt;/span&gt;, &lt;span style="color: #6600ee; font-weight: bold;"&gt;2.2&lt;/span&gt;, &lt;span style="color: #6600ee; font-weight: bold;"&gt;3.3&lt;/span&gt;],
+  test_string &lt;span style="color: #333333;"&gt;=&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;#39;string value&amp;#39;&lt;/span&gt;,
+  )
+
+
+&lt;span style="color: #008800; font-weight: bold;"&gt;def&lt;/span&gt; &lt;span style="color: #0066bb; font-weight: bold;"&gt;RequestData&lt;/span&gt;():
+
+    &lt;span style="color: #008800; font-weight: bold;"&gt;assert&lt;/span&gt; test_bool &lt;span style="color: #333333;"&gt;==&lt;/span&gt; &lt;span style="color: #007020;"&gt;True&lt;/span&gt;
+    &lt;span style="color: #008800; font-weight: bold;"&gt;assert&lt;/span&gt; test_int &lt;span style="color: #333333;"&gt;==&lt;/span&gt; &lt;span style="color: #0000dd; font-weight: bold;"&gt;123&lt;/span&gt;
+    &lt;span style="color: #008800; font-weight: bold;"&gt;assert&lt;/span&gt; test_int_vector &lt;span style="color: #333333;"&gt;==&lt;/span&gt; [&lt;span style="color: #0000dd; font-weight: bold;"&gt;1&lt;/span&gt;, &lt;span style="color: #0000dd; font-weight: bold;"&gt;2&lt;/span&gt;, &lt;span style="color: #0000dd; font-weight: bold;"&gt;3&lt;/span&gt;]
+    &lt;span style="color: #008800; font-weight: bold;"&gt;assert&lt;/span&gt; test_double &lt;span style="color: #333333;"&gt;==&lt;/span&gt; &lt;span style="color: #6600ee; font-weight: bold;"&gt;1.23&lt;/span&gt;
+    &lt;span style="color: #008800; font-weight: bold;"&gt;assert&lt;/span&gt; test_double_vector &lt;span style="color: #333333;"&gt;==&lt;/span&gt; [&lt;span style="color: #6600ee; font-weight: bold;"&gt;1.1&lt;/span&gt;, &lt;span style="color: #6600ee; font-weight: bold;"&gt;2.2&lt;/span&gt;, &lt;span style="color: #6600ee; font-weight: bold;"&gt;3.3&lt;/span&gt;]
+    &lt;span style="color: #008800; font-weight: bold;"&gt;assert&lt;/span&gt; test_string &lt;span style="color: #333333;"&gt;==&lt;/span&gt; &lt;span style="background-color: #fff0f0;"&gt;&amp;quot;string value&amp;quot;&lt;/span&gt;</textarea>
+   </div>
+   <div class="crayon-main">
+    <table class="crayon-table">
+     <tr class="crayon-row">
+      <td class="crayon-nums " data-settings="show">
+       <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-1">
+         1
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-2">
+         2
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-3">
+         3
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-4">
+         4
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-5">
+         5
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-6">
+         6
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-7">
+         7
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-8">
+         8
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-9">
+         9
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-10">
+         10
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-11">
+         11
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-12">
+         12
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-13">
+         13
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-14">
+         14
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-15">
+         15
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-16">
+         16
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-17">
+         17
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-18">
+         18
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-19">
+         19
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-20">
+         20
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-21">
+         21
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-22">
+         22
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-23">
+         23
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-24">
+         24
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-25">
+         25
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-26">
+         26
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-27">
+         27
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e1e190670216-28">
+         28
+        </div>
+       </div>
+      </td>
+      <td class="crayon-code">
+       <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-1">
+         <span class="crayon-v">
+          Name
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-p">
+          #39;TestFilter&amp;#39;&lt;/span&gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-2">
+         <span class="crayon-v">
+          Label
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-p">
+          #39;Test Filter&amp;#39;&lt;/span&gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-3">
+         <span class="crayon-v">
+          Help
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-p">
+          #39;Help for the Test Filter&amp;#39;&lt;/span&gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-4">
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-5">
+         <span class="crayon-v">
+          NumberOfInputs
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          1
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-6">
+         <span class="crayon-v">
+          InputDataType
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-p">
+          #39;vtkPolyData&amp;#39;&lt;/span&gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-7">
+         <span class="crayon-v">
+          OutputDataType
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-p">
+          #39;vtkPolyData&amp;#39;&lt;/span&gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-8">
+         <span class="crayon-v">
+          ExtraXml
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-p">
+          #39;&amp;#39;&lt;/span&gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-9">
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-10">
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-11">
+         <span class="crayon-v">
+          Properties
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #007020;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-v">
+          dict
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-12">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_bool
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #007020;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-t">
+          True
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-13">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_int
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          123
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-14">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_int_vector
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-sy">
+          [
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          1
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          3
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ]
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-15">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_double
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          1.23
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-16">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_double_vector
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-sy">
+          [
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          1.1
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          2.2
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          3.3
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ]
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-17">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_string
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-p">
+          #39;string value&amp;#39;&lt;/span&gt;,
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-18">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-19">
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-20">
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-21">
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #008800; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-v">
+          def
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0066bb; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-v">
+          RequestData
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          (
+         </span>
+         <span class="crayon-sy">
+          )
+         </span>
+         <span class="crayon-o">
+          :
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-22">
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-23">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #008800; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-st">
+          assert
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_bool
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #007020;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-t">
+          True
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-24">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #008800; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-st">
+          assert
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_int
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          123
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-25">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #008800; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-st">
+          assert
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_int_vector
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-sy">
+          [
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          1
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          2
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #0000dd; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          3
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ]
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-26">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #008800; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-st">
+          assert
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_double
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          1.23
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-27">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #008800; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-st">
+          assert
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_double_vector
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-sy">
+          [
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          1.1
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          2.2
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ,
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #6600ee; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-cn">
+          3.3
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          ]
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e1e190670216-28">
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #008800; font-weight: bold;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-st">
+          assert
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          test_string
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #333333;"
+         </span>
+         <span class="crayon-o">
+          &gt;=
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "background-color: #fff0f0;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-v">
+          quot
+         </span>
+         <span class="crayon-sy">
+          ;
+         </span>
+         <span class="crayon-t">
+          string
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          value
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-v">
+          quot
+         </span>
+         <span class="crayon-sy">
+          ;
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+        </div>
+       </div>
+      </td>
+     </tr>
+    </table>
+   </div>
+  </div>
+  <!-- [Format Time: 0.0030 seconds] -->
+ </div>
+ <p>
+ </p>
+ <p>
+  Then use the python_filter_generator.py script line to generate the XML file.  Here's the program usage:
+ </p>
+ <p>
+  <!-- HTML generated using hilite.me -->
+ </p>
+ <div style="background: #ffffff; overflow: auto; width: auto; border: solid gray; border-width: .1em .1em .1em .8em; padding: .2em .6em;">
+  <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+  <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c86061e2a067173888" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+   <div class="crayon-plain-wrap">
+    <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&lt;span style="color: #996633;"&gt;$ &lt;/span&gt;python python_filter_generator.py
+Usage: python_filter_generator.py &amp;lt;python input filename&amp;gt; &amp;lt;xml output filename&amp;gt;</textarea>
+   </div>
+   <div class="crayon-main">
+    <table class="crayon-table">
+     <tr class="crayon-row">
+      <td class="crayon-nums " data-settings="show">
+       <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+        <div class="crayon-num" data-line="crayon-5c41c86061e2a067173888-1">
+         1
+        </div>
+        <div class="crayon-num" data-line="crayon-5c41c86061e2a067173888-2">
+         2
+        </div>
+       </div>
+      </td>
+      <td class="crayon-code">
+       <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+        <div class="crayon-line" id="crayon-5c41c86061e2a067173888-1">
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-e">
+          span
+         </span>
+         <span class="crayon-v">
+          style
+         </span>
+         <span class="crayon-o">
+          =
+         </span>
+         <span class="crayon-s">
+          "color: #996633;"
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-sy">
+          $
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &lt;
+         </span>
+         <span class="crayon-o">
+          /
+         </span>
+         <span class="crayon-v">
+          span
+         </span>
+         <span class="crayon-o">
+          &gt;
+         </span>
+         <span class="crayon-e">
+          python
+         </span>
+         <span class="crayon-v">
+          python_filter_generator
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-e">
+          py
+         </span>
+        </div>
+        <div class="crayon-line" id="crayon-5c41c86061e2a067173888-2">
+         <span class="crayon-v">
+          Usage
+         </span>
+         <span class="crayon-o">
+          :
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-v">
+          python_filter_generator
+         </span>
+         <span class="crayon-sy">
+          .
+         </span>
+         <span class="crayon-v">
+          py
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-v">
+          lt
+         </span>
+         <span class="crayon-sy">
+          ;
+         </span>
+         <span class="crayon-e">
+          python
+         </span>
+         <span class="crayon-e">
+          input
+         </span>
+         <span class="crayon-v">
+          filename
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-v">
+          gt
+         </span>
+         <span class="crayon-sy">
+          ;
+         </span>
+         <span class="crayon-h">
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-v">
+          lt
+         </span>
+         <span class="crayon-sy">
+          ;
+         </span>
+         <span class="crayon-e">
+          xml
+         </span>
+         <span class="crayon-e">
+          output
+         </span>
+         <span class="crayon-v">
+          filename
+         </span>
+         <span class="crayon-o">
+          &amp;
+         </span>
+         <span class="crayon-v">
+          gt
+         </span>
+         <span class="crayon-sy">
+          ;
+         </span>
+        </div>
+       </div>
+      </td>
+     </tr>
+    </table>
+   </div>
+  </div>
+  <!-- [Format Time: 0.0002 seconds] -->
+ </div>
+ <p>
+  <strong>
+   Getting Started
+  </strong>
+ </p>
+ <p>
+  Attached to this blog post are all the files you need to get started.  I attached both the Python input files and the generated XML files, which are human readable for the most part.  As I wrote earlier, this requires ParaView with a version newer than 4.0.1.  At the time of this posting, you can download that from the
+  <a href="http://paraview.org/paraview/resources/software.php">
+   ParaView downloads page
+  </a>
+  under the section titled
+  <strong>
+   Nightly Builds.
+  </strong>
+  After you have generated an XML file from a Python input script, or written an XML file by hand, then you can load the XML plugin into ParaView using the menu
+  <em>
+   Tools –&gt; Manage Plugins
+  </em>
+  and then click
+  <em>
+   Load New
+  </em>
+  and select your xml file.
+ </p>
+</div>

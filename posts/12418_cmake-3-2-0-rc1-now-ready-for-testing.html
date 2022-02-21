@@ -1,0 +1,1308 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  I am proud to announce that CMake 3.2 has entered the release candidate stage.
+ </p>
+ <p>
+  Sources and binaries are available at:
+  <br/>
+  <a href="http://www.cmake.org/download/">
+   http://www.cmake.org/download/
+  </a>
+  <br/>
+  <a href="http://www.cmake.org/files/v3.2/?C=M;O=D">
+   http://www.cmake.org/files/v3.2/?C=M;O=D
+  </a>
+ </p>
+ <p>
+  Documentation is available at:
+  <br/>
+  <a href="http://www.cmake.org/cmake/help/v3.2" target="_blank">
+   http://www.cmake.org/cmake/help/v3.2
+  </a>
+ </p>
+ <p>
+  Release notes appear below and are also published at
+  <br/>
+  <a href="http://www.cmake.org/cmake/help/v3.2/release/3.2.html">
+   http://www.cmake.org/cmake/help/v3.2/release/3.2.html
+  </a>
+ </p>
+ <p>
+  Some of the more significant features of CMake 3.2 are:
+ </p>
+ <p>
+  * CMake learned to support unicode characters *encoded as UTF-8* on
+  <br/>
+  Windows.  This was already supported on platforms whose system APIs
+  <br/>
+  accept UTF-8 encoded strings. Unicode characters may now be used in
+  <br/>
+  CMake code, paths to source files, configured files such as ".h.in"
+  <br/>
+  files, and other files read and written by CMake.  Note that because
+  <br/>
+  CMake interoperates with many other tools, there may still be some
+  <br/>
+  limitations when using certain unicode characters.
+ </p>
+ <p>
+  * The "Compile Features" functionality is now aware of features
+  <br/>
+  supported by more compilers, including:
+ </p>
+ <p>
+  * Apple Clang ("AppleClang") for Xcode versions 4.4 though 6.1.
+ </p>
+ <p>
+  * GNU compiler versions 4.4 through 5.0 on UNIX and Apple ("GNU").
+ </p>
+ <p>
+  * Microsoft Visual Studio ("MSVC") for versions 2010 through 2015.
+ </p>
+ <p>
+  * Oracle SolarisStudio ("SunPro") version 12.4.
+ </p>
+ <p>
+  * The "add_custom_command()" and "add_custom_target()" commands
+  <br/>
+  learned a new "BYPRODUCTS" option to specify files produced as side
+  <br/>
+  effects of the custom commands.  These are not outputs because they
+  <br/>
+  do not always have to be newer than inputs.
+ </p>
+ <p>
+  * The "file(GENERATE)" command can now generate files which are used
+  <br/>
+  as source files for buildsystem targets.  Generated files
+  <br/>
+  automatically get their "GENERATED" property set to "TRUE".
+ </p>
+ <p>
+  Deprecated and Removed Features:
+ </p>
+ <p>
+  * Files written in the "cmake-language(7)", such as "CMakeLists.txt"
+  <br/>
+  or "*.cmake" files, are now expected to be encoded as UTF-8.  If
+  <br/>
+  files are already ASCII, they will be compatible.  If files were in
+  <br/>
+  a different encoding, including Latin 1, they will need to be
+  <br/>
+  converted.
+ </p>
+ <p>
+  * The "FindOpenGL" module no longer explicitly searches for any
+  <br/>
+  dependency on X11 libraries with the "FindX11" module.  Such
+  <br/>
+  dependencies should not need to be explicit. Applications using X11
+  <br/>
+  APIs themselves should find and link to X11 libraries explicitly.
+ </p>
+ <div>
+ </div>
+ <div>
+ </div>
+ <div>
+  <span style="font-family: 'Courier New', Courier, monospace;">
+   CMake 3.2.0 Release Notes
+  </span>
+  <br/>
+  <span style="font-family: 'Courier New', Courier, monospace;">
+   *************************
+  </span>
+  <br/>
+  <br style="font-family: 'Courier New', Courier, monospace;"/>
+  <br/>
+  <span style="font-family: 'Courier New', Courier, monospace;">
+   Changes made since CMake 3.1.0 include the following.
+  </span>
+ </div>
+ <div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    New Features
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ============
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Syntax
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ——
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * CMake learned to support unicode characters *encoded as UTF-8* on
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Windows.  This was already supported on platforms whose system APIs
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    accept UTF-8 encoded strings. Unicode characters may now be used in
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    CMake code, paths to source files, configured files such as ".h.in"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    files, and other files read and written by CMake.  Note that because
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    CMake interoperates with many other tools, there may still be some
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    limitations when using certain unicode characters.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Commands
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ——–
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "add_custom_command()" and "add_custom_target()" commands
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    learned a new "BYPRODUCTS" option to specify files produced as side
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    effects of the custom commands.  These are not outputs because they
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    do not always have to be newer than inputs.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "add_custom_command()" and "add_custom_target()" commands
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    learned a new "USES_TERMINAL" option to request that the command be
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    given direct access to the terminal if possible. The "Ninja"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    generator will places such commands in the "console" "pool".  Build
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    targets provided by CMake that are meant for individual interactive
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    use, such as "install", are now placed in this pool.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * A new "continue()" command was added that can be called inside
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    loop contexts to end the current iteration and start the next one at
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    the top of the loop block.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "file(LOCK)" subcommand was created to allow CMake processes
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    to synchronize through file and directory locks.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "file(STRINGS)" now supports UTF-16LE, UTF-16BE, UTF-32LE,
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    UTF- 32BE as "ENCODING" options.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "install(EXPORT)" command now works with an absolute
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "DESTINATION" even if targets in the export set are installed with a
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    destination or *usage requirements* specified relative to the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    install prefix.  The value of the "CMAKE_INSTALL_PREFIX" variable is
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    hard-coded into the installed export file as the base for relative
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    references.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "try_compile()" command source file signature now honors link
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    flags (e.g. "CMAKE_EXE_LINKER_FLAGS") in the generated test project.
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    See policy "CMP0056".
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "try_run()" command learned to honor the "LINK_LIBRARIES"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    option just as "try_compile()" already does.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "file(GENERATE)" command now generates the output file with
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    the same permissions as the input file if set.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "file(GENERATE)" command can now generate files which are used
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    as source files for buildsystem targets.  Generated files
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    automatically get their "GENERATED" property set to "TRUE".
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Variables
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ———
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "CMAKE_MATCH_COUNT" variable was introduced to record the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    number of matches made in the last regular expression matched in an
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "if()" command or a "string()" command.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Properties
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ———-
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * An "ANDROID_API_MIN" target property was introduced to specify the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    minimum version to be targeted by the toolchain.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * A "VS_SHADER_FLAGS" source file property was added to specify
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    additional shader flags to ".hlsl" files, for the Visual Studio
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    generators.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Modules
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ——-
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "ExternalData" module learned to support *Custom Fetch
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Scripts*. This allows projects to specify custom ".cmake" scripts
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    for fetching data objects during the build.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "ExternalProject" module learned options to create independent
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    external project step targets that do not depend on the builtin
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    steps.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "ExternalProject" module "ExternalProject_Add()" command
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    learned a new "CMAKE_CACHE_DEFAULT_ARGS" option to initialize cache
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    values in the external project without setting them on future
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    builds.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "ExternalProject" module "ExternalProject_Add()" command
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    learned a new "TEST_EXCLUDE_FROM_MAIN" option to exclude tests from
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    the main build.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "ExternalProject" module "ExternalProject_Add()" command
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    learned a new "UPDATE_DISCONNECTED" option to avoid automatically
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    updating the source tree checkout from version control.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "FindCUDA" module learned about the "cusolver" library in CUDA
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    7.0.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "FindGit" module learned to find the "git" command-line tool
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    that comes with GitHub for Windows installed in user home
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    directories.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * A "FindGSL" module was introduced to find the GNU Scientific
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Library.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * A "FindIntl" module was introduced to find the Gettext "libintl"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    library.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * A "FindJsonCpp" module was introduced to find the JsonCpp package.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "FindLATEX" module learned to support components.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "FindMPI" module learned to find MS-MPI on Windows.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "FindOpenSSL" module now reports "crypto" and "ssl" libraries
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    separately in "OPENSSL_CRYPTO_LIBRARY" and "OPENSSL_SSL_LIBRARY",
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    respectively, to allow applications to link to one without the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    other.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "WriteCompilerDetectionHeader" module learned to create a
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    define for portability of the "cxx_thread_local" feature. The define
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    expands to either the C++11 "thread_local" keyword, or a pre-
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    standardization compiler-specific equivalent, as appropriate.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "WriteCompilerDetectionHeader" module learned to create
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    multiple output files per compiler and per language, instead of
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    creating one large file.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    CTest
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    —–
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "ctest_coverage()" command learned to support Delphi coverage.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "ctest_coverage()" command learned to support Javascript
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    coverage.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "CTestCoverageCollectGCOV" module was introduced as an
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    alternative to the "ctest_coverage()" command for collecting "gcov"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    results for submission to CDash.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    CPack
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    —–
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "CPackRPM" module learned options to set per-component
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    descriptions and summaries.  See the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_RPM_&lt;component&gt;_PACKAGE_DESCRIPTION" and
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_RPM_&lt;component&gt;_PACKAGE_SUMMARY" variables.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "CPackRPM" module learned options to specify requirements for
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    pre- and post-install scripts.  See the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_RPM_PACKAGE_REQUIRES_PRE" and
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_RPM_PACKAGE_REQUIRES_POST" variables.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "CPackRPM" module learned options to specify requirements for
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    pre- and post-uninstall scripts.  See the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_RPM_PACKAGE_REQUIRES_PREUN" and
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_RPM_PACKAGE_REQUIRES_POSTUN" variables.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "CPackRPM" module learned a new
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_RPM_&lt;COMPONENT&gt;_PACKAGE_PREFIX" variable to specify a
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    component-specific value to use instead of
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CPACK_PACKAGING_INSTALL_PREFIX".
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "CPackRPM" module learned a new "CPACK_RPM_RELOCATION_PATHS"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    variable to specify multiple relocation prefixes for a single rpm
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    package.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Other
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    —–
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "cmake(1)" "-E tar" command now supports creating
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ".xz"-compressed archives with the "J" flag.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "cmake(1)" "-E tar" command learned a new "–files-
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    from=&lt;file&gt;" option to specify file names using lines in a file to
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    overcome command-line length limits.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "cmake(1)" "-E tar" command learned a new "–mtime=&lt;date&gt;"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    option to specify the modification time recorded in tarball entries.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "Compile Features" functionality is now aware of features
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    supported by more compilers, including:
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * Apple Clang ("AppleClang") for Xcode versions 4.4 though 6.1.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * GNU compiler versions 4.4 through 5.0 on UNIX and Apple ("GNU").
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * Microsoft Visual Studio ("MSVC") for versions 2010 through 2015.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * Oracle SolarisStudio ("SunPro") version 12.4.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The *AUTORCC* feature now tracks files listed in ".qrc" files as
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    dependencies. If an input file to the "rcc" tool is changed, the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    tool is automatically re-run.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    New Diagnostics
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ===============
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "break()" command now rejects calls outside of a loop context
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    or that pass arguments to the command. See policy "CMP0055".
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Deprecated and Removed Features
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    ===============================
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * Files written in the "cmake-language(7)", such as "CMakeLists.txt"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    or "*.cmake" files, are now expected to be encoded as UTF-8.  If
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    files are already ASCII, they will be compatible.  If files were in
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    a different encoding, including Latin 1, they will need to be
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    converted.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "FindOpenGL" module no longer explicitly searches for any
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    dependency on X11 libraries with the "FindX11" module.  Such
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    dependencies should not need to be explicit. Applications using X11
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    APIs themselves should find and link to X11 libraries explicitly.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The implementation of CMake now relies on some C++ compiler
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    features which are not supported by some older compilers.  As a
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    result, those old compilers can no longer be used to build CMake
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    itself.  CMake continues to be able to generate Makefiles and
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    project files for users of those old compilers however.  Compilers
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    known to no longer be capable of building CMake are:
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * Visual Studio 6 and 7.0 — superseded by VisualStudio 7.1 and
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    newer.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * GCC 2.95 — superseded by GCC 3 and newer compilers.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * Borland compilers — superseded by other Windows compilers.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * Compaq compilers — superseded by other compilers.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * SGI compilers — IRIX was dropped as a host platform.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Other Changes
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    =============
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * On Windows and OS X, commands supporting network communication via
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "https", such as "file(DOWNLOAD)", "file(UPLOAD)", and
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "ctest_submit()", now support SSL/TLS even when CMake is not built
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    against OpenSSL. The Windows or OS X native SSL/TLS implementation
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    is used by default. OS-configured certificate authorities will be
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    trusted automatically.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    On other platforms, when CMake is built with OpenSSL, these commands
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    now search for OS-configured certificate authorities in a few "/etc"
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    paths to be trusted automatically.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * On OS X with Makefile and Ninja generators, when a compiler is
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    found in "/usr/bin" it is now mapped to the corresponding compiler
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    inside the Xcode application folder, if any.  This allows such build
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    trees to continue to work with their original compiler even when
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "xcode- select" switches to a different Xcode installation.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The Visual Studio generators now write solution and project files
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    in UTF-8 instead of Windows-1252.  Windows-1252 supported Latin 1
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    languages such as those found in North and South America and Western
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    Europe.  With UTF-8, additional languages are now supported.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * The "Xcode" generator no longer requires a value for the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "CMAKE_MAKE_PROGRAM" variable to be located up front. It now locates
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "xcodebuild" when needed at build time.
+   </span>
+  </div>
+  <div>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    * When building CMake itself using SolarisStudio 12, the default
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "libCStd" standard library is not sufficient to build CMake.  The
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    SolarisStudio distribution supports compiler options to use
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    "STLPort4" or "libstdc++". An appropriate option to select the
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    standard library is now added automatically when building CMake with
+   </span>
+  </div>
+  <div>
+   <span style="font-family: Courier New, Courier, monospace;">
+    SolarisStudio compilers.
+   </span>
+  </div>
+  <div style="font-family: 'Courier New', Courier, monospace;">
+  </div>
+ </div>
+</div>

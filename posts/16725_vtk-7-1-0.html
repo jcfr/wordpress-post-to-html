@@ -1,0 +1,301 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400">
+   The VTK development team is pleased to introduce VTK 7.1.0.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   You might be tempted to think that 7.1 is just a minor release that tweaks the rendering after the big update that took effect last year in 7.0, but you would be wrong. Besides rendering, there are substantial changes to web (supporting javascript has been refactored into an external repository), filtering (revised zero copy arrays and SMP image processing filters), annotation, IO (efficient parallel file system operations), chemistry, and build system (laying groundwork for move to c++11). Even the code and documentation style has been significantly updated in this “minor” release. We recommend that all VTK users update to 7.1.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   To get started using it, git clone it or get it from the
+   <a href="http://www.vtk.org/download/">
+    download page
+   </a>
+   , and maybe check out the VTK
+  </span>
+  <a href="http://www.vtk.org/Wiki/VTK/API_Changes_7_0_0_to_7_1_0">
+   <span style="font-weight: 400">
+    upgrade report
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   . For the highlights continue reading.
+  </span>
+ </p>
+ <p>
+  <b>
+   RENDERING
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Rendering was the focus of VTK 7.0, so we shall begin there. In 7.1 there are numerous minor updates to OpenGL2 including better management of resources with multiple windows, better support for line integral convolution, faster Composite PolyData Mapper renders, line stipple support for Context2D charts, and better support for Intel HD2000/3000 based systems on Windows. We’ve also fixed bugs in OpenGL ES on Android/iOS and in EGL based offscreen hardware accelerated rendering.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Some of the bigger items are support for offscreen and onscreen mesa in the same build, direct support for
+  </span>
+  <a href="https://blog.kitware.com/ray-traced-rendering-revisited/">
+   <span style="font-weight: 400">
+    ray traced surface and volume rendering through Intel’s OSPRay renderer
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   , and initial support for using the
+  </span>
+  <a href="https://blog.kitware.com/using-virtual-reality-devices-with-vtk/">
+   <span style="font-weight: 400">
+    Oculus Rift and HTC Vive to bring VTK visualizations into Virtual Reality
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   . Likewise we’ve updated and modified the included GL2PS library to work with the OpenGL2 backend. Note that upstream changes required for that have been incorporated into GL2PS but have not yet made their way into an official release. In addition the OpenGL2 backend now lets you directly render lines as tubes and points as spheres via shaders, has a 2x
+  </span>
+  <a href="https://blog.kitware.com/vtk-technical-highlight-dual-depth-peeling/">
+   <span style="font-weight: 400">
+    faster depth peeling implementation
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   , a new
+  </span>
+  <a href="https://blog.kitware.com/hidden-line-removal-now-available-in-vtk-and-paraview/">
+   <span style="font-weight: 400">
+    hidden line removal renderer option
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   that shows only the nearest face of wireframe geometry and an
+  </span>
+  <a href="https://blog.kitware.com/new-fxaa-anti-aliasing-option-in-paraviewvtk/">
+   <span style="font-weight: 400">
+    FXAA screen space anti-aliasing capability.
+   </span>
+  </a>
+ </p>
+ <p>
+  <b>
+   FILTERS
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   VTK is as much about data processing as it is about rendering and there have been numerous improvements here too. Entirely new filters include the DataSetRegionSurface filter (promoted from ParaView), the LinearToQuadraticCells filter, the BinCellData filter, the UnstructuredGridQuadricDecimation filter, and the Force Time filter for better temporal data processing. Improvements to boolean operations on polygon meshes were made in the
+  </span>
+  <a href="http://www.sciencedirect.com/science/article/pii/S0965997816300230">
+   <span style="font-weight: 400">
+    vtkIntersectionPolyDataFilter
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   VTK 7.1 also marks the
+  </span>
+  <a href="https://blog.kitware.com/point-and-smoothed-particle-hydrodynamics-sph-interpolation-in-vtk/">
+   <span style="font-weight: 400">
+    introduction of threaded point cloud processing filters
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   in the Filters/Point module and new DIY based vtkResampleWithDataSet filters that are more efficient and more capable than the older vtkProbeFilters in distributed memory parallel contexts. The resampling filters are really handy, for example, in converting unstructured composite data into structured formats for faster volume rendering.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Image processing filters in general are better parallelized with the inclusion of load balanced threading in OpenMP and TBB through vtkSMPTools. This is the outcome of a
+  </span>
+  <a href="https://blog.kitware.com/google-summer-of-code-final-results/">
+   <span style="font-weight: 400">
+    2015 Google Summer of Code
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   project by Vincent Chen. There is also a brand new vtkOpenGLImageAlgorithmHelper that facilitates creation of image processing filters that run on the GPU. See
+  </span>
+  <a href="http://vtkopenglimagegradient">
+   <span style="font-weight: 400">
+    vtkOpenGLImageGradient
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   for an example. Expect much more of this type of work in the next release of VTK, when the
+  </span>
+  <a href="http://m.vtk.org/index.php/Main_Page">
+   <span style="font-weight: 400">
+    vtk-m project
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   will be merged into VTK.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   VTK’s data arrays have been overhauled in order to improve our support for zero copy operations which support in-place use of data generated by other packages. This is a pretty big change with new classes like the struct-of-arrays vtkSOADataArrayTemplate, several class and method renames and lots of refactoring under the covers. To learn all about it, check out
+  </span>
+  <a href="http://www.vtk.org/Wiki/VTK/Tutorials/DataArrays">
+   <span style="font-weight: 400">
+    this tutorial.
+   </span>
+  </a>
+ </p>
+ <p>
+  <b>
+   BUGFIXES
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   As always, there have been numerous bugfixes. The biggest this time was to
+  </span>
+  <a href="https://gitlab.kitware.com/vtk/vtk/merge_requests/1790/pipelines">
+   <span style="font-weight: 400">
+    fix a longstanding deficiency in VTK on Windows
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   and let long running applications run for more than a few hours without crashing when faced with frequent rendering state changes. The fix was to  expand VTK’s Modified Time timestamp counters from 32 to 64-bit in the new vtkMTimeType. For backwards compatibility we have a preprocessor defined “VTK_HAS_MTIME_TYPE” flag so that applications can easily build against old or new VTK.
+  </span>
+ </p>
+ <p>
+  <b>
+   STYLE AND DOCUMENTATION
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The source code itself underwent a significant code style modernization. This effort was meant to make VTK more palatable to new developers. In particular the remaining “BTX” and “ETX” wrapper exclusion markers have been removed, the brace indentation style was updated, and VTK’s non-standard documentation markup was replaced with mainstream Doxygen syntax. Meanwhile the python wrappers now automatically create Python docstrings from C++ Doxygen comments.
+  </span>
+ </p>
+ <p>
+  <b>
+   BUILD SYSTEM
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Continuing with the thread of unsung necessities, we’ve made substantial changes to VTK’s build system and compilation infrastructure.  First off, VTK now uses VTK_OVERRIDE, VTK_DELETE_FUNCTION, and VTK_FINAL macros that allow it to transparently benefit from new features found in the C++11 standard. This is in preparation for next spring’s VTK 8.0, in which C++11 will be required instead of optional.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Other changes include updates to support newer versions of Android NDK, that we’ve fixed a compilation issue with Java Wrapping on OS X, and rewrote all of the module dependency relationships to be more meaningful and well-organized and generally better follow compile and run-time header inclusion rules.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Along the same line there are several new tests that improve VTK’s nightly regression test coverage in specific areas. VTK modules now label their tests to make it easier to run tests in particular directories. For example to run all of the tests for CommonCore just type “ctest -L CommonCore”.  This is especially useful for remote modules.  In related news VTK’s externally contributed wiki examples are now a remote module. Use them more easily now with the cmake option: Module_WikiExamples:BOOL=ON. VTK’s DEBUG_LEAKS tests, which are a very useful feature that help developers avoid introducing memory leaks into new code, have been updated in this release too.
+  </span>
+ </p>
+ <p>
+  <b>
+   IO
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Several Readers and Writers received updates. The OpenFOAM reader now supports 64-bit labels and ignores instead of fails on nested lists following scalar data. There are new classes to perform
+  </span>
+  <a href="https://blog.kitware.com/efficient-parallel-file-system-introspection-with-vtk/">
+   <span style="font-weight: 400">
+    efficient parallel file system operations
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   as well.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In 7.1 we’ve updated to the newer proj 4.9.2 library for geographic projections and the latest version of TIFF. VTK’s ThirdParty Library update mechanism for XDMF is now an easy to run script and we’ve updated to the latest version of the library from ARL. This gave us a low overhead templating mechanism for data with repeated constant content. The Xdmf3 reader/writer also now supports now polyhedral cells (i.e. N face cells, where each face is a M edge polygon).
+  </span>
+ </p>
+ <p>
+  <b>
+   WEB
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   A fairly big change is that we’ve moved VTK’s internal Web/Javascript code out of VTK onto
+  </span>
+  <a href="http://github.com/Kitware/paraviewweb">
+   <span style="font-weight: 400">
+    http://github.com/Kitware/paraviewweb
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   , this code is used to create client side web pages that display VTK created server side content. The server side components remain in VTK though and have been updated to add push capabilities so that the Web server can send images to the client without waiting for the client to request a new rendered image. This allows better rendering performance in a web context. Likewise there are new capabilities for deferred rendering in
+  </span>
+  <a href="http://cinemascience.org/">
+   <span style="font-weight: 400">
+    Cinema
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   and ArcticViewer. The Cinema changes are actually rendering specific changes that allow VTK to create more precise value rendered raster images via floating point textures in OpenGL. The ArcticViewer changes promote Python code into VTK that creates ArcticViewer datasets.
+  </span>
+ </p>
+ <p>
+  <b>
+   TEXT/ANNOTATION
+  </b>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Some nice improvements were made in the areas of text display and general annotation. There are new classes for
+  </span>
+  <a href="https://gitlab.kitware.com/vtk/vtk/commit/cfff91029820799748067815439196d54bdc3704">
+   <span style="font-weight: 400">
+    progress reporting
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   and
+  </span>
+  <a href="http://www.vtk.org/doc/release/7.1/html/classvtkBillboardTextActor3D.html">
+   <span style="font-weight: 400">
+    billboard text
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   to start. Text properties now have an option vtkTextProperty::UseTightBoundingBox that provides a conservative size result to better align text with. This produces the real bounding box instead of one that that includes ascents and descents when they are not present in the string. Other changes include a new EllipseArc polyline source and updates to the Polar Axis Actor.
+  </span>
+ </p>
+ <p>
+  <b>
+   CHEMISTRY
+  </b>
+ </p>
+ <p>
+  VTK’s Chemistry domain capabilities got a boost via support from the AFRL PETTT program over the summer. For details see
+  <a href="https://blog.kitware.com/new-features-paraview-chemistry-pettt/" rel="noreferrer" target="_blank">
+   https://blog.kitware.com/new-features-paraview-chemistry-pettt/
+  </a>
+ </p>
+ <p>
+  <strong>
+   THANKS!
+  </strong>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   VTK 7.1 is brought to you by the efforts of at least 78 developers who made at least 1621 commits over the last eleven months. This is not including our upstream libraries’ authors and the infrastructure updates that went on behind the scenes. We’d like to thank all of the authors, bug reporters, and feature requesters. A special shout out goes to those who tested the release candidates and fixed the items found in them.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The next release, 8.0 is scheduled to be released in the Springtime. It will have expanded GPGPU capability with the integration of the vtk-m project. As mentioned before it will be the first release of VTK to require c++11 compilation.
+  </span>
+ </p>
+</div>

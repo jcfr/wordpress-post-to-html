@@ -1,0 +1,239 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  As reported back in July, we are in the process of a major overhaul of the rendering subsystem in VTK. The July article focused primarily on our efforts to move to OpenGL 2.1+ to support faster polygonal rendering.  This article will focus on our rewrite of the vtkGPURayCastMapper class to provide a faster, more portable, and more easily extensible volume mapper for regular rectilinear grids.
+ </p>
+ <p>
+  VTK has a long history of volume rendering and, unfortunately, that history is evident in the large selection of classes available to render volumes. Each of these methods was state-of-the-art at the time, but given VTK’s 20+ year history, many of these methods are now quite obsolete. One goal of this effort is to reduce the number of volume mappers to ideally just two: one that supports accelerated rendering on graphics hardware and another that works in parallel on the CPU. In addition, the vtkSmartVolumeMapper would help application developers by automatically choosing between these techniques based on system performance.
+ </p>
+ <p>
+  <a href="/source/files/4_820699870.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_820699870.jpg" style="width: 450px; height: 566px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1. Sample dataset volume rendered using the new vtkGPURayCastMapper
+  </em>
+ </p>
+ <p>
+  In this first phase, we have created a replacement for the vtkGPURayCastMapper. Currently, this is available for testing from the VTK git repository. General instructions on how to build VTK from the source are available at this URL: http://www.vtk.org/Wiki/VTK/Git. To build the new mapper, enable the Module_vtkRenderingVolumeOpenGLNew module in cmake, via -DModule_vtkRenderingVolumeOpenGLNew=ON, in ccmake or cmake-gui. Once built, it can be used via vtkSmartVolumeMapper or instantiated directly. When sufficient testing by the community has been performed, this class will replace the old vtkGPURayCastMapper.  In addition, we are adding this new mapper to the OpenGL2 module.  Availability of the new mapper with OpenGL2 module will improve the management of textures in the mapper and, eventually, benefit both forms of rendering (geometry and volume) by sharing common code between them.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Technical Details
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The new vtkGPURayCastMapper uses a ray casting technique for volume rendering. Algorithmically, it is quite similar to the older version of this class (although with a fairly different OpenGL implementation since that original class was first written over a decade ago).  We chose to use ray casting due to the flexibility of this technique, which allows us to support all the features of the software ray cast mapper but with the acceleration of the GPU.
+ </p>
+ <p>
+  Ray casting is inherently an image-order rendering technique, with one or more rays cast through the volume per image pixel. VTK is inherently an object-order rendering system, where all graphical primitive (points, lines, triangles, etc.) represented by the vtkProps in the scene are rendered by the GPU in one or more passes (with multiple passes needed to support advanced features such as depth peeling for transparency).
+ </p>
+ <p>
+  The image-order rendering process for the vtkVolume is initiated when the front-facing polygons of the volume’s bounding box are rendered with a custom fragment program. This fragment program is used to cast a ray through the volume at each pixel, with the fragment location indicating the starting location for that ray. The volume and all the various rendering parameters are transferred to the GPU through the use of textures (3D for the volume, 1D for the various transfer functions) and uniform variables. Steps are taken along the ray until the ray exits the volume, and the resulting computed color and opacity are blended into the current pixel value. Note that volumes are rendered after all opaque geometry in the scene to allow the ray casting process to terminate at the depth value stored in the depth buffer for that pixel (and, hence, correctly intermix with opaque geometry).
+ </p>
+ <p>
+  The new vtkGPURayCastMapper supports the following features:
+ </p>
+ <p>
+  <strong>
+   Cropping:
+  </strong>
+  Two planes along each coordinate axis of the volume are used to define 27 regions that can be independently turned on (visible) or off (invisible) to produce a variety of different cropping effects, as shown in Figure 2. Cropping is implemented by determining the cropping region of each sample location along the ray and including only those samples that fall within a visible region.
+ </p>
+ <p>
+  <a href="/source/files/4_1978089370.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1978089370.jpg" style="width: 450px; height: 198px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2. A sphere is cropped using two different configurations of cropping regions
+  </em>
+ </p>
+ <p>
+  <strong>
+   Wide Support of Data Types:
+  </strong>
+  The vtkGPURayCastMapper supports most data types stored as either point or cell data. The mapper supports one through four independent components. It also supports two and four component data representing IA or RGBA.
+ </p>
+ <p>
+  <strong>
+   Clipping:
+  </strong>
+  A set of infinite clipping planes can be defined to clip the volume to reveal inner detail, as shown in Figure 3.  Clipping is implemented by determining the visibility of each sample along the ray according to whether that location is excluded by the clipping planes.
+ </p>
+ <p>
+  <a href="/source/files/4_689626432.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_689626432.jpg" style="width: 450px; height: 455px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3. Top: An example of an oblique clipping plane. Bottom: A pair of parallel clipping planes clip the volume,
+   <br/>
+   rendered without (left) and with (right) shading
+  </em>
+ </p>
+ <p>
+  <strong>
+   Blending Modes:
+  </strong>
+  This mapper supports composite blending, minimum intensity projection, maximum intensity projection, and additive blending. See Figure 4 for an example of composite blending, maximum intensity projection, and additive blending on the same data.
+ </p>
+ <p>
+  <a href="/source/files/4_1845545788.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1845545788.jpg" style="width: 450px; height: 248px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 4. Blending modes using the new vtkGPURayCastMapper (from left to right): Composite, Maximum Intensity Projection, Additive
+  </em>
+ </p>
+ <p>
+  <strong>
+   Masking:
+  </strong>
+  Both binary and label masks are supported. With binary masks, the value in the masking volume indicates visibility of the voxel in the data volume. When a label map is in use, the value in the label map is used to select different rendering parameters for that sample.  See Figure 5 for an example of label data masks.
+ </p>
+ <p>
+  <a href="/source/files/4_1413394762.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1413394762.jpg" style="width: 450px; height: 479px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 5. Example of a label data map to mask the volume
+  </em>
+ </p>
+ <p>
+  <a href="/source/files/4_1427464096.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1427464096.jpg" style="width: 450px; height: 242px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 6. Volume rendering without (left) and with (right) gradient magnitude opacity-modulation (using the same scalar opacity transfer function)
+  </em>
+ </p>
+ <p>
+  <strong>
+   Opacity Modulated by Gradient Magnitude:
+  </strong>
+  A transfer function mapping the magnitude of the gradient to an opacity modulation value can be used to essentially perform edge detection (de-emphasize homogenous regions) during rendering. See Figure 6 for an example of rendering with and without the use of a gradient opacity transfer function.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Future Work
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  At this point, we have a replacement class for vtkGPURayCastMapper that is more widely supported, faster, more easily extensible, and supports the majority of the features of the old class. In the near future, our goal is to ensure that this mapper works as promised by integrating it into existing applications such as ParaView and Slicer. In addition, we are working toward adding this class to the new OpenGL2 rendering system in VTK, which requires a few changes in how we manage textures. Once these tasks are complete, we have some ideas on new features we would like to add to this mapper (outlined below). We would also like to solicit feedback from folks using the VTK volume mappers. What features do you need? Drop us a line at kitware@kitware.com, and let us know.
+ </p>
+ <p>
+  <strong>
+   Improved Lighting / Shading:
+  </strong>
+  One obvious improvement that we would like to make is to more accurately model the VTK lighting parameters. The old GPU ray cast mapper supported only one light (due to limitations in OpenGL at the time the class was written). The vtkFixedPointRayCastMapper does support multiple lights, but only with an approximate lighting model, since gradients are precomputed and quantized, and shading is performed for each potential gradient direction regardless of fragment location. This new vtkGPURayCastMapper will allow us to more accurately implement the VTK lighting model to produce high quality images for publication. In addition, we can adapt our shading technique to the volume, reducing the impact of noisy gradient directions in fairly homogenous regions of the data by de-emphasizing shading these regions.
+ </p>
+ <p>
+  <strong>
+   Volume Picking:
+  </strong>
+  Currently, picking of volumes in VTK is supported by a separate vtkVolumePicker class. The new vtkGPURayCastMapper can be extended to work with VTK’s hardware picker to allow seamless picking in a scene that contains both volumetric and geometric objects. In addition, supporting the picking directly in the mapper will ensure that “what you see is what you pick,” since the same blending code would be used both for rendering the volume and for detecting if the volume has been picked.
+ </p>
+ <p>
+  <strong>
+   2D Transfer Functions:
+  </strong>
+  Currently, volume rendering in VTK uses two 1D transfer functions, mapping scalar value to opacity and gradient magnitude to opacity. For some application areas, better rendering results can be obtained by using a 2D table that maps these two parameters into an opacity value. Part of the challenge in adding a new feature such as this to volume rendering in VTK is simply the number of volume mappers that have to be updated to handle it (either correctly rendering according to these new parameters or at least gracefully implementing an approximation). Once we have reduced the number of volume mappers in VTK, then adding new features such as this will become more manageable.
+ </p>
+ <p>
+  <strong>
+   Support for Depth Peeling:
+  </strong>
+  Currently, VTK correctly intermixes volumes with opaque geometry. For translucent geometry, you can obtain a correct image only if all translucent props can be sorted in depth order. Therefore, no translucent geometry can be inside a volume, as it would be, for example, when depicting a cut plane location with a 3D widget that represents the cutting plane as a translucent polygon.  Nor can a volume be contained within a translucent geometric object, as it would be if, for example, the outer skin of a CT data set was rendered as a polygonal isosurface with volume mappers used to render individual organs contained within the skin surface. We hope to extend the new vtkGPURayCastMapper to support the multipass depth peeling process, allowing for correctly rendered images with intersecting translucent objects.
+ </p>
+ <p>
+  <strong>
+   Improved Rendering of Labeled Data:
+  </strong>
+  Currently, VTK supports binary masks and only a couple of very specific versions of label mapping. We know that our community needs more extensive label mapping functionality – especially for medical datasets. Labeled data requires careful attention to the interpolation method used for various parameters. (You may wish to use linear interpolation for the scalar value to look up opacity, but, perhaps, select the nearest label to look up the color.) We plan to solicit feedback from the VTK community to understand the sources of labeled data and the application requirements for visualization of this data. We then hope to implement more comprehensive labeled data volume rendering for both the CPU and GPU mappers.
+ </p>
+ <p>
+  <strong>
+   Mobile Support:
+  </strong>
+  The move to OpenGL 2.1 means that VTK will run on iOS and Android devices. Although older devices do not support 3D textures, newer devices do. Therefore, this new volume mapper should, theoretically, work. We hope to test and refine our new mapper so that VTK is ready to be used for mobile volume rendering applications.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Acknowledgements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  We would like to recognize the National Institutes of Health for sponsoring this work under the grant NIH R01EB014955 “Accelerating Community-Driven Medical Innovation with VTK.” We would like to thank Marcus Hanwell and Ken Martin, who are tirelessly modernizing VTK by bringing it to OpenGL 2.1 and mobile devices and who have been providing feedback on this volume rendering effort.
+ </p>
+ <p>
+  The Head and Torso datasets used in this article are available on the Web at http://www.osirix-viewer.com/datasets.
+ </p>
+ <p>
+  <a href="/source/files/4_955344590.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_955344590.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Lisa Avila
+  </strong>
+  is Vice President, Commercial Operations at Kitware. She is one of the primary architects of VTK’s volume visualization functionality and has contributed to many volume rendering efforts in scientific and medical fields ranging from seismic data exploration to radiation treatment planning.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_316162363.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_316162363.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Aashish Chaudhary
+  </strong>
+  is a Technical Leader on the Scientific Computing team at Kitware. Prior to joining Kitware, he developed a graphics engine and open-source tools for information and geo-visualization. His interests include software engineering, rendering, and visualization.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1696425089.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1696425089.jpg" style="width: 100px; height: 125px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Sankhesh Jhaveri
+  </strong>
+  is an R&amp;D Engineer on the Scientific Visualization team at Kitware. He has a wide range of experience working on open-source, multi-platform, medical imaging, and visualization systems. At Kitware, Sankhesh has been actively involved in the development of VTK, ParaView, Slicer4, and Qt-based applications.
+ </p>
+</div>

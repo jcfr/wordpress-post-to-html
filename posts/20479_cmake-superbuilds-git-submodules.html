@@ -1,0 +1,160 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h3>
+  Introduction
+ </h3>
+ <p>
+  A long time ago, not long after I joined Kitware I was a little shocked that we were still using
+  <a href="https://en.wikipedia.org/wiki/Concurrent_Versions_System" rel="noopener" target="_blank">
+   CVS
+  </a>
+  and didn’t have a company blog, I was asked to work on a project called
+  <a href="https://blog.kitware.com/titan-informatics-toolkit-update/" rel="noopener" target="_blank">
+   Titan
+  </a>
+  (no longer an active open source project as far as I know). As part of this project we did the conversion of
+  <a href="https://blog.kitware.com/an-update-on-vtks-git-conversion/" rel="noopener" target="_blank">
+   VTK from CVS to Git
+  </a>
+  (2010), worked with the community on updating development practices. Once in place I created the Titan repository as a git repository with many git submodules.
+ </p>
+ <p>
+  The plan back then was to make it as easy as possible to build a project that had a number of dependencies for new developers. The main Titan code base built upon
+  <a href="https://vtk.org/" rel="noopener" target="_blank">
+   VTK
+  </a>
+  , and also made heavy use of
+  <a href="https://www.qt.io/" rel="noopener" target="_blank">
+   Qt
+  </a>
+  ,
+  <a href="http://www.boost.org/" rel="noopener" target="_blank">
+   Boost
+  </a>
+  , and a slew of other dependencies that needed to be tested and work on Windows, macOS, and Linux. At the time we decided to make use of the
+  <a href="https://cmake.org/cmake/help/v3.10/module/ExternalProject.html" rel="noopener" target="_blank">
+   ExternalProject
+  </a>
+  feature in
+  <a href="https://cmake.org/" rel="noopener" target="_blank">
+   CMake
+  </a>
+  to orchestrate the build process and this is the core of what many of us refer to as the superbuild. I don’t recall whether we had a dedicated external repository or a mixed code with submodules.
+ </p>
+ <p>
+  I have been meaning to write some of this up for years, and a colleague encouraged me to do so at a recent workshop, so here you go. Let’s get into some of the detail.
+ </p>
+ <h3>
+  ExternalProject: Never Cross the Streams
+ </h3>
+ <p>
+  If you learned anything from Ghostbusters (at least in the original) you never cross the streams. In my early days of working with ExternalProject there was a strong temptation to mix the ExternalProject targets building dependencies with normal targets building libraries and/or executables. While some people got it to work some of the time we avoided this practice, and maintained a clear separation of the outer coordinating build, and the inner projects that were built in a sequence as specified by their dependencies.
+ </p>
+ <p>
+  A strong concept you should bear in mind for any superbuild approach is that you will have an outer build, and this build should only concern itself with building other projects. Building CMake projects is by far the easiest, but it is also possible to drive other build tools, the main challenge is mapping everything from CMake to the external build tool so that you get a consistent result. We took the approach of mirroring the source tree layout in the build tree, so that when you have a VTK directory in the top level of the source tree, there is a VTK build directory in the top level of the build tree.
+ </p>
+ <h3>
+  Why?
+ </h3>
+ <p>
+  You may be asking yourself why do we even need to use superbuilds, they just sound like even more complication, and why not just use a package manager. A long time ago I was a
+  <a href="https://gentoo.org/" rel="noopener" target="_blank">
+   Gentoo
+  </a>
+  package maintainer, working on scientific packages and porting to 64 bit processors (which were new back then, I think I am getting old).
+ </p>
+ <p>
+  One thing we hated was projects that packaged third party libraries in their source tree to “make things easier”. This is a popular practice, VTK has many third party libraries for example, and we have done a lot of work to make it easy to switch to system libraries there. When you do this you must convert these packages to be a part of your build system, and update them regularly. Package maintainers hate this, they spend a lot of time getting everything to use the same version, or slotting several versions when they don’t maintain a stable API.
+ </p>
+ <p>
+  Superbuilds can remove all of this cruft from the project’s source repository, and enable you to more directly use the upstream project’s build system as an independently built software component. It is basically a poor man’s package manager that you make consistently work across your target build platforms, and if your target platforms have a common package manager you might consider using that instead.
+ </p>
+ <p>
+  I think they enable the best of both worlds, a project depends on and reuses a number of libraries that make sense but a developer can essentially clone the project and build it in one or two steps. Someone who knows what they are doing should be able to completely ignore your superbuild – experienced developers, packagers, etc. Most developers should be able to use the superbuild to set up their environment.
+ </p>
+ <h3>
+  Types of Superbuild
+ </h3>
+ <p>
+  I would say there are at least three approaches to creating a superbuild, with many hybrids, and probably some I have not come across. I will try to summarize the ones I know of here, along with why you might consider using each type. I have my own preferences, and I will do my best to objectively outline the pros and cons for each. As with many things, there probably isn’t one true way but a set of compromises that makes sense for your project.
+ </p>
+ <p>
+  <strong>
+   Developer build
+  </strong>
+  : the main focus here is on helping a developer get up and running, and to use the source tree for development. Here I strongly recommend using git with submodules, or an equivalent, for all projects that might be changed frequently. This type of layout uses the version control system to control versions, and the build system (CMake) to coordinate builds of these submodules, using instructions from the outer project, and downloading tarballs of source files that are not actively developed.
+ </p>
+ <p>
+  The Titan build system was a good example of this, and the
+  <a href="https://github.com/cryos/openchemistry" rel="noopener" target="_blank">
+   Open Chemistry supermodule
+  </a>
+  is a current example. It has submodules for the chemistry projects at the top level, along with some things in the thirdparty directory that change more frequently. It also uses ‘cmake/projects.cmake’ to download a number of source tarballs for things like Eigen, GLEW, etc that are moved less frequently/tend to use released versions of those projects. The ‘cmake/External_*.cmake’ files contain build logic and dependency information.
+ </p>
+ <p>
+  A feature here is that all source directories that might be edited are permanent, and outside of the build tree. If you change these you can rely on the build system not overwriting/changing them, and you can safely develop branches in these projects. Once changes are merged you can move the submodule SHA forward for the outer build to see the changes, mainly using version control to manage these updates. They can still be used for packaging, and that was always a strong driver in the development of this style of superbuild for me.
+ </p>
+ <p>
+  <strong>
+   Packaging build
+  </strong>
+  : the main focus here is packaging binaries/testing for dashboard submissions. The repository is usually simpler, and most logic for layout is in the CMake build system. In this case downloading tarballs and source trees is taken care of by CMake, and virtually all source code (outside of the superbuild repository) is contained in the build tree. This generally assures that the build tree will be clean, but means it is hard to use this to develop code in actively, for this reason it tends to be complementary to some other developer build instructions.
+ </p>
+ <p>
+  The
+  <a href="https://github.com/openchemistry/tomviz-superbuild" rel="noopener" target="_blank">
+   Tomviz superbuild
+  </a>
+  is a good example of this, which is derived from an earlier version of the
+  <a href="https://gitlab.kitware.com/paraview/paraview-superbuild" rel="noopener" target="_blank">
+   ParaView superbuild
+  </a>
+  . You will often need to copy SHAs for the projects from source trees tested locally to ‘versions.cmake’ in the case of Tomviz (as well as release tarballs referenced above), and once pushed these will be built by the builders. In both of these cases the superbuild actually contains the CPack packaging code, whereas in the case of Open Chemistry the individual software repositories contain the code for packaging. These contain all instructions for building the installers created on demand, or offered as part of a release.
+ </p>
+ <p>
+  <strong>
+   Dependency build
+  </strong>
+  : a third kind of superbuild I have seen more recently is what I call the dependency build. This usually follows the pattern of a packaging build, and is normally also a packaging build with a second mode where it builds everything but the project being targeted by the superbuild. So in
+  <a href="https://gitlab.kitware.com/cmb/cmb-superbuild" rel="noopener" target="_blank">
+   CMB’s superbuild
+  </a>
+  there is a concept of a developer mode where it builds everything but the actual project. It may then write some config file or similar to help the developer’s build find the dependencies that were built for them.
+ </p>
+ <h3>
+  Common Prefix
+ </h3>
+ <p>
+  Most superbuild projects use a common installation prefix, or a set of prefixes, to install build artifacts in. In Titan I think we started with one prefix per external project, but later moved to a common prefix for all projects. In Open Chemistry we use a common prefix for all projects, named ‘prefix’ at the top level of the build tree. The single common prefix can be very useful as you can simply add CMAKE_PREFIX_PATH to reference that prefix, and have projects favor anything found in there, this path can also be populated with a list.
+ </p>
+ <p>
+  The major disadvantage of this approach is that the prefix can become dirty over time, having multiple versions installed, and stale files causing issues. This is also an issue that arises with build trees in general, and starting from a clean build directory is often the best solution to avoid this. It also means that you cannot separate out different dependencies that were built and installed, but superbuilds are usually developed to support one (or a small number of) project(s).
+ </p>
+ <h3>
+  Build Everything?
+ </h3>
+ <p>
+  When we get into the mindset of developing the superbuild a question that comes up is whether we should build everything from source. Conceptually that is the best/simplest approach, but it is also the one that will lead to the longest possible build times. After spending quite some time thinking about this for Titan, later Open Chemistry and Tomviz I have come to the conclusion that it depends…
+ </p>
+ <p>
+  Some dependencies are so small, and reliable to build, that you should almost certainly just build it. Some of them are much larger, and if infrequently changed you should almost certainly attempt to build them only when they are updated. Others sit somewhere in the middle, and you learn that the real world is far murkier than we might like. Ideally the external project code will be robust, and reliably yield binaries on all platforms.
+ </p>
+ <p>
+  As we move to the use of more and more continuous integration I think we need to consider how we can automate saving/uploading binary artifacts to accelerate the build process of larger projects/superbuilds. The main Tomviz superbuild uses a system version of Qt, and a precompiled ITK, as they both take a long time to build and are not updated that frequently. ParaView/VTK also take a long time to build, they are updated more frequently. They would benefit from a more automated build/caching process, which we could then use for ITK and others.
+ </p>
+ <p>
+  This also reminds me of my days as a Gentoo Linux developer where we made it easy (or easy enough if you were determined) to build everything locally from source, but there was a push towards offering binaries optionally. Part of the reason I moved to Arch Linux was the easy availability of binaries in a rolling release distro that was always quite up to date. The availability of SDK installers can also help a lot as they can be placed in the path for CMake to build against.
+ </p>
+ <h3>
+  Conclusions
+ </h3>
+ <p>
+  Superbuilds can be extremely useful for modern projects. At a high level they enable the target projects to avoid duplicating third party code in their source trees. This usually leads to a cleaner project, where it concentrates on developing that project, and a superbuild that coordinates the building of dependencies when we need to build and/or package a project. We have had a lot of success in using these to help developers get up and running quickly, and for packaging complex projects with a number of dependencies for Windows, macOS, and Linux.
+ </p>
+ <p>
+  Ideally most of the dependency building would be replaced by a cross platform package manager, but nothing suitable has been created thus far. Most projects I have worked on want to build/package on Windows, macOS, and Linux using the native compilers for each platform – that means MSVC, Clang, GCC, etc. I have pointed out two high level styles of superbuild I have worked with in developer and packaging focused superbuilds with a third variant using a packaging focused build to skip building the actual target project.
+ </p>
+ <p>
+  On Linux and macOS I can often get away with using the package manager for the bulk of the dependencies, and a flexible superbuild to fill in the less commonly packaged projects. This is where having use system flags even for superbuilds is extremely useful, and can reduce build times while bootstrapping development environments.
+ </p>
+</div>

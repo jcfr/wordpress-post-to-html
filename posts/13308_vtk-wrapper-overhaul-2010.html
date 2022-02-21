@@ -1,0 +1,143 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The VTK wrappers received their last major overhaul in 1998 and have done well to serve the VTK community. In recent years, however, the wrappers have started to show some cracks, particularly as new types such as vtkVariant and vtkUnicodeString have been introduced to VTK but have not been made available in the wrappers. One reason for the wrappers’ slow development compared to the rest of VTK is undoubtedly the “intimidation factor” of the wrapper-generator code, which is very complex and lacking in documentation.
+ </p>
+ <p>
+  VTK wrappers were recently overhauled again. The four main goals of overhaul project were as follows:
+ </p>
+ <ul>
+  <li>
+   Cleaning up the wrapper-generator code by removing hard-coded hexadecimal constants, reducing the use of global variables, and improving code documentation;
+  </li>
+  <li>
+   Proper wrapping of vtkStdString, which is a crucial interface type that is only partly wrapped;
+  </li>
+  <li>
+   Wrapping vtkVariant and other new VTK types in Python;
+  </li>
+  <li>
+   And eliminating the need for BTX/ETX “unwrappable section” markers in the code.
+  </li>
+ </ul>
+ <p>
+  The overarching goal is to provide a new foundation for the wrapper-generators that will make it easier to move the wrappers forward.These changes have been made while maintaining backwards compatibility with existing Tcl, Python, and Java programs which use VTK. The old wrapper-generator code has not been replaced; it has only been cleaned up and enhanced.
+ </p>
+ <p>
+  <strong>
+   WRAPPER PRIMER
+  </strong>
+  <br/>
+  To provide some background, the wrapper-generator code consists of a “front-end” parser that reads the VTK header files and stores the class declarations in simple data structures, and three “back-ends” that read those data structures and generate the wrapper code for each of the wrapper languages. Most of this project has focused on the front end, but enhancements have been added to the back end as well, particularly the Python back end.
+ </p>
+ <p>
+  The parser front-end can be further subdivided into a “lex” tokenizer (which also does rudimentary preprocessing) and a “yacc” parser that understands the C++ grammar. These two pieces are the foundation of the wrappers, or less generously, they are the bottleneck. The wrappers are only able to wrap the class and method definitions the parser can pull from the header files. Because of the parser’s importance, it has received more attention during this update than any other part of the wrappers.
+ </p>
+ <p>
+  An important feature of the VTK wrappers is that they wrap the VTK classes one class at a time using only the header file for that class, with a minimal amount of hinting. When combined with CMake, this approach is easily scalable to a very large number of classes in different directories or even in different packages. The new wrappers further enhance this approach by automatically generating “hierarchy” files that describe all types defined in any particular VTK source directory. These files are discussed in detail later in this article.
+ </p>
+ <p>
+  <strong>
+   A SHINY NEW PARSER
+  </strong>
+  <br/>
+  The new parser is a significant improvement to the old parser code. The original code took a minimalist approach to parsing the VTK header files. It looked for the first VTK class defined in the header, and then extracted only the methods defined in that class. The rest of the file would be ignored, but since the parser lacked a full C++ grammar, it was not always successful in skipping over parts it was supposed to ignore. These troublesome patches of code had to be surrounded by BTX/ETX exclusion markers so that they could be removed at the preprocessing stage.
+ </p>
+ <p>
+  The new parser code reverses this minimalist approach: it reads all the declarations in the header file and stores them all for use in the wrappers. This means that typedefs, templates, constant definitions, enum types, operator overloads and namespaces are all available to the wrapper-generators. Each piece of information from the header file is stored in a C struct, with the most-used struct being the ValueInfo struct that is used for method arguments, variables, constants and typedefs. The following is from the vtkParse.h header file:
+ </p>
+ <table border="0" style="width: 650px; background-color: #d2d2d0;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      struct ValueInfo
+      <br/>
+      {
+      <br/>
+      parse_item_t   ItemType; /* var, typedef, etc */
+      <br/>
+      parse_access_t Access; /* public, private, etc. */
+      <br/>
+      const char     *Name;
+      <br/>
+      const char     *Comment;
+      <br/>
+      const char     *Value; /* value or default val */
+      <br/>
+      unsigned int   Type; /* see vtkParseType.h   */
+      <br/>
+      const char      *Class; /* type as a string */
+      <br/>
+      int            Count;  /* for arrays */
+      <br/>
+      int            NumberOfDimensions;
+      <br/>
+      const char      **Dimensions;
+      <br/>
+      FunctionInfo      *Function; /* for function ptrs */
+      <br/>
+      int            IsStatic; /* class variables only */
+      <br/>
+      int            IsEnum; /* for constants only */
+      <br/>
+      };
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  One should note that in contrast to the old parser, arrays can now be multi-dimensional. The dimensions are stored as strings, in case the dimensions are symbolic values (e.g., template parameters) that cannot be evaluated until compile time. The product of the dimensions is stored as an “int” if all the dimensions are integer literals.
+ </p>
+ <p>
+  Similar structs provide information for functions, classes, namespaces, templates, etcetera. The FunctionInfo and ClassInfo structs have backward compatibility sections that provide their info in the old wrapper format, so that wrappers-generators based on the old structs can easily be made to work with the new parser.
+ </p>
+ <p>
+  The new parser also features a preprocessor, something that was conspicuously absent before. The preprocessor stores defined macros and provides conditional parsing based on #if directives, eliminating yet another previous use of the BTX/ETX markers. Unlike a traditional preprocessor, the parser stores macros but does not expand them. This is by design, since several VTK macros have special meaning to the wrappers that would be lost if those macros were expanded. The parser can query the macros to get their value.
+ </p>
+ <p>
+  <strong>
+   HIERARCHIES FOR ALL
+  </strong>
+  <br/>
+  A fundamental addition for the new wrappers is a collection of “hierarchy” files, one per source directory, that list the full genealogy of all the VTK classes in each directory. The file vtkCommonHierarchy.txt, for example, lists all classes defined in the Common directory. The file structure is simple:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 650px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      vtkArray : vtkObject ; vtkArray.h ; ABSTRACT
+      <br/>
+      vtkArraySort ; vtkArraySort.h ; WRAP_EXCLUDE
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The name of the class comes first, followed by any superclasses, then the header file, and finally any of the CMake flags WRAP_EXCLUDE, WRAP_SPECIAL or ABSTRACT which apply to the class. Classes that have a name that is different from the name of their header file are automatically labelled with VTK_WRAP_EXCLUDE. Note that the file format might change in the future, so anyone who is interested in using this file should always use the functions defined in VTK/Wrapping/vtkParseHierarchy.h to read the file, instead of writing their own code to do so.
+ </p>
+ <p>
+  In addition to classes, the hierarchy files also include all typedefs and enum types encountered in the header files, in order to provide a comprehensive list of all types defined in VTK. The rationale behind the hierarchy files is as follows: previously, the wrappers would assume that any type with a “vtk” prefix was derived from vtkObjectBase, excepting types like vtkIdType that were specifically caught by the parser. This is the other reason that BTX/ETX had to be used so often (in addition to the aforementioned limitations of the parser), since methods that used new types like vtkVariant or vtkUnicodeString had to be BTX’d because these types were misidentified by the wrappers. By using the hierarchy files, the wrappers can identify any type defined in VTK.
+ </p>
+ <p>
+  <strong>
+   WRAPPER COMMAND LINE ARGUMENTS
+  </strong>
+  <br/>
+  The command line for the wrapper-generators has been modified, and this will make it easier to invoke the wrappers by hand. The old calling convention still works, in order to support older CMake scripts. The new command line is as follows:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 650px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      vtkWrapPython [options] input_file output_file
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+</div>

@@ -1,0 +1,171 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Steiner et al. note that osteoporosis has become more common in today’s aging population [1]. Treating fractures in patients with osteoporosis has also become more difficult, as implants such as titanium screws and plates impair the microstructural quality of bones [1].  The image below provides an example.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17041" style="width: 1060px">
+  <img class="wp-image-17041 size-full" height="1616" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-195x300.png 195w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-768x1182.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-665x1024.png 665w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-220x339.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-250x385.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-355x546.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-730x1124.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig1-90x139.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   An X-ray image contains a bone implant with a plate and screws.
+  </p>
+ </div>
+ <p>
+  According to Steiner et al., in vitro biomechanical tests can examine the mechanical efficacy of implants, but they come with significant costs [1]. Computational specimen-specific models, however, allow a single bone specimen to undergo multiple mechanical tests [1]. Steiner et al. use micro-computed tomography (micro-CT) based finite element (µFE) analysis, which tests bone-screw models in silico [1]. This analysis employs micro-CT to scan a specimen at a nominal isotropic resolution of 20 µm [1].
+ </p>
+ <p>
+  The image below offers an example.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17042" style="width: 1060px">
+  <img alt="" class="size-full wp-image-17042" height="918" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-300x262.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-768x671.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-1024x895.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-220x192.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-250x219.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-355x310.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-730x638.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig2-90x79.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   An in silico model shows the effective strain on a bone specimen.
+  </p>
+ </div>
+ <p>
+  The ParaSol solver is used for these µFE models and runs on the leading Cray supercomputers at the Swiss National Supercomputing Centre (CSCS). Models typically range in size from 50 to 500 million hexahedral cells, and they pair well with the state-of-the-art data processing and analysis algorithms and the advanced rendering methods in ParaView. This article describes the current state of the implementation of ParaView at CSCS, which has grown over the last few years.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Parallel Reading
+   </strong>
+  </span>
+ </p>
+ <p>
+  ParaSol stores the models in Hierarchical Data Format 5 (HDF5) as a single mesh of hexahedral elements. The software encodes materials (e.g., bones, screws, and plates) as an unsorted element-based variable. ParaView reads data in parallel due to the sheer size of the data. The size of the model shown above (414 million hexahedra) requires the use of 32 Cray nodes with 32 GB of memory. Each node allocates four Message Passing Interface (MPI) tasks for an average of three to five million cells per task.
+ </p>
+ <p>
+  ParaSol stores the mesh data in a sequence order that corresponds to the scanning device. To promote the use of large block input/output and to read consecutive node numbers, the CSCS team reads data by chunks. ParaView spreads the total number of cells among
+  <span style="font-family: courier new,courier;">
+   pvserver
+  </span>
+  tasks, renumbers the nodes, sorts the material locally, and performs MPI gather/broadcast operations to enumerate the number of materials.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Surface Extraction, Ghost Cell Generation, and Visualization
+   </strong>
+  </span>
+ </p>
+ <p>
+  The very porous nature of human bones exacerbates the visualization challenge. A slice through a bone sample readily illustrates the challenge in the image below. Computing an external surface mesh results in unusually high triangle and vertex counts, as many bone filaments make up the whole structure. The specimen shown below has 92 million hexahedra, 10 million vertices, and an external surface of 34 million triangles—a reduction factor of barely one third! The recent move to OpenGL2 rendering and the improved edge rendering with Fast Approximate Anti-Aliasing (FXAA) in ParaView have increased rendering speed for these very large surfaces.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17043" style="width: 854px">
+  <img alt="" class="size-full wp-image-17043" height="482" sizes="(max-width: 844px) 100vw, 844px" src="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3.png 844w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3-300x171.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3-768x439.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3-220x126.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3-250x143.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3-355x203.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3-730x417.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig3-90x51.png 90w" width="844"/>
+  <p class="wp-caption-text">
+   A longitudinally sliced specimen uncovers the trabecular nature of the bone tissue.
+  </p>
+ </div>
+ <p>
+  Yet, the hexahedral mesh (a by-product of the ortho-normal computerized axial tomography scan device) does not have a smooth external surface. While ParaView provides a
+  <span style="font-family: courier new,courier;">
+   Smooth
+  </span>
+  filter, ghost cells must be created at processor boundaries to ensure the continuity of the surface. In previous versions of ParaView, the
+  <span style="font-family: courier new,courier;">
+   D3
+  </span>
+  filter evenly divided data across processors into spatially contiguous regions with a K-dimensional tree. This resulted in massive data migration from the natural mono-axis cell ordering that originated from the scanning device, as the right-hand portion of the image below illustrates.
+ </p>
+ <p>
+  <img alt="" class="size-full wp-image-17044" height="488" sizes="(max-width: 1000px) 100vw, 1000px" src="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4.png 1000w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4-300x146.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4-768x375.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4-220x107.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4-250x122.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4-355x173.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4-730x356.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig4-90x44.png 90w" width="1000"/>
+ </p>
+ <p>
+  GhostCellGenerator (left) and D3 (right) perform processor coloring.The team at CSCS spontaneously adopted the
+  <span style="font-family: courier new,courier;">
+   GhostCellGenerator
+  </span>
+  filter, which the ParaView development community introduced in 2016 [2]. This filter does not redistribute the input data; it only generates ghost cells at processor boundaries. To do so, it fetches the topological and geometrical information of those cells on neighbor ranks. The filter can benefit from global point IDs, which a plug-in created by the CSCS team provides. The team tested
+  <span style="font-family: courier new,courier;">
+   D3
+  </span>
+  and
+  <span style="font-family: courier new,courier;">
+   GhostCellGenerator
+  </span>
+  with an input mesh of 285 million hexahedra.
+  <span style="font-family: courier new,courier;">
+   GhostCellGenerator
+  </span>
+  proved much better both in memory consumption and in performance, as the table below indicates.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17045" style="width: 1060px">
+  <img alt="" class="size-full wp-image-17045" height="767" sizes="(max-width: 1050px) 100vw, 1050px" src="https://blog.kitware.com/wp-content/uploads/2017/01/pv_table.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/pv_table.png 1050w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-300x219.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-768x561.png 768w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-1024x748.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-220x161.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-250x183.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-355x259.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-730x533.png 730w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_table-90x66.png 90w" width="1050"/>
+  <p class="wp-caption-text">
+   Tests record the execution times for D3 and GhostCellGenerator.
+  </p>
+ </div>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    Real-time Ray Tracing
+   </strong>
+  </span>
+ </p>
+ <p>
+  The intricate and complex internal surface of bones requires advanced rendering. The image below illustrates this fact unequivocally. A new rendering capability in ParaView augments dull renderings of the past—see the top of the bone sample—with shadows and takes into account the reduced visibility of pixels deeper within the bone structure. OSPRay, the open-source interactive ray-tracing library from Intel®, provides this new capability and enables real-time rendering of large models at CSCS [3].
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_17046" style="width: 707px">
+  <img alt="" class="size-full wp-image-17046" height="697" sizes="(max-width: 697px) 100vw, 697px" src="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5.png 697w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-300x300.png 300w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-220x220.png 220w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-250x250.png 250w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-355x355.png 355w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-50x50.png 50w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-96x96.png 96w, https://blog.kitware.com/wp-content/uploads/2017/01/pv_fig5-128x128.png 128w" width="697"/>
+  <p class="wp-caption-text">
+   A composite image compares dull rendering (top) to OSPray rendering with shadows (bottom).
+  </p>
+ </div>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    Summary
+   </span>
+  </strong>
+ </p>
+ <p>
+  ParaView has made a tremendous contribution to the visualization needs of CSCS. From distributed mesh management with ghost cell generation to advanced rendering, the implementation of ParaView has greatly contributed to the analysis of in silico fracture fixation implants in osteoporotic bones at CSCS.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    References
+   </strong>
+  </span>
+ </p>
+ <p>
+  [1] Steiner, Juri, Harry Van Lenthe, Stephen J. Ferguson, and Jean M. Favre. “In-silico Modeling for Fracture Fixation in Osteoporotic Bone.” In Proceedings of the International Conference on High Performance Computing, Networking, Storage and Analysis, 89. Proceedings of SC13, Colorado, Denver. Institute of Electrical and Electronics Engineers, 2013.
+  <a href="http://ieeexplore.ieee.org/xpl/mostRecentIssue.jsp?punumber=6869133">
+   http://ieeexplore.ieee.org/xpl/mostRecentIssue.jsp?punumber=6869133
+  </a>
+  .
+ </p>
+ <p>
+  [2] Quammen, Cory, Utkarsh Ayachit, Andy Bauer, David DeMarle, Sujin Philip, David Lonie, and Ken Martin. “ParaView 5.2.0 Release Notes.” Kitware Blog, November 15, 2016.
+  <a href="https://blog.kitware.com/paraview-5-2-0-release-notes">
+   https://blog.kitware.com/paraview-5-2-0-release-notes
+  </a>
+  .
+ </p>
+ <p>
+  [3] DeMarle, David. “VTK and ParaView – now with ray traced surface rendering.” Kitware Blog, May 11, 2016.
+  <a href="https://blog.kitware.com/vtk-and-paraview-now-with-ray-traced-rendering">
+   https://blog.kitware.com/vtk-and-paraview-now-with-ray-traced-rendering
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17047 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/favre_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/favre_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/favre_headshot-90x113.png 90w" width="100"/>
+   Jean M. Favre
+  </strong>
+  is the visualization task leader at CSCS in Lugano, Switzerland. His interests focus on high-performance computing and visualization.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <strong>
+   <img alt="" class="size-full wp-image-17048 alignleft" height="125" sizes="(max-width: 100px) 100vw, 100px" src="https://blog.kitware.com/wp-content/uploads/2017/01/steiner_headshot.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/01/steiner_headshot.png 100w, https://blog.kitware.com/wp-content/uploads/2017/01/steiner_headshot-90x113.png 90w" width="100"/>
+   Juri Steiner
+  </strong>
+  recently completed his doctoral thesis at Eidgenössische Technische Hochschule Zürich on the validation of patient-specific computer models that simulate the mechanical behavior of fracture fixation implants in osteoporotic human bone. His interests include high-resolution computed tomography, patient-specific finite element analysis, and biomechanical experiments.
+ </p>
+</div>

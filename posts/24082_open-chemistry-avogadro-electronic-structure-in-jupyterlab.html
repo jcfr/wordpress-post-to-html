@@ -1,0 +1,614 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  We have a new
+  <a href="https://openchemistry.org/" rel="noopener" target="_blank">
+   Open Chemistry
+  </a>
+  DOE SBIR Phase II project developing integration of chemical and materials data within
+  <a href="https://jupyter.org/" rel="noopener" target="_blank">
+   Jupyter
+  </a>
+  coupled with a data server/job execution logic. Previously we wrote up some of the
+  <a href="https://blog.kitware.com/open-chemistry-in-jupyterlab/" rel="noopener" target="_blank">
+   early results in a blog post
+  </a>
+  , and
+  <a href="https://conferences.oreilly.com/jupyter/jup-ny/public/schedule/detail/68367" rel="noopener" target="_blank">
+   presented the platform at JupyterCon
+  </a>
+  in August of this year. In the last few months we have also been looking at making it easier to try some of the tools being developed for this platform. Providing an easy way to install and use some of them in local JupyterLab notebooks is the focus of this post.
+ </p>
+ <h1>
+  Binary Wheels for Avogadro’s Libraries
+ </h1>
+ <p>
+  The
+  <a href="https://github.com/OpenChemistry/avogadrolibs" rel="noopener" target="_blank">
+   Avogadro libraries
+  </a>
+  are lightweight C++ libraries developed to not only support the Avogadro desktop application, but enable reuse in other contexts. We used
+  <a href="https://github.com/pybind/pybind11" rel="noopener" target="_blank">
+   PyBind11
+  </a>
+  to wrap some of the core API for reading/writing chemical files, and calculating electronic structure from the output of quantum codes. Binary wheels can be installed using the Python package manager pip under Python 3 (built using our CI integrated with release tags on GitHub):
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e892ef3da164503410" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+pip install avogadro</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e892ef3da164503410-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e892ef3da164503410-1">
+        <span class="crayon-e">
+         pip
+        </span>
+        <span class="crayon-e">
+         install
+        </span>
+        <span class="crayon-v">
+         avogadro
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  Once you have the package installed you can use a small subset of the C++ API. We plan on extending this in the future, but it is enough to load files, save files, perform some basic electronic structure calculations, and make some very rudimentary queries on the loaded molecule. Our server process has used this for quite a few years, originally using Boost.Python for wrapping.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e892ef3e1597885638" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import avogadro as avo
+# Set up the molecule and file format manager
+m = avo.core.Molecule()
+f = avo.io.FileFormatManager()
+# Read an example file
+f.read_file(m, 'caffeine.cjson')
+# Print some basic attributes
+print("Molecule has", m.atom_count(), "atoms,", m.bond_count(),
+      "bonds, the chemical formula", m.formula(), "and a mass of", m.mass())
+# Write a string in the XYZ format
+f.write_string(m, "xyz")</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e1597885638-11">
+        11
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-1">
+        <span class="crayon-r">
+         import
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         avogadro
+        </span>
+        <span class="crayon-st">
+         as
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         avo
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-2">
+        <span class="crayon-c">
+         # Set up the molecule and file format manager
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-3">
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         avo
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         core
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Molecule
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-4">
+        <span class="crayon-v">
+         f
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         avo
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         io
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         FileFormatManager
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-5">
+        <span class="crayon-c">
+         # Read an example file
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-6">
+        <span class="crayon-v">
+         f
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         read_file
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'caffeine.cjson'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-7">
+        <span class="crayon-c">
+         # Print some basic attributes
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-8">
+        <span class="crayon-k ">
+         print
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         "Molecule has"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         atom_count
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "atoms,"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         bond_count
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "bonds, the chemical formula"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         formula
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "and a mass of"
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         mass
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-10">
+        <span class="crayon-c">
+         # Write a string in the XYZ format
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e1597885638-11">
+        <span class="crayon-v">
+         f
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         write_string
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         m
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "xyz"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+ </p>
+ <h1>
+  Visualizing Electronic Structure in JupyterLab
+ </h1>
+ <p>
+  Another significant part of our project is the extension of the Jupyter Python 3 kernel, and visualization of chemical data in the JupyterLab web client. We use
+  <a href="http://3dmol.csb.pitt.edu/" rel="noopener" target="_blank">
+   3Dmol.js
+  </a>
+  or
+  <a href="https://kitware.github.io/vtk-js/" rel="noopener" target="_blank">
+   vtk.js
+  </a>
+  as the JavaScript rendering engines for 3D structure, with
+  <a href="https://d3js.org/" rel="noopener" target="_blank">
+   D3
+  </a>
+  for charts. A Python module houses the Python API being developed to support the project, and a JupyterLab extension for the visualization components. These can be installed locally using the following commands assuming you have Python 3 and JupyterLab installed already:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e892ef3e4642453518" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+pip install openchemistry
+jupyter labextension install @openchemistry/jupyterlab</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e4642453518-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e4642453518-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e892ef3e4642453518-1">
+        <span class="crayon-e">
+         pip
+        </span>
+        <span class="crayon-e">
+         install
+        </span>
+        <span class="crayon-e">
+         openchemistry
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e4642453518-2">
+        <span class="crayon-e">
+         jupyter
+        </span>
+        <span class="crayon-e">
+         labextension
+        </span>
+        <span class="crayon-i">
+         install
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         @
+        </span>
+        <span class="crayon-v">
+         openchemistry
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         jupyterlab
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  If all goes well you can start your JupyterLab server, and if you clone our new examples repository we will even give you a few example files to get started with:
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e892ef3e6859614991" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+git clone git://github.com/openchemistry/jupyter-examples
+jupyter-lab</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e6859614991-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e892ef3e6859614991-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e892ef3e6859614991-1">
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-r">
+         clone
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         git
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-c">
+         //github.com/openchemistry/jupyter-examples
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e892ef3e6859614991-2">
+        <span class="crayon-v">
+         jupyter
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         lab
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  You can open the example notebooks, and if everything works as expected you will be able to look at the example data, or even import some of your own if you make the files available.
+ </p>
+ <p>
+  <a href="http://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab.png">
+   <img alt="" class="alignnone size-full wp-image-24289" sizes="(max-width: 1531px) 100vw, 1531px" src="http://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab.png" srcset="https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab.png 1531w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-300x167.png 300w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-768x428.png 768w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-1024x571.png 1024w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-220x123.png 220w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-250x139.png 250w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-355x198.png 355w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-730x407.png 730w, https://blog.kitware.com/wp-content/uploads/2018/12/Screenshot_2018-12-27-JupyterLab-90x50.png 90w"/>
+  </a>
+ </p>
+ <h1>
+  JupyterLab and Binder
+ </h1>
+ <p>
+  We have gone one step further, and added the necessary files to the
+  <a href="https://github.com/openchemistry/jupyter-examples" rel="noopener" target="_blank">
+   example repository
+  </a>
+  to enable
+  <a href="http://mybinder.org/v2/gh/openchemistry/jupyter-examples/master?urlpath=lab/tree/caffeine.ipynb" rel="noopener" target="_blank">
+   viewing of these notebooks in Binder
+  </a>
+  . This enables you to experiment with the features described above in a live environment using everything mentioned. It can take a while to launch the containers, but once ready you are able to experiment with no local installation. It is fantastic to be a part of such a vibrant ecosystem of open source tools, and freely available web services that aid in the dissemination of results.
+ </p>
+ <h1>
+  Conclusions
+ </h1>
+ <p>
+  The wrapped Avogadro API is at quite an early stage, and many things you might want to do are not yet supported. Some extra work was done to decouple components so that it is easier to reuse parts of our Python kernel, web visualization, and other pieces independently of the larger project. We hope that you find these pieces useful, and we will continue to work on making it easier to install these open source components independently.
+ </p>
+ <p>
+  <em>
+   This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of Basic Energy Sciences, Small Business Innovation Research (SBIR) program under Award Number DE-SC0017193.
+  </em>
+ </p>
+</div>

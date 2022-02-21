@@ -1,0 +1,226 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="/source/files/4_250233713.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_250233713.jpg" style="float: left; height: 72px; margin-right: 20px; width: 144px;"/>
+  </a>
+ </p>
+ <p>
+  At the Core Technologies team at Netflix, we develop the application framework and streaming engine used by millions of consumer electronics devices, game consoles, tablets, and phones. With such a diverse array of devices and platforms, we need to make sure our code is lightweight, standards compliant, and portable. As we also produce the SDK that is used by partners to port Netflix to their devices, we need to make sure that it builds and runs well across many versions of the C++ compiler and standard C libraries.
+ </p>
+ <p>
+  One of the main issues we face with such a varied ecosystem is that in-house ports of our libraries (mainly game consoles) have very specific requirements that, more often than not, require heavy patching, usage of custom non-POSIX APIs, and linking against platform specific libraries. All those changes could not come back to us, as our build system was not capable of handling them, so the game console teams had to apply their patches and resolve the conflicts every time we released a new version of the SDK.
+ </p>
+ <p>
+  We set out to find a solution to this problem and defined our requirements for our perfect build system:
+  <br/>
+  •    All platforms should build from the same source tree, so all could benefit from bug fixes and new features just by getting the latest version of our code. At Netflix, we develop for consumer electronic devices (mostly Linux -based), game consoles (Windows-based, using different versions of Visual Studio with a mix of gcc and non-gcc compilers), iOS devices (using OS X and XCode), and Android. Therefore, our build tool had to handle as many of those environments as possible.
+  <br/>
+  •    We need to perform system introspection to detect compiler and platform features and library availability and version (in case we have to enforce a specific one).
+  <br/>
+  •    Integrated changes from one platform might break another, so the build tool had to be flexible and let us specify different configurations at build time.
+  <br/>
+  •    Ideally, the selected tool would be open source so we could customize it if needed. As Netflix is a very active Open Source believer and contributor, we would make any changes available.
+  <br/>
+  •    Our Jenkins build farm is as varied as the platforms for which we develop, so we wanted to minimize the number of system dependencies (like Python or bash) our chosen build tool had.
+ </p>
+ <p>
+  We found that CMake was the tool that better fit our needs: It created project files for all development environments we used, was easily extensible with its own scripting language,  provided cross-platform commands to copy and delete files and directories, and was easy to deploy on our Jenkins nodes.
+ </p>
+ <p>
+  <a href="/source/files/4_1157451394.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1157451394.jpg" style="margin-left: 75px; margin-right: 75px; width: 500px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: Main page of the live Netflix Dashboard. It is still in the early stages and, therefore, we are not running our full test suite. Only four machines are contributing.
+  </em>
+ </p>
+ <p>
+  <strong>
+   <span style="font-size: 14px;">
+    <span style="color: #000080;">
+     Integration
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  As part of our build process, we produce four self-contained and independent components deployed as libraries. CMake drives each individual project, as well as the master one that has the necessary infrastructure to handle different toolchains, verifies that the component versions meet the requirements (not all versions of our components work with each other), performs platform tests for introspection, and sets the different properties each project type requires.
+ </p>
+ <p>
+  We architected the build system to allow each subproject to work as a plugin that can then be optionally used (unless it is marked as required). Each subproject can export its own set of command line options to control how it is configured, as well as a component configuration summary that gets printed at the end, giving the user a global view of the options used to configure the project.
+ </p>
+ <p>
+  To build, we use a slightly modified version of the icecream distributed compiler [1]. It works perfectly with both the Unix Makefiles and Ninja generator, and allows us to spawn 100 or more processes, resulting in very fast compile times across the network.
+ </p>
+ <p>
+  To get more speed, we are evaluating precompiled headers, incremental linking, and tools like Cotire [2]. CMake makes it very easy to switch tools and play with different compiler and linker settings, encouraging experimentation and moving us toward our goal of reducing as much as possible the time developers have to wait for a build to complete.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: 14px;">
+     Customization
+    </span>
+   </strong>
+  </span>
+ </p>
+ <p>
+  The stock CMake provided almost all the functionality we required, but we still needed to extend it to suit our needs. Fortunately, everything could be written using CMake’s powerful scripting language.
+ </p>
+ <p>
+  <em>
+   <strong>
+    JavaScript build system
+   </strong>
+  </em>
+  : We include many JavaScript source files in our product, so we developed a small build system that handled dependencies, concatenating source files, stripping source files of debug statements, and minimizing the code.
+ </p>
+ <p>
+  <em>
+   <strong>
+    Resource compiler
+   </strong>
+  </em>
+  : We embed most of our baked-in assets (image files, JavaScript, error page, fonts, etc.) in the executable, which is then signed. CMake handles locating resources using objcopy, ld, or a custom tool to convert them to object files (depending on the platform), generating the C++ code that accesses the symbol table, and creating the static library that’s linked to the main program.
+ </p>
+ <p>
+  <em>
+   <strong>
+    Component system
+   </strong>
+  </em>
+  : We added the ability to specify the paths from which any component can be loaded, supporting binary or source builds, and the ability to add the component as an external library or a subproject with add_subdirectory.
+ </p>
+ <p>
+  <a href="/source/files/4_791476697.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_791476697.jpg" style="margin-left: 75px; margin-right: 75px; width: 500px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: JavaScript based chart viewer that plots memory usage during a test run.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Testing and the Dashboard
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The next step was to take advantage of the other software process tools closely related to CMake: CTest and CDash.
+ </p>
+ <p>
+  At Netflix, we have a highly automated test infrastructure that starts our application (a custom JavaScript based
+  <br/>
+  application framework) and thoroughly tests every component, as well as our layout and rendering engine. We need to make sure that the User Interface has pixel fidelity across many graphics libraries such as OpenGL or DirectFB.
+ </p>
+ <p>
+  The test framework produces a detailed report of test pass/fails, and a list of image diffs where the current rendering differs from a set of reference images. It also gathers memory usage across the test run and performs six, eight, and 12 hour stress tests.
+ </p>
+ <p>
+  We wanted to automate the testing runs, consolidate the results on an easy to read web page, and run memory leak detection, so we looked to CTest and CDash, as they offer the functionality we needed.
+ </p>
+ <p>
+  The first hurdle was that neither CTest nor CDash supported Perforce, the Version Control System we use, so we wrote patches to add support for it and extended CDash to also support P4Web.
+ </p>
+ <p>
+  <a href="/source/files/4_1727441941.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1727441941.jpg" style="margin-left: 75px; margin-right: 75px; width: 500px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3: Image diff viewer page. The draggable slider on the first image allows you to view the correct and actual images. Below the first image, the calculated image diff displays in bright magenta what has changed between
+   <br/>
+   the expected and the actual images.
+  </em>
+ </p>
+ <p>
+  Once we had it running, we found out that our logs, especially the stress tests, exceeded some hardcoded limits in PHP. Although we had to work around them, we were able to eventually find a solution.
+ </p>
+ <p>
+  With everything running smoothly, we began to actively use the dashboard and, based on our developers’ feedback, we extended CDash to add more visualization tools:
+ </p>
+ <p>
+  <em>
+   <strong>
+    An AJAX based log viewer
+   </strong>
+  </em>
+  to view and search huge log files without having to download the file to the client machine.
+ </p>
+ <p>
+  <em>
+   <strong>
+    A vector charting package.
+   </strong>
+  </em>
+  We measure memory usage for a test run by gathering memory usage every second. In the past, we were creating a PNG file and uploading it as another measurement. Now, we upload a JSON object with the data and use Highcharts to plot it. This allows the user to inspect each data point and zoom in real time.
+ </p>
+ <p>
+  <em>
+   <strong>
+    Image diffs.
+   </strong>
+  </em>
+  Differences created by a change in our layout engine can be very difficult to see by the naked eye. We implemented a new ImageDiff viewer that displays the before/after images, letting the user drag a slider to see both. We also use resemble.js [3] to render the differences to a canvas object in bright magenta.
+ </p>
+ <p>
+  <em>
+   <strong>
+    Static analysis.
+   </strong>
+  </em>
+  We plan on integrating reports by open source tools like the Clang Static Analyzer or cppcheck.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Contributing
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  We have already contributed back the patches for Perforce support and some general CDash bug fixes, which we expect will make the next CMake and CDash releases. Our CDash custom viewers and static analysis integrations are works in progress, which we fully expect to commit once the code is production quality and has been thoroughly tested.
+ </p>
+ <p>
+  CMake, CTest, and CDash have proven to be invaluable tools for us to build multiplatform code, track changes, run tests, and improve code quality by performing code coverage and memory leak analysis.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+  <br/>
+  [1]  https://github.com/icecc/icecream
+  <br/>
+  [2]  https://github.com/sakra/cotire
+  <br/>
+  [3]  http://huddle.github.io/Resemble.js/
+ </p>
+ <p>
+  <a href="/source/files/4_1314018752.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1314018752.jpg" style="float: left; margin-right: 20px; width: 100px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Pedro Navarro
+  </strong>
+  is a Senior Software Developer on the Core Technologies team of the Streaming Devices group at Netflix, where he works on the application framework and SDK that drives the Netflix experience for consumer electronics, game consoles, and mobile devices.
+ </p>
+ <p>
+ </p>
+</div>

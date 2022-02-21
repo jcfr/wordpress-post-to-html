@@ -1,0 +1,328 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Many of the projects to which Kitware contributes have recently switched to using the distributed version control system Git as a replacement for older, centralized version control systems such as SVN or CVS.  Among these projects are CMake, ITK, MIDAS, and VTK.  One of the key advantages of these version control systems is the ability to develop projects using a “branchy” workflow that allows developers to work on related changes on a separate “topic branch” and commit new features onto a separate branch that can be tested and made stable before being integrated into the “master” branch, which is considered stable. There are, however, challenges to using Git, most notably the saving of each version of a binary file and the resulting large repository size, which is addressed in this article.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <strong>
+    <span style="font-size: small;">
+     Distributed VCS
+    </span>
+   </strong>
+  </span>
+  <br/>
+  The major difference in using a distributed VCS is that the entire repository history is stored locally on each user’s machine, instead of being stored in only one central server.  When changes are committed to any text file, such as a source file, the changes are stored as the line-by-line difference between the two files.  For any binary file, however, it’s much more difficult to store the difference, so instead Git simply stores each version of binary files in the repository in their entirety.  Naturally this causes the size of the history to become unacceptably large if the repository contains sizable binary files that change frequently.  We needed an alternative place to store binary files outside the repository that could be referenced from within the source code.
+  <br/>
+  The solution we created uses MIDAS as the place to host the binary files.  MIDAS provides a hierarchical organization of data on the server that can emulate a filesystem structure, and also provides access and administrative controls to the data in each directory.  MIDAS also provides, via its web API, a mechanism for downloading a file stored on the server by passing the MD5 checksum of the file’s contents.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080;">
+    <span style="font-size: small;">
+     Hosting and referencing binary files
+    </span>
+   </span>
+  </strong>
+  <br/>
+  In order to move files out of the source repository and onto MIDAS, the first step is to upload the files to the MIDAS server.  Once the files (called “bitstreams” in MIDAS) have been uploaded to the server, we will remove them from the source code repository and replace each removed binary file with a “key file.”  This key file acts as a placeholder for the real file; it simply contains the MD5 checksum of the actual file’s contents.  A key file has the same name as the actual file, with a “.md5” extension added to the end.
+ </p>
+ <p>
+  To get the key file corresponding to a file stored on the MIDAS server, navigate in your browser to the item containing the desired bitstream.  Click the checkbox that says “Advanced View,” and a link titled Download MD5 Key File will appear next to each bitstream in the list.  These links can be used to download individual key files.
+ </p>
+ <p>
+  Alternatively, you can download all of the key files for an item at once using the Item menu at the top.
+ </p>
+ <p>
+  Choose “key files (.tgz)” or “key files (.zip)”, depending which compression format you prefer, and the keys will be downloaded in a zipped directory to your machine.  You can then unzip them and copy them into the source repository in place of the actual files.  Each of these key files is text and is only 32 bytes, so the overhead of storing them in the repository is minimal.
+ </p>
+ <p>
+  The most common form of binary data in our source repositories is data used for automated testing, such as baseline and input images.  To allow the MIDAS key files to be used as placeholders for real files, we created a CMake macro that’s a thin wrapper around the usual “add_test” command.  The main difference is that instead of referring to actual binary files in the source tree, you can call this macro with a reference to a placeholder file.  Then, at test time, all of the files referenced as test arguments will be downloaded from MIDAS just prior to running the test, and the test will be run on the files that have been downloaded (by convention into the build tree).
+ </p>
+ <p>
+  To use this macro, you’ll need to add the following line in your CMakeLists code:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      include(MIDAS)
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Additionally, you need to make sure that MIDAS.cmake is in your CMake module path and set a few CMake variables prior to running the macro.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      set(MIDAS_REST_URL
+      <br/>
+      “http://midas.kitware.com/api/rest”)
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The macro communicates with MIDAS via its rest API, so you must specify the URL of the server from which you will download the data.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      set(MIDAS_KEY_DIR
+      <br/>
+      “${PROJECT_SOURCE_DIR}/Testing/Data”)
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  Set this variable to point to the top level directory where you have stored your key files.  You can keep key files in the same nested directory structure you kept your old files in; all references to key files will be relative paths to this MIDAS_KEY_DIR directory.
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      set(MIDAS_DATA_DIR
+      <br/>
+      “${PROJECT_BINARY_DIR}/Testing/Data”)
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  This is an optional variable. This directory is the location where the actual files will be downloaded at test time.  By convention, this should be placed outside of your source tree so as not to pollute it.
+ </p>
+ <p>
+  Once you have set these variables, you may call the new macro, midas_add_test().  This macro should be called with the same parameters as you’d call add_test, but substitute any references to moved files with a new type of reference to the placeholder file.  An example is shown here, taken from the BRAINSTools module of Slicer4.  The original call to add_test was:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      add_test(NAME ${BRAINSFitTestName}
+      <br/>
+      COMMAND ${LAUNCH_EXE}
+      <br/>
+      $&lt;TARGET_FILE:BRAINSFitTest&gt;
+      <br/>
+      –compare
+      <br/>
+      ${BRAINSFitTestName}.result.nii.gz
+      <br/>
+      ${BRAINSFit_BINARY_DIR}/
+      <br/>
+      Testing/${BRAINSFitTestName}.test.nii.gz
+      <br/>
+      –compareIntensityTolerance 7
+      <br/>
+      –compareRadiusTolerance 0
+      <br/>
+      –compareNumberOfPixelsTolerance 777
+      <br/>
+      BRAINSFitTest
+      <br/>
+      –costMetric MMI
+      <br/>
+      –failureExitCode -1
+      <br/>
+      –writeTransformOnFailure
+      <br/>
+      –numberOfIterations 2500
+      <br/>
+      –numberOfHistogramBins 200
+      <br/>
+      –numberOfSamples 131072
+      <br/>
+      –translationScale 250
+      <br/>
+      –minimumStepLength 0.001
+      <br/>
+      –outputVolumePixelType uchar
+      <br/>
+      –transformType Affine
+      <br/>
+      –initialTransform
+      <br/>
+      BRAINSFitTest_Initializer_RigidRotationNoMasks.mat
+      <br/>
+      –maskProcessingMode ROI
+      <br/>
+      –fixedVolume test.nii.gz
+      <br/>
+      –fixedBinaryVolume test.mask
+      <br/>
+      –movingVolume rotation.test.nii.gz
+      <br/>
+      –movingBinaryVolume rotation.test.mask
+      <br/>
+      –outputVolume ${BRAINSFit_BINARY_DIR}/
+      <br/>
+      Testing/${BRAINSFitTestName}.test.nii.gz
+      <br/>
+      –outputTransform ${BRAINSFit_BINARY_DIR}/
+      <br/>
+      Testing/${BRAINSFitTestName}.mat
+      <br/>
+      –debugLevel 50
+      <br/>
+      )
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  After moving the files to MIDAS and replacing them with their key files, the macro looks like this:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      midas_add_test(NAME ${BRAINSFitTestName}
+      <br/>
+      COMMAND ${LAUNCH_EXE}
+      <br/>
+      $&lt;TARGET_FILE:BRAINSFitTest&gt;
+      <br/>
+      –compare
+      <br/>
+      MIDAS{${BRAINSFitTestName}.result.nii.gz.md5}
+      <br/>
+      ${BRAINSFit_BINARY_DIR}/Testing/${BRAINSFitTestName}.test.nii.gz
+      <br/>
+      –compareIntensityTolerance 7
+      <br/>
+      –compareRadiusTolerance 0
+      <br/>
+      –compareNumberOfPixelsTolerance 777
+      <br/>
+      BRAINSFitTest
+      <br/>
+      –costMetric MMI
+      <br/>
+      –failureExitCode -1
+      <br/>
+      –writeTransformOnFailure
+      <br/>
+      –numberOfIterations 2500
+      <br/>
+      –numberOfHistogramBins 200
+      <br/>
+      –numberOfSamples 131072
+      <br/>
+      –translationScale 250
+      <br/>
+      –minimumStepLength 0.001
+      <br/>
+      –outputVolumePixelType uchar
+      <br/>
+      –transformType Affine
+      <br/>
+      –initialTransform MIDAS{
+      <br/>
+      BRAINSFitTest_Initializer_RigidRotationNoMasks.mat.md5}
+      <br/>
+      –maskProcessingMode ROI
+      <br/>
+      –fixedVolume
+      <br/>
+      MIDAS{test.nii.gz.md5}
+      <br/>
+      –fixedBinaryVolume
+      <br/>
+      MIDAS{test.mask.md5}
+      <br/>
+      –movingVolume
+      <br/>
+      MIDAS{rotation.test.nii.gz.md5}
+      <br/>
+      –movingBinaryVolume
+      <br/>
+      MIDAS{rotation.test.mask.md5}
+      <br/>
+      –outputVolume ${BRAINSFit_BINARY_DIR}/
+      <br/>
+      Testing/${BRAINSFitTestName}.test.nii.gz
+      <br/>
+      –outputTransform ${BRAINSFit_BINARY_DIR}/
+      <br/>
+      Testing/${BRAINSFitTestName}.mat
+      <br/>
+      –debugLevel 50
+      <br/>
+      )
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  The references to binary files in the source directory have been changed to refer to the key file instead, and wrapped with the MIDAS{…} keyword to let the macro know that the files need to be downloaded.  When you configure the project, calling the midas_add_test macro actually creates two tests.  The first of these is the fetchData test, which performs the download of all the data required by the actual test, which is then added by the macro.  The actual test is made to explicitly depend on the fetchData test, which makes this macro safe for use in parallel-CTest environments.
+ </p>
+ <p>
+  Another use case is for tests that pass a directory as an argument instead of a single file. This is the case in Slicer4’s DicomToNrrdConverter module, which tests against many DICOM directories containing a large number of binary files.  There is an additional signature for this use case: MIDAS_DIRECTORY{…}.  Pass in the name of a directory that contains multiple key files.  All of the key files will be replaced by the corresponding actual files at test time and the directory where they were downloaded will be passed to the test as an argument.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+     Network Connectivity
+    </strong>
+   </span>
+  </span>
+  <br/>
+  If you want to download all of the required testing data in anticipation of losing your network connectivity, run CMake on your project to configure the test set, and then in the build directory, run the following command:
+ </p>
+ <table border="0" style="background-color: #d2d2d0; width: 641px; height: 26px;">
+  <tbody>
+   <tr>
+    <td>
+     <span style="font-family: courier new,courier;">
+      ctest -R _fetchData
+     </span>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  This will fetch all of the data needed for the tests.  The data only needs to be downloaded once; subsequent calls to run the tests will reference the data that was previously downloaded to your machine, so no further network connectivity is required.
+ </p>
+ <p>
+  <span style="color: #000080;">
+   <span style="font-size: small;">
+    <strong>
+     Conclusion
+    </strong>
+   </span>
+  </span>
+  <br/>
+  The midas_add_test macro is designed so that test developers will have an easy time converting their existing tests and managing the synchronization of data between the MIDAS server and their source repositories.  Those running the tests will not have to do anything different except to ensure the data is downloaded once they have network connectivity.
+ </p>
+ <p>
+  Full documentation for this macro can be found at http://www.kitware.com/midaswiki/index.php/MIDAS%2BCTest
+ </p>
+ <p>
+  <em>
+   <strong>
+    <img alt="" height="94" src="https://blog.kitware.com/source/files/4_584150882_gif" style="border: 0pt none; float: left;" width="75"/>
+   </strong>
+  </em>
+ </p>
+ <p>
+  Zach Mullen has been a R&amp;D Engineer at Kitware since 2009.  He works on several of Kitware’s software process tools, including CMake/CTest, CDash, and MIDAS.
+ </p>
+</div>

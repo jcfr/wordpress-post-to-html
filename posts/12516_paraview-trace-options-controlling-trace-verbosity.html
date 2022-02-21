@@ -1,0 +1,2811 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Continuing covering the improvements to Python tracing capabilities in the upcoming ParaView 4.2, in this post, we’ll see how to control the trace verbosity.
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/blog/files/48_1287476515.png" rel="noopener" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/48_1287476515.png" width="40%"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Figure 1: Trace Options Dialog
+  </strong>
+ </p>
+ <p>
+ </p>
+ <p>
+  This is the option under
+  <b>
+   General Settings
+  </b>
+  group called ‘
+  <i>
+   Select which properties to save in trace’
+  </i>
+  . There are 3 options:
+ </p>
+ <ol>
+  <li>
+   <strong>
+    all properties
+   </strong>
+  </li>
+  <li>
+   <strong>
+    any
+    <i>
+     modified
+    </i>
+    properties
+   </strong>
+   <em>
+    (default)
+   </em>
+  </li>
+  <li>
+   <strong>
+    only
+    <em>
+     user-modified
+    </em>
+    properties
+   </strong>
+  </li>
+ </ol>
+ <p>
+  What this setting basically controls if that when a new traceable module such as a source, reader, filter, view, etc. is to be added to the trace, which properties on this object do you want to trace.
+ </p>
+ <p>
+  (1) results in all properties being saved to the trace irrespective of whether you actually changed them using the
+  <strong>
+   <em>
+    Properties
+   </em>
+  </strong>
+  panel or
+  <a href="https://blog.kitware.com/new-in-paraview-easy-saving-of-custom-defaults-in-paraview/">
+   custom user defaults
+  </a>
+  <span style="line-height: 1.6em;">
+   . (2) saves
+   <em>
+    any
+   </em>
+   of  the properties that were modified either by your actions in panels, or data specific defaults selected by ParaView (e.g. automatically selected arrays for processing), as well as changes you make on the
+   <strong>
+    <em>
+     Properties
+    </em>
+   </strong>
+   panel. This is a good default since it generally ends up saving properites that you would care about. (3) is more restrictive option than (2), where only the properties that you modify on the
+   <strong>
+    <em>
+     Properties
+    </em>
+   </strong>
+   panel will be saved, none of the custom defaults or auto-detected values.
+  </span>
+ </p>
+ <p>
+  <span style="line-height: 1.6em;">
+   To see the difference, let’s take a simple use-case:
+  </span>
+ </p>
+ <ul>
+  <li>
+   <span style="line-height: 1.6em;">
+    Sphere -&gt; Apply
+   </span>
+  </li>
+  <li>
+   <span style="line-height: 1.6em;">
+    Clip -&gt; Change Normal to “Y Normal” -&gt; Apply
+   </span>
+  </li>
+ </ul>
+ <p>
+  <span style="line-height: 1.6em;">
+   And I’ve changed my
+  </span>
+  <a href="https://blog.kitware.com/new-in-paraview-easy-saving-of-custom-defaults-in-paraview/">
+   custom user defaults
+  </a>
+  <span style="line-height: 1.6em;">
+   for Sphere to use Phi and Theta resolutions of 80 instead of the default 8.
+  </span>
+ </p>
+ <p>
+  <strong>
+   Option 1: Trace all properties (
+  </strong>
+  <em>
+   editied to remove display properties for better readability online
+  </em>
+  <strong>
+   )
+  </strong>
+ </p>
+ <hr/>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7fe18030741659632" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#### import the simple module from the paraview
+from paraview.simple import *
+#### disable automatic camera reset on 'Show'
+paraview.simple._DisableFirstRenderCameraReset()
+
+# create a new 'Sphere'
+sphere1 = Sphere()
+sphere1.Center = [0.0, 0.0, 0.0]
+sphere1.Radius = 0.5
+sphere1.ThetaResolution = 80
+sphere1.StartTheta = 0.0
+sphere1.EndTheta = 360.0
+sphere1.PhiResolution = 80
+sphere1.StartPhi = 0.0
+sphere1.EndPhi = 180.0
+
+# get active view
+renderView1 = GetActiveViewOrCreate('RenderView')
+# uncomment following to set a specific view size
+# renderView1.ViewSize = [910, 796]
+
+# show data in view
+sphere1Display = Show(sphere1, renderView1)
+# trace defaults for the display properties.
+sphere1Display.Representation = 'Surface'
+sphere1Display.Ambient = 0.0
+sphere1Display.AmbientColor = [1.0, 1.0, 1.0]
+sphere1Display.ColorArrayName = [None, '']
+# &amp;lt;-- SNIP: removed tons more for brevity --&amp;gt;
+# reset view to fit data
+renderView1.ResetCamera()
+
+# create a new 'Clip'
+clip1 = Clip(Input=sphere1)
+clip1.ClipType = 'Plane'
+clip1.Scalars = [None, '']
+clip1.Value = 0.0
+clip1.InsideOut = 0
+clip1.Crinkleclip = 0
+
+# init the 'Plane' selected for 'ClipType'
+clip1.ClipType.Origin = [0.0, 0.0, 0.0]
+clip1.ClipType.Normal = [1.0, 0.0, 0.0]
+clip1.ClipType.Offset = 0.0
+
+# Properties modified on clip1
+clip1.Scalars = ['POINTS', '']
+
+# Properties modified on clip1.ClipType
+clip1.ClipType.Normal = [0.0, 1.0, 0.0]
+
+# show data in view
+clip1Display = Show(clip1, renderView1)
+# trace defaults for the display properties.
+clip1Display.Representation = 'Surface'
+clip1Display.Ambient = 0.0
+clip1Display.AmbientColor = [1.0, 1.0, 1.0]
+# &amp;lt;-- SNIP: removed tons more for brevity --&amp;gt;
+</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-42">
+        42
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-43">
+        43
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-44">
+        44
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-45">
+        45
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-46">
+        46
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-47">
+        47
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-48">
+        48
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-49">
+        49
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-50">
+        50
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-51">
+        51
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-52">
+        52
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-53">
+        53
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-54">
+        54
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-55">
+        55
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-56">
+        56
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-57">
+        57
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-58">
+        58
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18030741659632-59">
+        59
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-1">
+        <span class="crayon-p">
+         #### import the simple module from the paraview
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-2">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         simple
+        </span>
+        <span class="crayon-e ">
+         import *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-3">
+        <span class="crayon-p">
+         #### disable automatic camera reset on 'Show'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-4">
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         simple
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         _DisableFirstRenderCameraReset
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-6">
+        <span class="crayon-p">
+         # create a new 'Sphere'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-7">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Sphere
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-8">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Center
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-9">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Radius
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.5
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-10">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ThetaResolution
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         80
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-11">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         StartTheta
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-12">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         EndTheta
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         360.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-13">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         PhiResolution
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         80
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-14">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         StartPhi
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-15">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         EndPhi
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         180.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-16">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-17">
+        <span class="crayon-p">
+         # get active view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-18">
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         GetActiveViewOrCreate
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'RenderView'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-19">
+        <span class="crayon-p">
+         # uncomment following to set a specific view size
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-20">
+        <span class="crayon-p">
+         # renderView1.ViewSize = [910, 796]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-21">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-22">
+        <span class="crayon-p">
+         # show data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-23">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Show
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-24">
+        <span class="crayon-p">
+         # trace defaults for the display properties.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-25">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Representation
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'Surface'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-26">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Ambient
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-27">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         AmbientColor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-28">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ColorArrayName
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         None
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-29">
+        <span class="crayon-p">
+         # &amp;lt;-- SNIP: removed tons more for brevity --&amp;gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-30">
+        <span class="crayon-p">
+         # reset view to fit data
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-31">
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ResetCamera
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-32">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-33">
+        <span class="crayon-p">
+         # create a new 'Clip'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-34">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Clip
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         Input
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-35">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'Plane'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-36">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Scalars
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         None
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-37">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Value
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-38">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         InsideOut
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-39">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Crinkleclip
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-40">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-41">
+        <span class="crayon-p">
+         # init the 'Plane' selected for 'ClipType'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-42">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Origin
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-43">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Normal
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-44">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Offset
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-45">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-46">
+        <span class="crayon-p">
+         # Properties modified on clip1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-47">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Scalars
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'POINTS'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-48">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-49">
+        <span class="crayon-p">
+         # Properties modified on clip1.ClipType
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-50">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Normal
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-51">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-52">
+        <span class="crayon-p">
+         # show data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-53">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Show
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-54">
+        <span class="crayon-p">
+         # trace defaults for the display properties.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-55">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Representation
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'Surface'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-56">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Ambient
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-57">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         AmbientColor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-58">
+        <span class="crayon-p">
+         # &amp;lt;-- SNIP: removed tons more for brevity --&amp;gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18030741659632-59">
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0136 seconds] -->
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7fe18046288606185" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+
+# hide data in view
+Hide(sphere1, renderView1)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7fe18046288606185-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18046288606185-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18046288606185-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7fe18046288606185-1">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18046288606185-2">
+        <span class="crayon-p">
+         # hide data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18046288606185-3">
+        <span class="crayon-e">
+         Hide
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  <strong>
+   Option 2: Trace any modified properites
+  </strong>
+ </p>
+ <hr/>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7fe18049822244408" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#### import the simple module from the paraview
+from paraview.simple import *
+#### disable automatic camera reset on 'Show'
+paraview.simple._DisableFirstRenderCameraReset()
+
+# create a new 'Sphere'
+sphere1 = Sphere()
+sphere1.ThetaResolution = 80
+sphere1.PhiResolution = 80
+
+# get active view
+renderView1 = GetActiveViewOrCreate('RenderView')
+# uncomment following to set a specific view size
+# renderView1.ViewSize = [910, 796]
+
+# show data in view
+sphere1Display = Show(sphere1, renderView1)
+# trace defaults for the display properties.
+sphere1Display.ColorArrayName = [None, '']
+
+# reset view to fit data
+renderView1.ResetCamera()
+
+# create a new 'Clip'
+clip1 = Clip(Input=sphere1)
+clip1.ClipType = 'Plane'
+clip1.Scalars = [None, '']
+
+# Properties modified on clip1
+clip1.Scalars = ['POINTS', '']
+
+# Properties modified on clip1.ClipType
+clip1.ClipType.Normal = [0.0, 1.0, 0.0]
+
+# show data in view
+clip1Display = Show(clip1, renderView1)
+# trace defaults for the display properties.
+clip1Display.ColorArrayName = [None, '']
+clip1Display.ScalarOpacityUnitDistance = 0.079845308687414
+
+# hide data in view
+Hide(sphere1, renderView1)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe18049822244408-42">
+        42
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-1">
+        <span class="crayon-p">
+         #### import the simple module from the paraview
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-2">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         simple
+        </span>
+        <span class="crayon-e ">
+         import *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-3">
+        <span class="crayon-p">
+         #### disable automatic camera reset on 'Show'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-4">
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         simple
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         _DisableFirstRenderCameraReset
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-6">
+        <span class="crayon-p">
+         # create a new 'Sphere'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-7">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Sphere
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-8">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ThetaResolution
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         80
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-9">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         PhiResolution
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         80
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-10">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-11">
+        <span class="crayon-p">
+         # get active view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-12">
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         GetActiveViewOrCreate
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'RenderView'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-13">
+        <span class="crayon-p">
+         # uncomment following to set a specific view size
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-14">
+        <span class="crayon-p">
+         # renderView1.ViewSize = [910, 796]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-16">
+        <span class="crayon-p">
+         # show data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-17">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Show
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-18">
+        <span class="crayon-p">
+         # trace defaults for the display properties.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-19">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ColorArrayName
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         None
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-20">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-21">
+        <span class="crayon-p">
+         # reset view to fit data
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-22">
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ResetCamera
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-23">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-24">
+        <span class="crayon-p">
+         # create a new 'Clip'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-25">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Clip
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         Input
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-26">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'Plane'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-27">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Scalars
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         None
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-28">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-29">
+        <span class="crayon-p">
+         # Properties modified on clip1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-30">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Scalars
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'POINTS'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-31">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-32">
+        <span class="crayon-p">
+         # Properties modified on clip1.ClipType
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-33">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Normal
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-34">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-35">
+        <span class="crayon-p">
+         # show data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-36">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Show
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-37">
+        <span class="crayon-p">
+         # trace defaults for the display properties.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-38">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ColorArrayName
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-v">
+         None
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-39">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ScalarOpacityUnitDistance
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.079845308687414
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-40">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-41">
+        <span class="crayon-p">
+         # hide data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe18049822244408-42">
+        <span class="crayon-e">
+         Hide
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0008 seconds] -->
+ <p>
+  <strong>
+   Options 3: Trace only user-modified properites
+  </strong>
+ </p>
+ <hr/>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7fe1804c554557496" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#### import the simple module from the paraview
+from paraview.simple import *
+#### disable automatic camera reset on 'Show'
+paraview.simple._DisableFirstRenderCameraReset()
+
+# create a new 'Sphere'
+sphere1 = Sphere()
+
+# get active view
+renderView1 = GetActiveViewOrCreate('RenderView')
+# uncomment following to set a specific view size
+# renderView1.ViewSize = [910, 796]
+
+# show data in view
+sphere1Display = Show(sphere1, renderView1)
+
+# reset view to fit data
+renderView1.ResetCamera()
+
+# create a new 'Clip'
+clip1 = Clip(Input=sphere1)
+
+# Properties modified on clip1
+clip1.Scalars = ['POINTS', '']
+
+# Properties modified on clip1.ClipType
+clip1.ClipType.Normal = [0.0, 1.0, 0.0]
+
+# show data in view
+clip1Display = Show(clip1, renderView1)
+
+# hide data in view
+Hide(sphere1, renderView1)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7fe1804c554557496-33">
+        33
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-1">
+        <span class="crayon-p">
+         #### import the simple module from the paraview
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-2">
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         simple
+        </span>
+        <span class="crayon-e ">
+         import *
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-3">
+        <span class="crayon-p">
+         #### disable automatic camera reset on 'Show'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-4">
+        <span class="crayon-v">
+         paraview
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         simple
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         _DisableFirstRenderCameraReset
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-6">
+        <span class="crayon-p">
+         # create a new 'Sphere'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-7">
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Sphere
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-9">
+        <span class="crayon-p">
+         # get active view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-10">
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         GetActiveViewOrCreate
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-s">
+         'RenderView'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-11">
+        <span class="crayon-p">
+         # uncomment following to set a specific view size
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-12">
+        <span class="crayon-p">
+         # renderView1.ViewSize = [910, 796]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-13">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-14">
+        <span class="crayon-p">
+         # show data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-15">
+        <span class="crayon-v">
+         sphere1Display
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Show
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-16">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-17">
+        <span class="crayon-p">
+         # reset view to fit data
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-18">
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ResetCamera
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-19">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-20">
+        <span class="crayon-p">
+         # create a new 'Clip'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-21">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Clip
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         Input
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-22">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-23">
+        <span class="crayon-p">
+         # Properties modified on clip1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-24">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Scalars
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-s">
+         'POINTS'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         ''
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-25">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-26">
+        <span class="crayon-p">
+         # Properties modified on clip1.ClipType
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-27">
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         ClipType
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         Normal
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-28">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-29">
+        <span class="crayon-p">
+         # show data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-30">
+        <span class="crayon-v">
+         clip1Display
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Show
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         clip1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-31">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-32">
+        <span class="crayon-p">
+         # hide data in view
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7fe1804c554557496-33">
+        <span class="crayon-e">
+         Hide
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sphere1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         renderView1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0057 seconds] -->
+ <p>
+ </p>
+ <hr/>
+ <p>
+  That should hopefull help understand the difference. I had to trim down the trace produced by Option 1 a little to make it readable. BTW, that comments are indeed added by the trace and not manually inserted afterwords!
+ </p>
+</div>

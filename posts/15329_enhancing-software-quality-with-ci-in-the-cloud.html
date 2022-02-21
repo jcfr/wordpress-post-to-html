@@ -1,0 +1,205 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-weight: 400">
+   Good software relies on software quality practices such as Continuous Integration (CI) to maintain high standards of reliability, efficiency, security, maintainability, and size. These practices lower costs and reduce risk by identifying problems earlier, giving organizations the agility and confidence to try out new architectural directions, features, and dependency changes.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   At Kitware, we have a long history of using version control and continuous testing systems to attain measurably high software quality. Our development practices have evolved by integrating popular quality tools and systems, allowing developers and managers to track metrics for large, complex projects being developed across geographically distributed teams.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   This article will discuss how we have deployed
+   <a href="https://jenkins.io">
+    Jenkins
+   </a>
+   , a popular open source CI tool, with the
+   <a href="http://cmake.org/">
+    CMake
+   </a>
+   Tool Suite
+  </span>
+  <span style="font-weight: 400">
+   on multiple cloud computing platforms to create a completely open source testing system that alerts developers to potential problems as the code is developed. The projects discussed in this blog are large C++ projects, although many of the tools and techniques can be used for other languages.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   Automated Testing with CI
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   Kitware has enhanced several customer projects–including Google’s
+   <a href="https://blog.kitware.com/building-science-with-cmake-google-tech-talk/">
+    Tango
+   </a>
+   , the NLM’s ITK, and Toyota Research Institute (TRI) / MIT’s Project Drake–by using Jenkins as our CI and automation task runner. Each time a commit is pushed to the version control repository, Jenkins runs a full build and a suite of unit and integration tests on the head of the branch, as well as on the branch after a simulated merge into the master branch.
+  </span>
+ </p>
+ <p>
+  <img alt="sqbp_Jenkins_Builds" class=" wp-image-15339 aligncenter" height="341" sizes="(max-width: 487px) 100vw, 487px" src="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-300x210.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-300x210.png 300w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-768x537.png 768w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-1024x716.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-220x154.png 220w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-250x175.png 250w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-355x248.png 355w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-730x511.png 730w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Jenkins_Builds-90x63.png 90w" width="487"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   We’ve also added specific Jenkins jobs which perform algorithm evaluation. Any branch that touches algorithmic code can have these jobs run in addition to the test suites, resulting in quantitative measurements displayed on a quality metrics dashboard. Thus the decision of whether to merge a code branch is informed not only by the stability of the codebase, but also by its fielded performance quality against relevant data sets.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Once a branch has been merged into master, a full test cycle is once again run to catch subtle integration problems related to merge-to-master ordering. Finally, nightly test suites and algorithm evaluation test jobs are run against the master branch, resulting in a standard time series of data that can be tracked and analyzed.
+  </span>
+ </p>
+ <p>
+  <img alt="sqbp_CMake_Flow" class=" wp-image-15404 aligncenter" height="354" sizes="(max-width: 418px) 100vw, 418px" src="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-300x254.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-300x254.png 300w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-768x651.png 768w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-1024x868.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-220x187.png 220w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-250x212.png 250w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-355x301.png 355w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-730x619.png 730w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_CMake_Flow-90x76.png 90w" width="418"/>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   Measuring Quality with Dashboards
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   The problem with using Jenkins or Travis with large, complex projects is the long build logs. The standard output is unstructured, making it cumbersome to parse and difficult to compare changes over time, with no clear way to analyze the health of the codebase.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   At Kitware, we have tackled this problem using our expertise in software build quality, data analysis, and visualization to extract metrics from the logs in
+  </span>
+  <span style="font-weight: 400">
+   CMake build environments running on CI infrastructure. These cloud based,
+  </span>
+  <a href="https://blog.kitware.com/cmake-building-with-all-your-cores/">
+   <span style="font-weight: 400">
+    cross-platform
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   builds use CDash to turn Jenkins
+  </span>
+  <span style="font-weight: 400">
+   output into easy-to-read dashboards which monitor codebase quality and alert developers to declining project health.
+  </span>
+ </p>
+ <p>
+  <img alt="sqbp_drake_cdash_build" class=" wp-image-15334 aligncenter" height="121" sizes="(max-width: 470px) 100vw, 470px" src="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-300x77.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-300x77.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-768x196.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-1024x262.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-220x56.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-250x64.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-355x91.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-730x187.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_drake_cdash_build-90x23.jpg 90w" width="470"/>
+ </p>
+ <p>
+  <img alt="sqbp_Quality_Trends" class=" wp-image-15335 aligncenter" height="190" sizes="(max-width: 412px) 100vw, 412px" src="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-300x138.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-300x138.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-768x353.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-220x101.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-250x115.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-355x163.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-730x336.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends-90x41.jpg 90w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_Quality_Trends.jpg 868w" width="412"/>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   The CMake Tool Suite
+  </span>
+ </h2>
+ <p>
+  <a href="https://cmake.org/">
+   <b>
+    CMake
+   </b>
+  </a>
+  <span style="font-weight: 400">
+   is a cross-platform build tool that provides C++ compilation portability similar to the compile-once-run-everywhere of Java, Python and C#, and allows developers to use the same build tool and files for all platforms.
+  </span>
+ </p>
+ <p>
+  <a href="https://cmake.org/Wiki/CMake/Testing_With_CTest">
+   <b>
+    CTest
+   </b>
+  </a>
+  <span style="font-weight: 400">
+   is a language agnostic testing harness, distributed with CMake, that allows the usage of most common testing frameworks. Tests are created as a part of the project build, and are executed as a part of the build cycle.
+  </span>
+ </p>
+ <p>
+  <a href="https://cdash.org/">
+   <b>
+    CDash
+   </b>
+  </a>
+  <span style="font-weight: 400">
+   is a web dashboard that aggregates, analyzes, and displays summary and detailed views of build and test results on a daily and historical basis, keeping builds organized by submitter, platform, architecture, compiler, and compiler settings.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The CMake suite of tools support large and complex software projects that can be deployed in most major cloud based environments. We have created a build process in Amazon Web Services (AWS) with a C++ and MATLAB codebase for TRI/MIT; for Google we have built this tooling in the Google Cloud, naturally; and we have deployed these tools in the
+  </span>
+  <a href="https://blog.kitware.com/continuous-integration-in-the-azure-cloud-with-cdash-and-jenkins/">
+   <span style="font-weight: 400">
+    Azure cloud for ITK
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   , an open-source C++ project for which Kitware is a main contributor.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   After each CMake build, CTest results are communicated to CDash, allowing developers to continually monitor and improve the state of the software system. CDash can identify individual tests that fail, link failing tests against commits to identify the possible source of failures, and present the history of builds. CDash can also update the branch integration record as soon as a test failure is detected by writing a comment in the
+  </span>
+  <a href="https://blog.kitware.com/cdash-integration-with-github/">
+   <span style="font-weight: 400">
+    GitHub
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   pull request – without having to wait for the entire test suite to finish.
+  </span>
+ </p>
+ <p>
+  <img alt="sqbp_cdashbot_build_failure" class=" wp-image-15336 aligncenter" height="70" sizes="(max-width: 488px) 100vw, 488px" src="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-300x43.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-300x43.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-768x110.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-1024x146.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-220x31.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-250x36.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-355x51.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-730x104.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure-90x13.jpg 90w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbp_cdashbot_build_failure.jpg 1592w" width="488"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   In addition to building the software and running all the tests, the CMake suite can integrate with external third party static and
+  </span>
+  <a href="https://blog.kitware.com/ctest-cdash-add-support-for-new-dynamic-analysis-tools/">
+   <span style="font-weight: 400">
+    dynamic analysis
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   tools such as
+  </span>
+  <a href="https://blog.kitware.com/additional-coverage-features-in-cdash/">
+   <span style="font-weight: 400">
+    code coverage
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   , memory error and memory leak detection, thread sanitization, style consistency, and dependency analysis. Although these tools are extremely helpful, they are often difficult to run and even harder to interpret the output. CTest allows a team to easily include these tools in their standard test suites, while CDash clearly displays the results, revealing memory errors like buffer overflows and further enhancing code stability and security.
+  </span>
+ </p>
+ <p>
+  <img alt="sqbq_drake_cdash_coverage_and_dynamicanalysis" class="alignnone wp-image-15337 aligncenter" height="143" sizes="(max-width: 539px) 100vw, 539px" src="https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-300x80.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-300x80.png 300w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-768x204.png 768w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-220x59.png 220w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-250x67.png 250w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-355x94.png 355w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-730x194.png 730w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis-90x24.png 90w, https://blog.kitware.com/wp-content/uploads/2016/07/sqbq_drake_cdash_coverage_and_dynamicanalysis.png 774w" width="539"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Tracking these extracted metrics has provided our customers with greater insight into project health. Not only do they show the source of existing and past problems, they document the frequency of those problems to identify trouble spots in the codebase that predict looming issues. This has led to improved accuracy and confidence in estimations, improved communication within technical teams, reproducibly higher quality software, and overall reduced risk for software projects, and perhaps most importantly, reduced stress and anxiety for the whole team.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The ability to extract these metrics for build quality is an important first step in creating a baseline for project health. Watch for the next post in this series, where we will discuss augmenting this baseline with algorithm evaluation and performance metrics.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Want to learn more about how Kitware improves software projects? Let us know in the comments below or contact us directly at
+  </span>
+  <a href="mailto:kitware@kitware.com">
+   <span style="font-weight: 400">
+    kitware@kitware.com
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+</div>

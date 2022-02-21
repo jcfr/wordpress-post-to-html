@@ -1,0 +1,188 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  This past month, ITK 4.5.0 was released! Below is the introduction, new documentation, and new features sections of the release notes.
+ </p>
+ <p>
+  <strong>
+   Introduction
+  </strong>
+ </p>
+ <p>
+  The 4.5 release is a major milestone that marks the hard work of many outstanding community members. Among the major contributions in this release are registrations computed with 32-bit floats, a new edition of the Software Guide, the first release of the wiki examples tarball, and the first release of the Sphinx examples tarballs. Links to the Sourceforge.net tarballs can be found on the
+  <a href="http://www.itk.org/ITK/resources/software.html">
+   download page
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   New Documentation
+  </strong>
+ </p>
+ <p>
+  <strong>
+   New edition of the ITK Software Guide:
+  </strong>
+  For the first time since version 2.4, a new edition of the ITK Software Guide is available. The guide is a book that has been a close companion to numerous medical imaging graduate students. In addition to numerous updates, the resource now has a community contribution mechanism that mirrors the contribution process for the ITK repository. Improvements are welcome to this living document. The new edition is available in
+  <a href="http://itk.org/ItkSoftwareGuide.pdf">
+   PDF form and downloadable
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   ITK Wiki examples tarball:
+  </strong>
+  A buildable archive of the
+  <a href="http://itk.org/Wiki/ITK/Examples">
+   outstanding examples
+  </a>
+  is available to download, build against the current release, and use for purposes of learning.
+ </p>
+ <p>
+  <strong>
+   ITK Sphinx examples downloads:
+  </strong>
+  Examples available
+  <a href="http://itk.org/ITKExamples/">
+   online
+  </a>
+  are stored in Git version control but rendered in HTML, PDF, and EPUB output formats with the Sphinx documentation system. They have CTest unit tests, inline Doxygen class descriptions and links to full Doxygen class documentation, nightly generated Gitstats, an index, quick search, and a contribution mechanism that mirrors ITK or the Software Guide.
+ </p>
+ <p>
+  <strong>
+   ITK repository examples links in Doxygen HTML documentation:
+  </strong>
+  A downloadable archive of the Doxygen generated HTML documentation is available as usual, but examples from the ITK repository Examples/directory are also indexed in the description of every Doxygen class.
+ </p>
+ <p>
+  <strong>
+   New Features
+  </strong>
+ </p>
+ <ul>
+  <li>
+   ITKv4 registrations can now be run in either 64-bit double or 32-bit float modes. Both double and float transform types are also now supported by metrics, optimizers, and IO readers/writers.
+  </li>
+  <li>
+   SpacingValueType — Previously ITK only supported representing physical space as type double. This patch introduces a typedef to encapsulate the concept of space precision to more clearly document the intended characteristics of the types. This is the first step toward allowing compile time selection using single precision types for characterizing physical space (origin, spacing, direction cosines). There is a CMake configuration option, ITK_USE_FLOAT_SPACE_PRECISION, to allow building the entire toolbox in single precision mode. It is currently intended to facilitate future performance testing. NOTE: Use of ITK_USE_FLOAT_SPACE_PRECISION causes many regression test failures. It is not intended for production use at this time.
+  </li>
+  <li>
+   Support for “float” type as physical units type in the Registration framework — This makes float type displacement fields possible, as well as faster, less memory intensive registrations.
+  </li>
+  <li>
+   Many performance improvements in Registration — significant performance improvements made for ImageRegistration. See patch sets prefixed by PERF.
+  </li>
+  <ul>
+   <li>
+    False sharing across threads identified and removed.
+   </li>
+   <li>
+    Unnecessary mutex lock identified and removed. For one common case on real sized data, this resulted in a 70X speed increase.
+   </li>
+  </ul>
+  <li>
+   Two new Remote modules:
+  </li>
+  <ul>
+   <li>
+    MGHIO — Partial support for reading/writing image files from FreeSurfer (Not a complete implementation, but simple label maps and intensity images can be read/written).
+   </li>
+   <li>
+    SmoothingRecursiveYvvGaussianFilter —
+    <a href="http://hdl.handle.net/10380/3425">
+     From Insight Journal submission
+    </a>
+   </li>
+  </ul>
+  <li>
+   The SCIFIO remote module has also seen nice updates.
+  </li>
+  <li>
+   IO module libraries will now be built as shared libraries with BUILD_SHARED_LIBS ON
+  </li>
+  <li>
+   MRCImageIO moved out of the Review Module
+  </li>
+  <li>
+   BinShrinkImageFilter added —
+   <a href="http://hdl.handle.net/10380/3450">
+    From Insight Journal submission
+   </a>
+  </li>
+  <li>
+   WrapITK Python wrapping now supporting GCC 4.8
+  </li>
+  <li>
+   JPEG format now writes out spacing in physical units
+  </li>
+  <li>
+   MINC ImageIO improvements:
+  </li>
+  <ul>
+   <li>
+    Correct handling of missing or damaged minc file.
+   </li>
+   <li>
+    MINCTransformAdapter class to use MINC style transformations stored in .xfm files by implementing native minc general_transform functions. This means that thin-plate spline non-linear transformations are accessible and that the calculation of inverse transformation can be completed in a way that is consistent with minc tools.
+   </li>
+   <li>
+    Ability to store any linear transformation based on MatrixOffsetTransformBase&lt;double,3,3&gt; in minc style .xfm file (using TransformFileWriter).
+   </li>
+   <li>
+    OtsuThresholding classes made more consistent with other libraries.
+   </li>
+   <ul>
+    <li>
+     Now the output of the threshold value may be different from previous releases (bug fix).
+    </li>
+   </ul>
+  </ul>
+  <li>
+   Synchronized with “teem” library 1.11.1, providing NRRD functionalities.
+  </li>
+  <li>
+   FlatStructuringElement new option to use a parametric radius in Ball() method.
+  </li>
+  <li>
+   LevelSetsv4 now has a penalty term for overlap between level sets.
+  </li>
+  <li>
+   Can now read Philips 4D multi-frame DICOM files.
+  </li>
+  <li>
+   CMake variable ITK_BUILD_ALL_MODULES was replaced with ITK_BUILD_DEFAULT_MODULES (same behavior, more appropriate name).
+  </li>
+  <li>
+   Remote Modules were simplified by removing the CMake configuration variable Fetch_ {RemoteModuleName} and making it so that only Module_{RemoteModuleName} is required.
+  </li>
+  <li>
+   New CTest label “RUNS_LONG” to make it possible to exclude long running tests with “ctest -LE RUNS_LONG.”
+  </li>
+  <li>
+   Deprecate ITK_USE_REVIEW CMake variable in favor of Module_ITKReview.
+  </li>
+  <li>
+   Better support for system installed GDCM.
+  </li>
+  <li>
+   Preliminary support for Visual Studio 12 (2013).
+  </li>
+  <li>
+   Preliminary support for OSX 10.9 – Maverick.
+  </li>
+  <li>
+   Support for building ITK against a DCMTK 3.6.0 installed on Ubuntu using apt-get.
+  </li>
+  <li>
+   Improved support for C++11.
+  </li>
+  <li>
+   More consistent coding style across the toolkit.
+  </li>
+  <li>
+   Lots of important bug fixes, including 73 issues reported by Coverity static analysis.
+  </li>
+ </ul>
+</div>

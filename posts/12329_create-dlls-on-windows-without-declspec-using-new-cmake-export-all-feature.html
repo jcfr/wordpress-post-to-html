@@ -1,0 +1,549 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+   CMake 3.4 will have a new feature to simplify porting C and C++ software using shared libraries from Linux/UNIX to Windows.
+  </span>
+  <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+   Linux/UNIX developers are often surprised to learn that creating a shared library on Windows known as a DLL (dynamic linked library) requires changes to the source code or an explicit listing of all the symbols that the dll will export.  The compilers on Linux/UNIX have the ability to export all symbols in a shared library automatically. On Windows, you must either use compiler directives __declspec(import) and __declspec(export) to declare which symbols are exported/imported from a shared library, or you must create a module definition text file (.def) with a list of all the symbols you want to export and pass that file to the linker.
+  </span>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    With C libraries, creating a .def file by hand or automatically is not very difficult since you just have to list the names of all the functions in the library. However, with C++ code, name mangling and the sheer number of functions make crafting a .def file by hand nearly impossible. The standard workaround uses the preprocessor to conditionally insert __declspec(import) and __declspec(export) into the code.  However, with a large existing C++ code base, it can be difficult and time consuming to edit all of the source code. CMake now has a feature which allows it to query .obj files that will make up a DLL and create a .def file automatically, in most cases without needing to modify the original source code.
+   </span>
+  </span>
+ </p>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    The feature is implemented in CMake via a new target property,
+    <em>
+     WINDOWS_EXPORT_ALL_SYMBOLS
+    </em>
+    . When enabled, this property causes CMake to automatically create a .def  file with all symbols found in the input .obj files for a SHARED library on Windows.  The .def file will be passed to the linker causing all symbols to be exported from the DLL. For global
+    <em>
+     data
+    </em>
+    symbols, __declspec(dllimport) must still be used when compiling against the code in the DLL. The symbol is exported from the DLL correctly and automatically, but the compiler needs to know that it is being imported from a DLL at compile time.  All other function symbols will be automatically exported and imported by callers.  This simplifies porting projects to Windows by reducing the need for explicit dllexport markup, even in C++ classes. This property is initialized by the value of the
+    <em>
+     CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
+    </em>
+    variable when a target is created.
+   </span>
+  </span>
+ </p>
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    To try this out on an existing project, run
+   </span>
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8927cba1485549050" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DBUILD_SHARED_LIBS=TRUE</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8927cba1485549050-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8927cba1485549050-1">
+        cmake -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE -DBUILD_SHARED_LIBS=TRUE
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span style="color: #000000; font-family: Arial; font-size: 14.6666666666667px; line-height: 1.38; white-space: pre-wrap; background-color: transparent;">
+   on a CMake project.  This should turn all
+   <em>
+    add_library
+   </em>
+   calls that do not explicitly specify build type into shared builds. If there are no global data variables in the project, all libraries will be built as DLLs with no errors.  If you run into undefined symbols, check for global data like static data members of classes. The easiest way to handle the global data is to use the CMake GenerateExportHeader module like this:
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8927cba9876466302" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+add_library(mylibrary ${mylibrary_SOURCES})
+# add these lines
+include(GenerateExportHeader)
+generate_export_header(mylibrary)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8927cba9876466302-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8927cba9876466302-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8927cba9876466302-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8927cba9876466302-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8927cba9876466302-1">
+        add_library(mylibrary ${mylibrary_SOURCES})
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8927cba9876466302-2">
+        # add these lines
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8927cba9876466302-3">
+        include(GenerateExportHeader)
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8927cba9876466302-4">
+        generate_export_header(mylibrary)
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  // edit the source like this:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8927cbac992025069" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+#include &lt;mylibary_export.h&gt;
+class myclass
+{
+ static mylibrary_EXPORT int GlobalCounter;
+…</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c8927cbac992025069-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8927cbac992025069-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8927cbac992025069-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8927cbac992025069-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c8927cbac992025069-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c8927cbac992025069-1">
+        <span class="crayon-p">
+         #include &lt;mylibary_export.h&gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8927cbac992025069-2">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         myclass
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8927cbac992025069-3">
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8927cbac992025069-4">
+        <span class="crayon-m">
+         static
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         mylibrary_EXPORT
+        </span>
+        <span class="crayon-t">
+         int
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         GlobalCounter
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c8927cbac992025069-5">
+        …
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    Note, if you use GenerateExportHeader and still want static builds to work, you will need to add a
+    <em>
+     -Dmylibrary_STATIC
+    </em>
+    during static builds. See the generated mylibary_export.h for more details.
+   </span>
+  </span>
+ </p>
+ <h2 dir="ltr" style="line-height: 1.38; margin-top: 10pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 17.3333333333333px; font-family: 'Trebuchet MS'; color: #000000; font-weight: bold; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    Real World Use Cases
+   </span>
+  </span>
+ </h2>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    After adding this feature to CMake, I tried it on two relatively large software projects VXL ( (
+   </span>
+   <a href="http://vxl.sourceforge.net/" style="text-decoration: none;">
+    <span style="font-size: 14.6666666666667px; font-family: Arial; color: #1155cc; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+     http://vxl.sourceforge.net/
+    </span>
+   </a>
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    ) and ITK (
+   </span>
+   <a href="http://www.itk.org" style="text-decoration: none;">
+    <span style="font-size: 14.6666666666667px; font-family: Arial; color: #1155cc; text-decoration: underline; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+     www.itk.org
+    </span>
+   </a>
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    ). Although, it did take some time, it was much easier than adding dll markup to every source file. In the end the changes required fell into the following repeated issues and fixes:
+   </span>
+  </span>
+ </p>
+ <ul style="margin-top: 0pt; margin-bottom: 0pt;">
+  <li dir="ltr" style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+   <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+    <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+     <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+      Handling class static data members
+     </span>
+    </span>
+   </p>
+   <ul style="margin-top: 0pt; margin-bottom: 0pt;">
+    <li style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+     <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+      <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+       <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+        Add dll import/export macros to the static data.
+       </span>
+      </span>
+     </p>
+    </li>
+    <li style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+     <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+      <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+       <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+        Eliminate the static data –
+       </span>
+      </span>
+     </p>
+     <ul style="margin-top: 0pt; margin-bottom: 0pt;">
+      <li style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+       <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+        <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+         <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+          This can be done by making a static getter function with a local static variable.
+         </span>
+        </span>
+       </p>
+      </li>
+     </ul>
+    </li>
+   </ul>
+  </li>
+  <li dir="ltr" style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+   <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+    <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+     <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+      Static const members
+     </span>
+    </span>
+   </p>
+   <ul style="margin-top: 0pt; margin-bottom: 0pt;">
+    <li style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+     <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+      <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+       <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+        These are not exported by the new feature.  In some cases to support older compilers, these are put in .cxx files and compiled into the library and are not just inlined in the .h files.  If you have this case, you will need to use dllimport and dllexport markup and not just dllimport mark up as the auto export will not work.
+       </span>
+      </span>
+     </p>
+    </li>
+   </ul>
+  </li>
+  <li dir="ltr" style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+   <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+    <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+     <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+      Inherit from std::string or other templated classes with dllimport/dllexport mark up.
+     </span>
+    </span>
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8927cbb1531411343" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+class mylibrary_EXPORT myclass public std::string
+{
+..</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41c8927cbb1531411343-1">
+          1
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41c8927cbb1531411343-2">
+          2
+         </div>
+         <div class="crayon-num" data-line="crayon-5c41c8927cbb1531411343-3">
+          3
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41c8927cbb1531411343-1">
+          <span class="crayon-t">
+           class
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-e">
+           mylibrary_EXPORT
+          </span>
+          <span class="crayon-e">
+           myclass
+          </span>
+          <span class="crayon-m">
+           public
+          </span>
+          <span class="crayon-h">
+          </span>
+          <span class="crayon-v">
+           std
+          </span>
+          <span class="crayon-o">
+           ::
+          </span>
+          <span class="crayon-t">
+           string
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41c8927cbb1531411343-2">
+          <span class="crayon-sy">
+           {
+          </span>
+         </div>
+         <div class="crayon-line" id="crayon-5c41c8927cbb1531411343-3">
+          <span class="crayon-sy">
+           .
+          </span>
+          <span class="crayon-sy">
+           .
+          </span>
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0001 seconds] -->
+   <p>
+   </p>
+   <ul>
+    <li style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+     <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+      <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+       This can cause duplicate symbol errors in the parent templated class to show up in some cases. The fix for this is to remove the markup and let the auto-export do its thing.
+      </span>
+     </p>
+    </li>
+   </ul>
+  </li>
+  <li dir="ltr" style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+   <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+    <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+     <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+      Not having fully linked libraries. On many Unix systems the linker will allow for shared libraries to have unresolved symbols at create time, that are expected to be resolved at the link time of the executable.  Windows dlls must resolve all symbols, so your library must explicitly link to everything it depends on.  One way to find out where symbols exist in a big system if you get an undefined symbol at link to time is to look for the symbol in the .def files that are created. From a bash (cygwin or git) shell you could run something like this:
+     </span>
+    </span>
+   </p>
+   <p>
+   </p>
+   <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+   <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c8927cbbc106136746" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+    <div class="crayon-plain-wrap">
+     <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+ find . -name "*.def" | xargs grep symbol</textarea>
+    </div>
+    <div class="crayon-main">
+     <table class="crayon-table">
+      <tr class="crayon-row">
+       <td class="crayon-nums " data-settings="show">
+        <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+         <div class="crayon-num" data-line="crayon-5c41c8927cbbc106136746-1">
+          1
+         </div>
+        </div>
+       </td>
+       <td class="crayon-code">
+        <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+         <div class="crayon-line" id="crayon-5c41c8927cbbc106136746-1">
+          find . -name "*.def" | xargs grep symbol
+         </div>
+        </div>
+       </td>
+      </tr>
+     </table>
+    </div>
+   </div>
+   <!-- [Format Time: 0.0000 seconds] -->
+   <p>
+   </p>
+  </li>
+  <li dir="ltr" style="list-style-type: disc; font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; background-color: transparent;">
+   <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+    <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+     <span style="font-size: 14.6666666666667px; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+      Static data members of templated classes.  It is best to just avoid these, or only use explicit instantiation or specialization for these.  I was not able to get these to work at all.
+     </span>
+    </span>
+   </p>
+  </li>
+ </ul>
+ <h2 dir="ltr" style="line-height: 1.38; margin-top: 10pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 17.3333333333333px; font-family: 'Trebuchet MS'; color: #000000; font-weight: bold; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    Thanks
+   </span>
+  </span>
+ </h2>
+ <p dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  <span id="docs-internal-guid-52b4ecf9-bbf0-cfe6-41c2-42b3e9ad0110">
+   <span style="font-size: 14.6666666666667px; font-family: Arial; color: #000000; vertical-align: baseline; white-space: pre-wrap; background-color: transparent;">
+    I would like to give a special thanks to Valeri Fine (code author) and
+    <a href="https://root.cern.ch/drupal/content/root-development-team">
+     Bertrand Bellenot
+    </a>
+    and the rest of the
+    <a href="https://root.cern.ch/drupal/">
+     ROOT
+    </a>
+    team at CERN for contributing the .obj file symbols parsing code, and for testing the feature on their project. Enjoy!
+   </span>
+  </span>
+ </p>
+ <h2 dir="ltr" style="line-height: 1.38; margin-top: 0pt; margin-bottom: 0pt;">
+  Links
+ </h2>
+ <p dir="ltr">
+  Nightly CMake with new feature:
+  <a href="http://www.cmake.org/files/dev/cmake-3.3.20150721-g9cd2f-win32-x86.exe">
+   http://www.cmake.org/files/dev/cmake-3.3.20150721-g9cd2f-win32-x86.exe
+  </a>
+ </p>
+ <p dir="ltr">
+  Nightly Docs for feature:
+ </p>
+ <p dir="ltr">
+  <a href="http://www.cmake.org/cmake/help/git-master/prop_tgt/WINDOWS_EXPORT_ALL_SYMBOLS.html">
+   http://www.cmake.org/cmake/help/git-master/prop_tgt/WINDOWS_EXPORT_ALL_SYMBOLS.html
+  </a>
+ </p>
+ <p dir="ltr">
+  ITK changes for this feature:
+  <a href="http://review.source.kitware.com/#/c/20020">
+   <span style="line-height: 1.6em;">
+    http://review.source.kitware.com/#/c/20020
+   </span>
+  </a>
+ </p>
+ <p dir="ltr">
+  VXL changes for this feature:
+  <a href="https://github.com/vxl/vxl/pull/4">
+   https://github.com/vxl/vxl/pull/4
+  </a>
+ </p>
+ <p dir="ltr">
+  Valeri Fine presented this approach and introduced the original code at Computing in High Energy Physics Berlin, Lichtenberger Congress Center April 7-11, 2977:
+ </p>
+ <p dir="ltr">
+  <a href="http://www.ifh.de/CHEP97/abstract/g340.htm">
+   http://www.ifh.de/CHEP97/abstract/g340.htm
+  </a>
+ </p>
+ <p dir="ltr">
+  <span style="color: #777777; font-family: Arial, sans-serif; font-size: 10.8000001907349px; line-height: 16.2000007629395px;">
+   <a href="http://www.ifh.de/CHEP97/paper/340.ps">
+    http://www.ifh.de/CHEP97/paper/340.ps
+   </a>
+   .
+  </span>
+ </p>
+ <p>
+ </p>
+</div>

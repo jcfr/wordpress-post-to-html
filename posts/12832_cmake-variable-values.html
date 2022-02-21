@@ -1,0 +1,103 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-size: small;">
+   WARNING: Techn-ish blog post, DO NOT READ if you’re allergic to any scripting languages.
+  </span>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   Straight to the point: here’s a function that lists all the CMake variables that are currently defined, along with their values:
+  </span>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <br/>
+  </span>
+ </p>
+ <p>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   function(echo_all_cmake_variable_values)
+  </span>
+  <br/>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   message(STATUS “”)
+  </span>
+  <br/>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   get_cmake_property(vs VARIABLES)
+  </span>
+  <br/>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   foreach(v ${vs})
+  </span>
+  <br/>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   message(STATUS “${v}=’${${v}}'”)
+  </span>
+  <br/>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   endforeach(v)
+  </span>
+  <br/>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   message(STATUS “”)
+  </span>
+  <br/>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   endfunction()
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   Call it like this:
+  </span>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <br/>
+  </span>
+ </p>
+ <p>
+  <span style="font-family: 'courier new', courier; font-size: medium;">
+   echo_all_cmake_variable_values()
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   This little function can be used in a CMakeLists.txt file, or in a CMake -P script, or in a ctest -S script, or in a find module, or even in a script file run at CPack time. Although, in some contexts, you may need to use the message calls without the STATUS arg, because STATUS messages do not show up in the output stream.
+  </span>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   Put this function in your CMakeLists.txt file and then call the function to see what it looks like. It includes all your variables, and all of the built-in/pre-defined CMake variables, and all of the ones defined by package config files that you’ve included, too… You may be surprised at the number of CMake variables that are defined, especially if you have a pretty small or simple CMakeLists for your project.
+  </span>
+ </p>
+ <p>
+  <span style="font-size: small;">
+   For example, you could call this function after a call to find_package to see what variables are available after the package is found. Or not found, perhaps. I used it this way this morning. Of course, this is a bit of a reverse-engineering technique, and the author of the project config file or the find module may think of some of his or her variables as “internal use only.” Use any information you learn from this technique wisely: understand that CMake has an IF command, and some things happen conditionally. Whether or not a variable exists may be based on some conditional block of code. Be sure to check the documentation for the package or find module, too. Most recommend a set of documented variables that are intended for public use.
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <span class="Apple-style-span" style="font-size: small;">
+   Sometimes, you already know exactly what variables you’re dealing with, but you just don’t understand how it’s getting set to the value that it ends up with. In that case, I recommend using the “–trace” command line argument to cmake. The “–trace” mode of cmake spits out a huge volume of data, basically detailing every line of every CMakeLists file and every included script file that it executes as it configures your project. You will quickly adopt the technique of redirecting –trace output to a text file and then loading it up in your favorite editor. Once you do, though, and you scan through it for occurrences of the variable you’re investigating, it’s quite easy to see exactly what lines of code are modifying the variable.
+  </span>
+ </p>
+ <p>
+ </p>
+ <p>
+  <span class="Apple-style-span" style="font-size: small;">
+   I keep meaning to make “blogging little CMake tips &amp; tricks” a more regular thing. Let me know if you’re curious about something CMake and you’d like to see a post about it.
+  </span>
+ </p>
+ <p>
+ </p>
+</div>

@@ -1,0 +1,191 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Recently, a lot of effort has gone into web-based projects that Kitware manages, including:
+ </p>
+ <ul>
+  <li>
+   <a href="https://www.paraview.org/web/" rel="noopener" target="_blank">
+    ParaViewWeb
+   </a>
+   , a JavaScript library that developers can employ to build applications that run on the Web and use the
+   <a href="http://www.vtk.org/" rel="noopener" target="_blank">
+    Visualization Toolkit
+   </a>
+   (VTK) or
+   <a href="https://www.paraview.org/">
+    ParaView
+   </a>
+   as the backend;
+  </li>
+  <li>
+   <a href="https://kitware.github.io/vtk-js" rel="noopener" target="_blank">
+    vtk.js
+   </a>
+   , a rendering library for high-performance computing; and
+  </li>
+  <li>
+   <a href="https://kitware.github.io/visualizer" rel="noopener" target="_blank">
+    Visualizer
+   </a>
+   , an application that renders and processes data with ParaView.
+  </li>
+ </ul>
+ <p>
+  Even ParaView and VTK have received significant updates to support web-based visualization.  We would like to share some of the improvements gained as a result of these efforts: the return of local rendering, the improved handling of proxy properties, and the introduction of
+  <a href="https://github.com/kitware/wslink" rel="noopener" target="_blank">
+   wslink
+  </a>
+  .
+ </p>
+ <h2>
+  Return of Local Rendering
+ </h2>
+ <p>
+  Last year, Visualizer was updated to use
+  <a href="https://facebook.github.io/react" rel="noopener" target="_blank">
+   React
+  </a>
+  and
+  <a href="http://redux.js.org/" rel="noopener" target="_blank">
+   Redux
+  </a>
+  . While the previous
+  <a href="https://jquery.com/" rel="noopener" target="_blank">
+   jQuery
+  </a>
+  -based version could download geometry to the browser and render it locally using
+  <a href="https://www.khronos.org/webgl/" rel="noopener" target="_blank">
+   WebGL
+  </a>
+  , the updated version did not include such functionality until now.
+ </p>
+ <p>
+  In the last year or so, we made such great progress on vtk.js that we felt it was ready to be used as the mechanism for local rendering in ParaViewWeb and friends. So, as of ParaView 5.4 and Visualizer 2.1.0, you can again enable local rendering simply by flipping a switch in the Visualizer settings panel. The switch is even in the same location. While this capability may not suit a massive dataset (as the data needs to fit in browser memory, if you wish to render it there), if your data is small enough, you should see a big gain in perceived rendering speed by using local rendering with vtk.js.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18641" style="width: 1034px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering.png">
+   <img alt="Remote rendering image" class="wp-image-18641 size-large" height="703" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-1024x703.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-1024x703.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-300x206.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-768x527.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-220x151.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-250x172.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-355x244.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-730x501.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-remote-rendering-90x62.png 90w" width="1024"/>
+  </a>
+  <p class="wp-caption-text">
+   The traditional image delivery approach to rendering in Visualizer
+  </p>
+ </div>
+ <p>
+  As you can see below, the data can be rendered locally by opening the Settings panel (identified by the cogs icon) and unchecking “Remote Rendering.”
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_18640" style="width: 1034px">
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering.png">
+   <img alt="Local rendering image" class="wp-image-18640 size-large" height="703" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-1024x703.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-1024x703.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-300x206.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-768x527.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-220x151.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-250x172.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-355x244.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-730x501.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/pvw-local-rendering-90x62.png 90w" width="1024"/>
+  </a>
+  <p class="wp-caption-text">
+   The same pipeline rendered locally thanks to vtk.js
+  </p>
+ </div>
+ <p>
+  This capability is a work in progress, and not all features from remote rendering are yet available in local rendering, as the above images evidence.  The basic functionality, however, is now there. Future work includes things like scalar bars, axes grid, orientation axes, volume rendering, and three-dimensional (3D) widgets.
+ </p>
+ <p>
+  The new local rendering capability of Visualizer is available as of ParaView 5.4. Just
+  <a href="https://www.paraview.org/download/" rel="noopener" target="_blank">
+   download
+  </a>
+  the 5.4 binary for your operating system, and take it for a
+  <a href="https://kitware.github.io/paraviewweb/docs/architecture.html#Simplicity" rel="noopener" target="_blank">
+   spin
+  </a>
+  !
+ </p>
+ <h2>
+  Improved Handling of Proxy Properties
+ </h2>
+ <p>
+  Since exposing the majority of ParaView proxies and properties to the web quite some time ago, the flat properties lists that pertain to sources, representations, and views have grown longer and longer. It had become very difficult to understand the uses of some of the properties, as there were no sections or titles. Even without turning on advanced properties, to find a particular setting, you had to sift through around 200 representation properties. We have recently put some effort into cleaning up the properties lists. As of the June 21, 2017, ParaView master (and Visualizer 2.2.1), we have started to see some nice behavior in the Visualizer property panel.
+ </p>
+ <p>
+  <a href="https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels.png">
+   <img alt="" class="alignnone size-large wp-image-18685" height="579" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-1024x579.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-1024x579.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-300x170.png 300w, https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-768x434.png 768w, https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-220x124.png 220w, https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-250x141.png 250w, https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-355x201.png 355w, https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-730x413.png 730w, https://blog.kitware.com/wp-content/uploads/2017/06/combined-panels-90x51.png 90w" width="1024"/>
+  </a>
+ </p>
+ <p>
+  Many of those 200 representation properties belonged to complex proxy properties like
+  <a href="https://blog.kitware.com/bringing-back-cube-axes-sort-of/">
+   Data Axes Grid
+  </a>
+  and Polar Axes Grid (based on the VTK
+  <a href="https://blog.kitware.com/vtk-improved-polar-axis/">
+   Polar Axes
+  </a>
+  ). As is visible in the above images, these properties have been collected into a couple of collapsible groups, so they don’t clutter the panel, unless you need to see them. Additionally, ParaView provides information about how properties should be grouped in the user interface (UI), which we are now using to provide nice labels on groups of properties within the Web Properties panel. You can still expect to see “Color” repeated many times under the representation properties, but each time, it should be grouped under a title that indicates what that particular “Color” property means.
+ </p>
+ <p>
+  Another change in ParaView allows certain advanced properties to become default, if a specific representation is selected. Visualizer now benefits from this information as well. Just create a cone source, and open the representation properties.  Now, under “Styling,” the only default property is “Opacity,” when the representation is set to “Surface.”  Change the representation to “Wireframe,” and you should see “Line Width” as a default property, just as you would in ParaView.
+ </p>
+ <p>
+  The new-and-improved handling of proxy properties is available via the ParaView nightly binary.
+ </p>
+ <h2 style="text-align: left">
+  Introducing wslink
+ </h2>
+ <p>
+  Another improvement in the works is not one that we can show in a screenshot (because it lives “under the hood”). Nevertheless, it will provide a lot of benefit to Visualizer and ParaViewWeb, as well as other projects down the road. This improvement comes through
+  <a href="https://github.com/kitware/wslink" rel="noopener" target="_blank">
+   wslink
+  </a>
+  . wslink allows easy, bi-directional communication between a
+  <a href="https://www.python.org/" rel="noopener" target="_blank">
+   Python
+  </a>
+  server and a
+  <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" rel="noopener" target="_blank">
+   JavaScript
+  </a>
+  client over a
+  <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" rel="noopener" target="_blank">
+   websocket
+  </a>
+  . The client can make remote procedure calls (RPC) to the server, and the server can publish messages to topics to which the client can subscribe (pub-sub). The server can include binary attachments in these messages, which are communicated as binary websocket messages to avoid the overhead of encoding and decoding.
+ </p>
+ <p>
+  ParaViewWeb, ParaView, and VTK are in the process of converting their web interfaces to use wslink. The current releases use
+  <a href="http://wamp-proto.org/" rel="noopener" target="_blank">
+   Autobahn WAMP
+  </a>
+  for sending messages between a JavaScript client in a web app and a Python server that launches VTK or ParaView visualization processes per user. Unfortunately, the current architecture of Autobahn does not support creating and destroying processes per user, so we have been stuck on an old version.
+ </p>
+ <p>
+  The conversions to wslink have several features.
+ </p>
+ <ul>
+  <li>
+   Python 3: We’ve upgraded the web stack to be fully compatible with Python 2 and 3. This required an upgrade to our Twisted webserver, among numerous small compatibility changes.
+  </li>
+  <li>
+   Simplified messaging: All our messaging is point-to-point; the web application initiates a connection with the server, which sets up a dedicated websocket link for that client. This means we eliminated the complexity of the broker/router functionality of
+   <a href="http://crossbar.io/autobahn/" rel="noopener" target="_blank">
+    Autobahn’s crossbar.io
+   </a>
+   .
+  </li>
+  <li>
+   Improved performance: We included binary attachments in JSON messages by sending them as a separate binary message. As a result, we eliminated the overhead of encoding.
+  </li>
+  <li>
+   Open source: All wslink code is available and free to use for everyone. The two pieces of wslink have very few dependencies, and wslink is independent of its use in ParaViewWeb. This means that it can be used in other web applications.
+  </li>
+ </ul>
+ <p>
+  Because wslink speaks two languages, it has been published separately to the appropriate package managers:
+  <a href="https://www.npmjs.com/package/wslink" rel="noopener" target="_blank">
+   npm
+  </a>
+  for the client JavaScript and
+  <a href="https://pypi.python.org/pypi/wslink" rel="noopener" target="_blank">
+   pypi
+  </a>
+  for the server Python. Integration into VTK, ParaView, and ParaViewWeb is complete, and awaits the next release!
+ </p>
+ <p>
+  We expect wslink to be fully rolled out in ParaView 5.5 this coming November 2017.
+ </p>
+</div>

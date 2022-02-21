@@ -1,0 +1,583 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span style="font-size:12px;">
+   Community, as well as small-team, software development faces many challenges.  Kitware is constantly developing and looking for new ways to ensure that quality software processes are readily available and can be seemlessly integrated into any project, large or small.  Our efforts have lead to the development of tools such as
+   <a href="http://cmake.org/">
+    CMake
+   </a>
+   and
+   <a href="http://www.cdash.org/">
+    CDash
+   </a>
+   , as well as the identification of several outstanding tools and processes that have been developed by others.
+   <span style="line-height: 1.6em;">
+    Nevertheless, software development mistakes can and will happen, and this blogs explains one method for addressing them.
+   </span>
+  </span>
+ </p>
+ <p>
+  <span style="font-size:12px;">
+   <span style="line-height: 1.6em;">
+    If, at some point in the lifetime of your project, you realize (perhaps thanks to a CDash regression test) that an error has been introduced into your project, it can sometimes be difficult to pintpoint exactly which commit caused it.  At a high level, the approach to resolving such errors is to:
+   </span>
+  </span>
+ </p>
+ <ol>
+  <li>
+   Identify a version of the software that does not exhibit the error
+  </li>
+  <li>
+   Thoroughly analyze the subsequent software changes, until you find the faulty commit
+  </li>
+ </ol>
+ <p>
+  This approach can be accomplished with standard tools, if you have very few commits to check; however, in highly active development environments and particularly for community development efforts, a massive number of commits might need to be reviewed. Luckily, git provides us with the 'bisect' module, allowing us to
+  <em>
+   find, by binary search, the change that introduced a bug given a 'good' commit object name prior to the error and a later 'bad' commit object name that occurred after the introduction of the error.
+  </em>
+ </p>
+ <p>
+  Source:
+  <a href="https://www.kernel.org/pub/software/scm/git/docs/git-bisect.html">
+   https://www.kernel.org/pub/software/scm/git/docs/git-bisect.html
+  </a>
+ </p>
+ <p>
+  <span style="font-size:medium">
+   Example
+  </span>
+ </p>
+ <p>
+  On July 10, 2013, within Slicer, the hash tag associated with the ITKv4 external project was updated (
+  <a href="http://viewvc.slicer.org/viewvc.cgi/Slicer4?view=revision&amp;revision=22163">
+   r22163
+  </a>
+  ) to point to the tip of the release branch (
+  <a href="https://github.com/Kitware/ITK/commit/41abd503c51277d4ead198e6dbe5020d5a0c6bbf">
+   41abd503
+  </a>
+  ). The next day, the MacOSX dashboard was complaining.
+ </p>
+ <p>
+  Exactly
+  <a href="https://github.com/Kitware/ITK/compare/1866ef4...41abd5">
+   289 changes were introduced
+  </a>
+  by updating the ITK external project,. Therefore, checking each change or looking at the history wasn't an option. Indeed, we weren't sure what to look for to try to identify the cause of the regression. We then decided to try using git bisect.
+ </p>
+ <p>
+  Git bisect provided us with a manual and an automatic mode. In this case, we used the automatic mode, but we will briefly describe the "manual" mode here.
+ </p>
+ <p>
+  <span style="font-size:medium">
+   Manual mode
+  </span>
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7ff1beb9919705182" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ git bisect start
+$ git bisect bad 41abd5
+$ git bisect good 1866ef4 # Last version tested that was good
+Bisecting: 143 revisions left to test after this (roughly 7 steps)
+[21cc50a7] Merge topic &amp;#39;ImageScanlineIteartorForImageCopy&amp;#39; </textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7ff1beb9919705182-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ff1beb9919705182-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ff1beb9919705182-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ff1beb9919705182-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ff1beb9919705182-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7ff1beb9919705182-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-i">
+         start
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ff1beb9919705182-2">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-i">
+         bad
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         41abd5
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ff1beb9919705182-3">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-i">
+         good
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1866ef4
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-p">
+         # Last version tested that was good
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ff1beb9919705182-4">
+        <span class="crayon-v">
+         Bisecting
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         143
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         revisions
+        </span>
+        <span class="crayon-e">
+         left
+        </span>
+        <span class="crayon-st">
+         to
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         test
+        </span>
+        <span class="crayon-e">
+         after
+        </span>
+        <span class="crayon-r">
+         this
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-i">
+         roughly
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         7
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         steps
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ff1beb9919705182-5">
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         21cc50a7
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         Merge
+        </span>
+        <span class="crayon-v">
+         topic
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-p">
+         #39;ImageScanlineIteartorForImageCopy&amp;#39;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <p>
+  First, build and test the above. Then, based on the result, you can use either use
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7ff1bec3294367971" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ git bisect good</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7ff1bec3294367971-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7ff1bec3294367971-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-v">
+         good
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  or
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7ff1bec6931363184" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ git bisect bad</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7ff1bec6931363184-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7ff1bec6931363184-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-v">
+         bad
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  until you find the faulty commit.
+ </p>
+ <p>
+  If, for some reason, the current commit can't be tested, you can use
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7ff1bec8871932913" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ git bisect skip </textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7ff1bec8871932913-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7ff1bec8871932913-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-i">
+         skip
+        </span>
+        <span class="crayon-h">
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <p>
+  <span style="font-size:medium">
+   Automatic mode
+  </span>
+ </p>
+ <p>
+  While very powerful, the manual mode can still be tedious and repetitive. To use the automatic mode, you first need to create a script that will return 0, 1, or 255 based on the outcome of a set of commands, allowing you to determine whether or not the current checkout is problematic .
+ </p>
+ <p>
+  In this case, we used the following script and ran the bisection using
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e7ff1beca271830466" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ git bisect start 41abd5 1866ef
+$ git bisect run /Users/kitware/Dashboards/Nightly/find_itkv4_regression.sh</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e7ff1beca271830466-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e7ff1beca271830466-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e7ff1beca271830466-1">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-i">
+         start
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         41abd5
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1866ef
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e7ff1beca271830466-2">
+        <span class="crayon-sy">
+         $
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         git
+        </span>
+        <span class="crayon-e">
+         bisect
+        </span>
+        <span class="crayon-v">
+         run
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Users
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         kitware
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Dashboards
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Nightly
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         find_itkv4_regression
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         sh
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+ </p>
+ <p>
+  Et voila, it returns that the commit introducing the regression was
+  <a href="http://itk.org/gitweb?p=ITK.git;a=commit;h=5bfdff361">
+   5bfdff361
+  </a>
+  .
+ </p>
+ <p>
+  UPDATE: 2015/09/04 – Code for find_itkv4_regression.sh can be found
+  <a href="https://gist.github.com/jcfr/6029698">
+   here
+  </a>
+  .
+ </p>
+ <p>
+  After some investigation to try to understand the source of the problem, we created an issue on the ITK tracker:
+  <br/>
+  <a href="https://itk.icts.uiowa.edu/jira/browse/ITK-3172">
+   https://itk.icts.uiowa.edu/jira/browse/ITK-3172
+  </a>
+ </p>
+ <p>
+  We then decided to propose a patch using gerrit:
+  <br/>
+  <a href="http://review.source.kitware.com/#/c/11942/">
+   http://review.source.kitware.com/#/c/11942/
+  </a>
+ </p>
+ <p>
+  Finally, in the timespan of 3 hours, after 8 patchsets, 24 comments, and few emails, the reviewed and polished ITK commit
+  <a href="http://itk.org/gitweb?p=ITK.git;a=commit;h=f49a7db766fdfff5953fbfd3a70c790ac09bed3e">
+   f49a7db7
+  </a>
+  was integrated into the release and the master branch of ITK. Then, the Slicer external project was updated accordingly (
+  <a href="http://viewvc.slicer.org/viewvc.cgi/Slicer4?view=revision&amp;revision=22171">
+   r22171
+  </a>
+  ), and the error was resolved.
+ </p>
+ <p>
+  Kitware is proud to be maintainers of the ITK and Slicer open-source efforts.  We are dedicated to their success, and our tools and practices, as well as numerous other outstanding software development and debugging tools and practices being developed around the world, are invaluable to our open-source and private consulting efforts. If we can help you with developing, maintaining, or debugging your code; we welcome the opportunity to provide consulting services to your project.  For more information, email kitware@kitware.com.
+ </p>
+</div>

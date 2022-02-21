@@ -1,0 +1,240 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Computational Model Builder (CMB) [1] is a toolset for implementing engineering workflows that involve simulations and experiments. Developed at Kitware, CMB comes in the form of libraries and customizable applications for manipulating geometric models, meshes that discretize those models, and attributes of simulation parameters or experimental quantities. These attributes include those that can be associated with mesh or model entities.
+ </p>
+ <p>
+  Usually, CMB workflows perform preprocessing tasks that generate input decks. A simulation package uses the input decks to approximate the physical quantities needed to make informed decisions. Inspection of the simulation results occurs in ParaView [2] or in a custom CMB application (either while generating results as the simulation runs or afterward). Kitware and collaborators have successfully used CMB to develop workflows for large-scale hydrological flow simulations [3] and for nuclear reactor simulations [4].
+ </p>
+ <p>
+  In this work, we showcase the use of CMB for medical simulations, using pediatric airway simulations as an example. We begin by summarizing the clinical problem and the technology developed to address this problem, as discussed in the paper “Virtual Pediatric Airways Workbench” [5] (presentation to occur at the 22nd Medicine Meets Virtual Reality conference in April 2016). We then highlight CMB.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Clinical Problem
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  As outlined in “Virtual Pediatric Airways Workbench,” subglottic stenosis is among airway problems that may cause life-threatening complications in children due to poor respiration. With subglottic stenosis, the airway below the vocal cords narrows. Figure 1 shows subglottic stenosis in a patient’s airway.
+ </p>
+ <p>
+  <a href="/source/files/134_393336105.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_393336105.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1: Subglottic stenosis in a patient. “A” depicts a computed tomography (CT) sagittal slice showing stenosis. “B” exhibits a preoperative view using a laryngoscope. “C” displays a view of a postoperative-corrected airway [5].
+  </em>
+ </p>
+ <p>
+  When planning treatment for children with subglottic stenosis, clinicians often rely on past experience and procedural preference, among institutional factors [5]. Incorporating reliable metrics based on published guidelines or quantitative airway metrics into decision making can improve surgical success rates [5]. Additional guidance can come from software tools that quantify airway pathology and potential virtually reconstructed airways. These tools indicate which interventions, if any, are warranted [5].
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Virtual Pediatric Airways Workbench
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  A research team at Kitware, led by Cory Quammen, and collaborators at the University of North Carolina at Chapel Hill (UNC-Chapel Hill) have developed a highly specialized prototype software tool for surgical modeling and evaluation, called Virtual Pediatric Airways Workbench (VPAW) [5]. VPAW aims to reduce subjectivity in the surgical decision-making process by providing objective measures founded on physics-based standards derived from fluid flow simulations.
+ </p>
+ <p>
+  As detailed in depth in the paper and shown in Figure 2, the surgical planning workflow of VPAW has four main components: segmentation, interactive surgical modeling, visualization, and airflow simulation. For these components, VPAW makes use of several resources. VPAW implements the Visualization Toolkit (VTK) [6] for interactive surgical modeling and visualization. For image segmentation, VPAW utilizes the Insight Segmentation and Registration Toolkit (ITK) [7]. VPAW also employs ITK for image editing. In addition, VPAW uses the Virtual Reality Peripheral Network (VRPN) for interfacing with three-dimensional input devices required for intuitive geometric model editing.
+ </p>
+ <p>
+  <a href="/source/files/134_364571883.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_364571883.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2: VPAW’s surgical planning workflow [5].
+  </em>
+ </p>
+ <p>
+  One of the important aspects of VPAW is the simulation module, which simulates airflow through patient-specific airway geometry. The module applies a lattice Boltzmann method (LBM) implementation from Dr. Sorin Mitran at UNC-Chapel Hill [8]. This LBM simulates fluid flow using fictitious particles that propagate over a discrete lattice mesh overlaid on the problem domain. The Boltzmann equation governs the particles’ movement, as does the nature of the interactions (collisions), which depends on the nature of the fluid being simulated. The LBM can simulate complex fluid phenomenon and naturally lends itself to parallelization.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     CMB Interface to the Airflow Simulation Module
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The inputs to the airflow simulation engine in VPAW include (a) an indexed regular lattice grid, (b) the flow boundary conditions, (c) the physical properties of the fluid, and (d) the simulation parameters for the LBM. A custom CMB plug-in provides this input deck to the fluid simulation engine, given only a CT scan and a segmentation of the airway within the scan created using an ITK-based tool.
+ </p>
+ <p>
+  CMB interactively sets the boundary conditions, the fluid properties, and the simulation parameters as shown in Figure 3. In the case of pediatric airways, CMB approximates ambient conditions based on the placement of a sphere around the inlet of the nostrils and on the ambient conditions settings at the boundary of the sphere. CMB enables moving and placing the sphere in relation to the entry point of the airway. CMB also enables choosing the airway exit point based on the intersection of airway voxels with a manually placed plane.
+ </p>
+ <p>
+  Figure 4 shows the label map contours used by the simulation volume rendered in the context with the original CT data. After establishing the required inputs, CMB offers the option to export simulation settings into a file that CMB inputs to the simulation engine fluid solver.
+ </p>
+ <p>
+  <a href="/source/files/134_1731145194.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_1731145194.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3: CMB’s interface for the lattice Boltzmann simulation module. All the simulation-related parameters, fluid properties, and boundary conditions can be set in their respective tabs.
+  </em>
+ </p>
+ <p>
+  <a href="/source/files/134_739704793.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.134_739704793.png" width="100%"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 4: Visualization of the label map contours of the simulation volume along with original CT data in ParaView.
+  </em>
+ </p>
+ <p>
+  For a video showing the tool developed for VPAW using CMB, please visit
+  <a href="https://vimeo.com/148388880">
+   https://vimeo.com/148388880
+  </a>
+  .
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Conclusions
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  With minimal effort, we developed the workflow described in this article. This is very encouraging for others looking to develop similar workflow tools for their medical applications. At Kitware, we plan to use CMB for newer surgical planning and simulation applications, which could benefit from more streamlined, modularized, and automated workflows in the future.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [1] Kitware, Inc. “Introducing the Computational Model Builder.” CMB.
+  <a href="http://www.computationalmodelbuilder.org">
+   http://www.computationalmodelbuilder.org
+  </a>
+  .
+  <br/>
+  [2] Kitware, Inc. “Welcome to ParaView.” ParaView.
+  <a href="http://www.paraview.org">
+   http://www.paraview.org
+  </a>
+  .
+  <br/>
+  [3] Kitware, Inc. “Hydrology.” CMB.
+  <a href="http://www.computationalmodelbuilder.org/cmb-hydro">
+   http://www.computationalmodelbuilder.org/cmb-hydro
+  </a>
+  .
+  <br/>
+  [4] Kitware, Inc. “Simulations for Nuclear Energy.”
+  <a href="http://www.computationalmodelbuilder.org/cmb-nuclear">
+   http://www.computationalmodelbuilder.org/cmb-nuclear
+  </a>
+  .
+  <br/>
+  [5] Quammen, Cory W., Russell M. Taylor II, Pavel Krajcevski,  Sorin Mitran, Andinet Enquobahrie, Richard Superfine, Brad Davis, Stephanie Davis, and Carlton Zdanski. “Virtual Pediatric Airways Workbench.” Paper accepted at the 22nd Medicine Meets Virtual Reality conference, Los Angeles, California, April 7-9, 2016.
+  <br/>
+  [6] Kitware, Inc. “Welcome to VTK.” VTK.
+  <a href="http://www.vtk.org">
+   http://www.vtk.org
+  </a>
+  .
+  <br/>
+  [7] Kitware, Inc. “ITK.” ITK.
+  <a href="http://www.itk.org">
+   http://www.itk.org
+  </a>
+  .
+  <br/>
+  [8] Zdanski, Carlton, Stephanie Davis, Yi Hong, Di Miao, Cory W. Quammen, Sorin Mitran, Brad Davis, Marc Niethammer, Julia Kimbell, Elizabeth Pitkin, Jason Fine, Lynn Fordham, Bradley Vaughn, and Richard Superfine. “Quantitative assessment of the upper airway in infants and children with subglottic stenosis.” The Laryngoscope 125 (2015): 1531-4995.
+ </p>
+ <p>
+  <a href="/source/files/4_404965061.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_404965061.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Sreekanth Arikatla
+  </strong>
+  is a research and development engineer at Kitware. His interests include numerical methods, computational mechanics, computer graphics, and virtual surgery.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1115323419.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1115323419.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   David Thompson
+  </strong>
+  is a research and development engineer at Kitware. His interests include conceptual design, solid modeling, computational simulation and visualization, and mechatronics.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_704818461.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_704818461.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Cory Quammen
+  </strong>
+  is a research and development engineer at Kitware and a core developer of VTK and ParaView. His main area of focus is scientific visualization.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1119276063.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1119276063.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Andinet Enquobahrie
+  </strong>
+  is the Assistant Director of Medical Computing at Kitware.  As a subject matter expert, he is responsible for technical contribution and management of image-guided intervention, quantitative imaging, and surgical simulation projects.
+ </p>
+</div>

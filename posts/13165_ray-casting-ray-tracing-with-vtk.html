@@ -1,0 +1,2370 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  VTK has long evolved beyond just visualization. It offers some amazing functionality that just cannot be found elsewhere. Two examples are the ‘ray-casting’ and, consequentially, ‘ray-tracing’ capabilities provided by the vtkOBBTree class. In this article, I would like to introduce these capabilities and show examples of ray-casting and ray-tracing performed exclusively through Python, a dash of NumPy, and VTK.
+ </p>
+ <p>
+  <strong>
+   Disclaimer:
+  </strong>
+  <em>
+   The ray-casting and ray-tracing examples I will be presenting here are severely condensed versions of my posts “Ray Casting with Python and VTK: Intersecting lines/rays with surface meshes” and “From Ray Casting to Ray Tracing with Python and VTK” that appear on my blog [1]. If they pique your interest, please visit the aforementioned posts, where you can find all of the material and code (in the form of IPython Notebooks), as well as an excruciating amount of detail pertaining to each aspect of the process, as these posts were written for people with little to no experience in VTK.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Ray-Casting vs. Ray-Tracing
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  I would like to emphasize a pivotal difference between ‘ray-casting’ and ‘ray-tracing.’ In the case of the former, we only ‘cast’ a single ray, test for its intersection with objects, and retrieve information regarding the intersection. Ray-tracing, on the other hand, is more physically accurate, as it applies laws of physics (e.g., reflection, refraction, attenuation, etc.) to the rays to ‘trace’ (i.e., follow) that ray and its derivative rays. However, ray-casting is the natural precursor to ray-tracing, as it tells us with what part of which object the ray intersects and provides all necessary information to cast subsequent rays.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     The vtkOBBTree Class
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The star of this post is the vtkOBBTree class, which generates an oriented bounding-box (OBB) ‘tree’ for a given geometry under a vtkPolyData object. Upon generation of this OBB tree, the vtkOBBTree class allows us to perform intersection tests between the mesh and the lines of finite length, as well as intersection tests between different meshes. It can then return the point coordinates where intersections were detected, as well as the polydata cell IDs where the intersections occurred.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Ray-Casting with vtkOBBTree
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  For this demonstration, we are assuming that we have a surface model of a human skull stored in a .stl file, whose contents we have loaded into a vtkPolyData object, named
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b75432389011" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     mesh
+    </span>
+   </span>
+  </span>
+  , through the vtkSTLReader class. A rendering of this model through the vtkPolyDataMapper class can be seen in Figure 1.
+ </p>
+ <p>
+  <a href="/source/files/4_1710896754.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1710896754.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1. Rendering of the surface model of a human skull, which we will use to demonstrate ray-casting.
+  </em>
+ </p>
+ <p>
+  The center of the skull is centered around the cartesian origin, i.e., the (0.0, 0.0, 0.0) point. Now let’s assume we want to cast a ray emanating from (100.0, 100.0, 0.0) and ending at (0.0, 0.0, 0.0) and retrieve the coordinates of the points where this ray intersects with the skull’s surface. A rendering including the ray, prior to actually casting it, can be seen in Figure 2.
+ </p>
+ <p>
+  <a href="/source/files/4_1359449650.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1359449650.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2. The ray that will be tested for intersection with the skull model. The ‘source’ point of the ray is rendered as red, while the ‘target’ point is rendered as green.
+  </em>
+ </p>
+ <p>
+  Prior to intersection, we need to create and initialize a new vtkOBBTree with the vtkPolyData object of our choice. In our case, this is called
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b7c044983760" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-i">
+     mesh
+    </span>
+   </span>
+  </span>
+  and is done as follows:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e42a60b7f772898614" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+obbTree = vtk.vtkOBBTree()
+obbTree.SetDataSet(mesh)
+obbTree.BuildLocator()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e42a60b7f772898614-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b7f772898614-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b7f772898614-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e42a60b7f772898614-1">
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkOBBTree
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b7f772898614-2">
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetDataSet
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         mesh
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b7f772898614-3">
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         BuildLocator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  Note the call to the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b81981701939" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     BuildLocator
+    </span>
+   </span>
+  </span>
+  method, which creates the OBB tree.
+ </p>
+ <p>
+  That’s it! We now have a world-class intersection tester at our disposal. At this point, we can use the
+  <br/>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b83593571769" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     IntersectWithLine
+    </span>
+   </span>
+  </span>
+  method of the vtkOBBTree class to test for intersection with the aforementioned ray. We merely need to create a vtkPoints object and a vtkIdList object to store the results of the intersection test.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e42a60b85577435535" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+points = vtk.vtkPoints()
+cellIds = vtk.vtkIdList()
+
+code = obbTree.IntersectWithLine((100.0, 100.0, 0.0), (0.0, 0.0, 0.0), points, cellIds)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e42a60b85577435535-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b85577435535-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b85577435535-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b85577435535-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e42a60b85577435535-1">
+        <span class="crayon-v">
+         points
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b85577435535-2">
+        <span class="crayon-v">
+         cellIds
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkIdList
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b85577435535-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b85577435535-4">
+        <span class="crayon-k ">
+         code
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         IntersectWithLine
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         100.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         100.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         points
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIds
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+  As mentioned above, the points and cellIds now contain the point coordinates and cell IDs with which the ray intersected as it was emanated from the first point, i.e., (100.0, 100.0, 0.0), onto the second point, i.e., (0.0, 0.0, 0.0), in the order they were ‘encountered.’ The return value code is an integer, which would be equal to 0 if no intersections were found. A rendering showing the intersection points can be seen in Figure 3.
+ </p>
+ <p>
+  <a href="/source/files/4_1483754968.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1483754968.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 3. Result of the ray-casting operation and intersection test between the skull model and the ray. The blue points depict the detected intersection points.
+  </em>
+ </p>
+ <p>
+  The Python package
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b87612054686" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     pycaster
+    </span>
+   </span>
+  </span>
+  [2] wraps the functionality shown above, assuming no VTK experience, and provides additional methods to calculate the distance a given ray has ‘traveled’ within a closed surface. It is currently being served through PyPI. The repository [3] can be found on BitBucket.
+ </p>
+ <p>
+  As I mentioned at the beginning of this article, the entire process shown above, including all of the material and code needed to reproduce it, is detailed in my post “Ray Casting with Python and VTK: Intersecting lines/rays with surface meshes” [4].
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Ray-Tracing with vtkOBBTree
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Now, in order to perform ray-tracing, we can take the lessons learned from ray-casting and apply them to a more convoluted scenario. The rationale behind ray-tracing with the vtkOBBTree class is the following:
+ </p>
+ <ul>
+  <li>
+   Cast rays from every ‘ray source’ and test for their intersection with every ‘target’ mesh in the scene.
+  </li>
+  <li>
+   If a given ray intersects with a given ‘target,’ then use the intersection points and intersected cells to calculate the normal at that cell, to calculate the vectors of the reflected/refracted rays, and to cast subsequent rays off the target.
+  </li>
+  <li>
+   An excellent, freely available article entitled “Reflections and Refractions in Ray-Tracing” [5] (Bram de Greve, 2006)  provides a good overview of the math and the physics behind ray-tracing.
+  </li>
+  <li>
+   Repeat this process for every ray cast from the ‘ray source.’
+  </li>
+ </ul>
+ <p>
+  Let’s assume a scene is comprised of a half-sphere dubbed
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b8b315358953" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     sun
+    </span>
+   </span>
+  </span>
+  , which will act as the ray-source, and a larger nicely textured sphere called
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b8c104022583" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     earth
+    </span>
+   </span>
+  </span>
+  , which will be the target of those rays. This ‘environment’ can be seen in Figure 4.
+ </p>
+ <p>
+  <a href="/source/files/4_1094214485.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1094214485.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 4. Scene defined for the ray-tracing example. The yellow half-sphere, sun, acts as the ray-source, while the textured sphere, earth, will be the target of those rays.
+  </em>
+ </p>
+ <p>
+  In this example, we will be casting a ray from the center of each triangular cell on the sun’s surface along the direction of that cell’s normal vector. The cell-centers of the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b8e357736784" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     sun
+    </span>
+   </span>
+  </span>
+  were calculated through the vtkCellCenters class and stored under
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b90995096343" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     pointsCellCentersSun
+    </span>
+   </span>
+  </span>
+  (of type vtkPolyData). The cell-normals of the sun were calculated through the vtkPolyDataNormals class and stored under
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b92744684012" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     normalsSun
+    </span>
+   </span>
+  </span>
+  (of type vtkFloatArray). A rendering of the cell-centers as points and cell-normals as glyphs through the vtkGlyph3D class can be seen in Figure 5.
+ </p>
+ <p>
+  <a href="/source/files/4_2028156187.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_2028156187.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 5. Rendering of the cell-centers of the sun that will act as source-points for the rays and the cell-normals along which the rays will be cast.
+  </em>
+ </p>
+ <p>
+  Similarly to what was done in the previous example, prior to ray-casting, we first need to create a vtkOBBTree object for the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b94355244379" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     earth
+    </span>
+   </span>
+  </span>
+  :
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e42a60b96999021990" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+obbEarth = vtk.vtkOBBTree()
+obbEarth.SetDataSet(earth.GetOutput())
+obbEarth.BuildLocator()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e42a60b96999021990-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b96999021990-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b96999021990-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e42a60b96999021990-1">
+        <span class="crayon-v">
+         obbEarth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkOBBTree
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b96999021990-2">
+        <span class="crayon-v">
+         obbEarth
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetDataSet
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         earth
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b96999021990-3">
+        <span class="crayon-v">
+         obbEarth
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         BuildLocator
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  Now, since we will be casting a large number of rays, let’s wrap the vtkOBBTree functionality in two convenient
+  <br/>
+  functions:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e42a60b98683539779" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+def isHit(obbTree, pSource, pTarget):
+  code = obbTree.IntersectWithLine(pSource, pTarget, None, None)
+  if code==0:
+    return False
+  return True
+
+def GetIntersect(obbTree, pSource, pTarget):
+  points = vtk.vtkPoints()
+  cellIds = vtk.vtkIdList()
+  # Perform intersection test
+  code = obbTree.IntersectWithLine(pSource, pTarget, points, cellIds)
+
+  pointData = points.GetData()
+  noPoints = pointData.GetNumberOfTuples()
+  noIds = cellIds.GetNumberOfIds()
+
+  pointsInter = []
+  cellIdsInter = []
+  for idx in range(noPoints):
+    pointsInter.append(pointData.GetTuple3(idx))
+    cellIdsInter.append(cellIds.GetId(idx))
+
+  return pointsInter, cellIdsInter</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60b98683539779-23">
+        23
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-1">
+        <span class="crayon-r">
+         def
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         isHit
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pSource
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pTarget
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         code
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         IntersectWithLine
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pSource
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pTarget
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         None
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         None
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         code
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         False
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-t">
+         True
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-7">
+        <span class="crayon-r">
+         def
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         GetIntersect
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pSource
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pTarget
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         points
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIds
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkIdList
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # Perform intersection test
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         code
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         obbTree
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         IntersectWithLine
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pSource
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pTarget
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         points
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIds
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-12">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointData
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         points
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         noPoints
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointData
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfTuples
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         noIds
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIds
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfIds
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-16">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointsInter
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIdsInter
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         idx
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         range
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         noPoints
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointsInter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         append
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pointData
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetTuple3
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         idx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIdsInter
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         append
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         cellIds
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetId
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         idx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-22">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60b98683539779-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointsInter
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIdsInter
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0010 seconds] -->
+ <p>
+  The
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b9a903171817" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     isHit
+    </span>
+   </span>
+  </span>
+  function will return True or False, depending on whether a given ray intersects with
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b9c674531974" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     obbTree
+    </span>
+   </span>
+  </span>
+  , which, in our case, will only be
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b9d542518891" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     obbEarth
+    </span>
+   </span>
+  </span>
+  .
+ </p>
+ <p>
+  The
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60b9f282138572" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     GetIntersect
+    </span>
+   </span>
+  </span>
+  function simply wraps the functionality we saw in the first example. In a nutshell, it will return two list objects:
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60ba1480851598" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     pointsInter
+    </span>
+   </span>
+  </span>
+  and
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60ba2522676396" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     cellIdsInter
+    </span>
+   </span>
+  </span>
+  . The former will contain a series of tuple objects with the coordinates of the intersection points. The latter will contain the ‘id’ of the mesh cells that were ‘hit’ by that ray. This information is vital, as we will be able to get the correct normal vector for that
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60ba4777015294" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     earth
+    </span>
+   </span>
+  </span>
+  cell and calculate the appropriate reflected vector through these ids, which we will see below.
+ </p>
+ <p>
+  At this point, we are ready to perform the ray-tracing. Let’s take a look at a condensed version of the code:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e42a60ba6504372978" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+noPoints = pointsCellCentersSun.GetNumberOfPoints()
+for idx in range(noPoints):
+  pointSun = pointsCellCentersSun.GetPoint(idx)
+  normalSun = normalsSun.GetTuple(idx)
+
+  # Calculate the 'target' of the 'sun' ray based
+  # on 'RayCastLength'
+  pointRayTarget = list(numpy.array(pointSun) + RayCastLength*numpy.array(normalSun))
+
+  if isHit(obbEarth, pointSun, pointRayTarget):
+    pointsInter, cellIdsInter = GetIntersect(obbEarth, pointSun, pointRayTarget)
+
+    # Get the normal vector at the earth cell
+    # that intersected with the ray
+    normalEarth = normalsEarth.GetTuple(cellIdsInter[0])
+
+    # Calculate the incident ray vector
+    vecInc = (numpy.array(pointRayTarget) - numpy.array(pointSun))
+    # Calculate the reflected ray vector
+    vecRef = (vecInc - 2*numpy.dot(vecInc, numpy.array(normalEarth)) * numpy.array(normalEarth))
+
+    # Calculate the 'target' of the reflected
+    ray based on 'RayCastLength'
+    pointRayReflectedTarget = (numpy.array(pointsInter[0]) + RayCastLength*l2n(vecRef))</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e42a60ba6504372978-24">
+        24
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-1">
+        <span class="crayon-v">
+         noPoints
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointsCellCentersSun
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfPoints
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-2">
+        <span class="crayon-st">
+         for
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         idx
+        </span>
+        <span class="crayon-st">
+         in
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         range
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         noPoints
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointSun
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointsCellCentersSun
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetPoint
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         idx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         normalSun
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         normalsSun
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetTuple
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         idx
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # Calculate the 'target' of the 'sun' ray based
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # on 'RayCastLength'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointRayTarget
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-k ">
+         list
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pointSun
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         RayCastLength
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         normalSun
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         isHit
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         obbEarth
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointSun
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointRayTarget
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointsInter
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cellIdsInter
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         GetIntersect
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         obbEarth
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointSun
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointRayTarget
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-12">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # Get the normal vector at the earth cell
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # that intersected with the ray
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         normalEarth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         normalsEarth
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetTuple
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         cellIdsInter
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-16">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # Calculate the incident ray vector
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vecInc
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pointRayTarget
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pointSun
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # Calculate the reflected ray vector
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vecRef
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vecInc
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         2
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         dot
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vecInc
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         normalEarth
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         normalEarth
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-21">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         # Calculate the 'target' of the reflected
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ray
+        </span>
+        <span class="crayon-e">
+         based
+        </span>
+        <span class="crayon-i">
+         on
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'RayCastLength'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e42a60ba6504372978-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pointRayReflectedTarget
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         numpy
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-k ">
+         array
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         pointsInter
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         RayCastLength
+        </span>
+        <span class="crayon-o">
+         *
+        </span>
+        <span class="crayon-e">
+         l2n
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vecRef
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0013 seconds] -->
+ <p>
+  Please note that all rendering code was removed from the above snippet. What is done above is the following:
+ </p>
+ <p>
+  We looped through every cell-center on the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60ba9045217078" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     sun
+    </span>
+   </span>
+  </span>
+  mesh (pointSun), stored under
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60baa181598024" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     pointsCellCentersSun
+    </span>
+   </span>
+  </span>
+  .
+ </p>
+ <p>
+  We casted a ray along the direction of that
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bac194985471" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     sun
+    </span>
+   </span>
+  </span>
+  cell’s normal vector, stored under
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bae034597963" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     normalsSun
+    </span>
+   </span>
+  </span>
+  . The ray emanates from
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bb0043022071" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     pointSun
+    </span>
+   </span>
+  </span>
+  to
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bb1522784554" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     pointRayTarget
+    </span>
+   </span>
+  </span>
+  .
+ </p>
+ <p>
+  As the vtkOBBTree class only allows for intersection tests with lines of finite length, not semi-infinite rays, the rays cast in the code above are given a large (relative to the scene) length to ensure that failure to intersect with
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bb3752229033" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     earth
+    </span>
+   </span>
+  </span>
+  would only be due to the ray’s direction and not an insufficient length.
+ </p>
+ <p>
+  Every ray was tested for intersection with the earth through the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bb5676896031" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     isHit
+    </span>
+   </span>
+  </span>
+  function and the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bb7805335761" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     obbEarth
+    </span>
+   </span>
+  </span>
+  object defined above.
+ </p>
+ <p>
+  If a ray intersected with the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bb8311987436" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     earth
+    </span>
+   </span>
+  </span>
+  , the intersection test was repeated through the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bba671431248" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     GetIntersect
+    </span>
+   </span>
+  </span>
+  function in order to retrieve the intersection point coordinates and the intersected cell IDs on the
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bbc746209495" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     earth
+    </span>
+   </span>
+  </span>
+  mesh. The intersection point coordinates and the intersected
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bbd443830743" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     earth
+    </span>
+   </span>
+  </span>
+  cell normal vector (
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bbf264207367" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     normalEarth
+    </span>
+   </span>
+  </span>
+  ) were used to calculate the normal vector of the reflected ray and cast that ray off the earth’s surface.
+ </p>
+ <p>
+  The cell normals on the earth’s surface were calculated through the vtkPolyDataNormals class and stored under
+  <br/>
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bc1515296302" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     normalsEarth
+    </span>
+   </span>
+  </span>
+  (of type vtkFloatArray). This is the same way that
+  <span class="crayon-syntax crayon-syntax-inline crayon-theme-coy crayon-theme-coy-inline crayon-font-monaco" id="crayon-5c41e42a60bc2113720746" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important;">
+   <span class="crayon-pre crayon-code" style="font-size: 16px !important; line-height: 25px !important;font-size: 16px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+    <span class="crayon-v">
+     normalSun
+    </span>
+   </span>
+  </span>
+  was calculated.
+ </p>
+ <p>
+  A render of the ray-tracing result can be seen in Figure 6.
+ </p>
+ <p>
+  As I mentioned at the beginning of this article, the entire process shown above, including all of the material and code needed to reproduce it, is detailed in my post “From Ray Casting to Ray Tracing with Python and VTK” [6].
+ </p>
+ <p>
+  <a href="/source/files/4_1694856176.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1694856176.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 6. Result of the ray-tracing example. Rays cast from the sun that missed the earth are rendered as white. Rays that intersected with the earth are rendered as yellow. The intersection points, normal vectors at the intersected earth cells, and the reflected rays can also be seen.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Conclusions
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  As you can see, VTK provides some little-known pearls that offer fantastic functionality.
+  <br/>
+  While the above examples fall short of real-world ray-tracing applications, as one would need to account for effects like refraction and energy attenuation, the sky is the limit!
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [1]
+  <a href="http://pyscience.wordpress.com">
+   http://pyscience.wordpress.com
+  </a>
+  <br/>
+  [2]
+  <a href="https://pypi.python.org/pypi/pycaster">
+   https://pypi.python.org/pypi/pycaster
+  </a>
+  <br/>
+  [3]
+  <a href="https://bitbucket.org/somada141/pycaster">
+   https://bitbucket.org/somada141/pycaster
+  </a>
+  <br/>
+  [4]
+  <a href="http://pyscience.wordpress.com/2014/09/21/ray-casting-with-python-and-vtk-intersecting-linesrays-with-surface-meshes/">
+   http://pyscience.wordpress.com/2014/09/21/ray-casting-with-python-and-vtk-intersecting-linesrays-with-surface-meshes/
+  </a>
+  <br/>
+  [5]
+  <a href="http://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf">
+   http://graphics.stanford.edu/courses/cs148-10-summer/docs/2006–degreve–reflection_refraction.pdf
+  </a>
+  <br/>
+  [6]
+  <a href="http://pyscience.wordpress.com/2014/10/05/from-ray-casting-to-ray-tracing-with-python-and-vtk/">
+   http://pyscience.wordpress.com/2014/10/05/from-ray-casting-to-ray-tracing-with-python-and-vtk/
+  </a>
+ </p>
+ <p>
+  <a href="/source/files/4_369246635.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_369246635.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Adamos Kyriakou
+  </strong>
+  is an Electrical &amp; Computer Engineer with an MSc. in Telecommunications and a Ph.D. in Biomedical Engineering. He is currently working as a Research Associate in Computational Multiphysics at the IT’IS Foundation (ETH Zurich), where his work and research are primarily focused on computational algorithm development, high-performance computing, multi-physics simulations, big-data analysis, and medical imaging/therapy modalities.
+ </p>
+</div>

@@ -1,0 +1,290 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <div class="wp-caption aligncenter" id="attachment_20055" style="width: 1034px">
+  <img alt="" class="size-large wp-image-20055" height="340" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-1024x340.png" srcset="https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-1024x340.png 1024w, https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-300x100.png 300w, https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-768x255.png 768w, https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-220x73.png 220w, https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-250x83.png 250w, https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-355x118.png 355w, https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-730x242.png 730w, https://blog.kitware.com/wp-content/uploads/2017/11/subproject_screenshot-90x30.png 90w" width="1024"/>
+  <p class="wp-caption-text">
+   A single build split into three subprojects
+  </p>
+ </div>
+ <p>
+ </p>
+ <p>
+  Large software projects can almost always be logically divided into distinct yet interrelated components.  At Kitware, we refer to such components as
+  <strong>
+   subprojects
+  </strong>
+  .  CDash has long supported the notion of subprojects, but up until now it has been a bit tricky to use this feature.  Fear not, now it is easier than ever!
+ </p>
+ <p>
+  Previously, clients submitting to CDash needed to build and test each subproject separately.
+  <a href="https://cmake.org/cmake/help/latest/release/3.10.html#ctest">
+   New features in CMake 3.10 and CDash 2.6
+  </a>
+  allow you to build and test your whole project at once while still splitting the results across subprojects.  Here’s how to do it!
+ </p>
+ <p>
+ </p>
+ <h4>
+  Step 1: In your project’s CMakeLists.txt files, use a label to represent each subproject.
+ </h4>
+ <p>
+  It’s likely that your subprojects are already organized into separate subdirectories in your source code repository.  In this case, you can
+  <a href="https://cmake.org/cmake/help/latest/variable/CMAKE_DIRECTORY_LABELS.html">
+   easily set a label on each directory
+  </a>
+  .
+ </p>
+ <p class="p1" style="padding-left: 30px">
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span class="s1" style="color: #ff9900">
+     set
+    </span>
+    <span style="color: #33cccc">
+     <span class="s2">
+      (CMAKE_DIRECTORY_LABELS
+     </span>
+     <span class="s3">
+      <span style="color: #ff0000">
+       “mysubproj1”
+      </span>
+      )
+     </span>
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+  This causes any targets or tests declared in this directory or its subdirectories to inherit the label
+  <span style="font-family: 'courier new', courier">
+   mysubproj1
+  </span>
+  .
+ </p>
+ <p>
+  If your subprojects are not organized into separate directories you should instead assign a label to each target and test.
+ </p>
+ <p style="padding-left: 30px">
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span style="color: #ff9900">
+     add_executable
+    </span>
+    <span style="color: #33cccc">
+     (foo foo.c)
+    </span>
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span style="color: #ff9900">
+     add_test
+    </span>
+    (
+    <span style="color: #ff9900">
+     NAME
+    </span>
+    <span style="color: #33cccc">
+     foo
+    </span>
+    <span style="color: #ff9900">
+     COMMAND
+    </span>
+    <span style="color: #33cccc">
+     foo
+    </span>
+    )
+   </span>
+  </strong>
+ </p>
+ <p style="padding-left: 30px">
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span style="color: #000000">
+     set_property
+    </span>
+    <span style="color: #33cccc">
+     (TARGET foo PROPERTY LABELS mysubproj1)
+    </span>
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span style="color: #000000">
+     set_property
+    </span>
+    <span style="color: #33cccc">
+     (TEST foo PROPERTY LABELS mysubproj1)
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p>
+ </p>
+ <h4>
+  Step 2: tell CDash which labels represent subprojects.
+ </h4>
+ <p>
+  Labels are a general feature in CMake that can be used for purposes other than subprojects.  For this reason, you need to explicitly tell CDash which labels should be treated as subprojects.  To do this, set the
+  <a href="https://cmake.org/cmake/help/latest/variable/CTEST_LABELS_FOR_SUBPROJECTS.html">
+   <span style="font-family: 'courier new', courier">
+    CTEST_LABELS_FOR_SUBPROJECTS
+   </span>
+  </a>
+  variable in your CTestConfig.cmake file.
+ </p>
+ <p style="padding-left: 30px">
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span style="color: #ff9900">
+     set
+    </span>
+    <span style="color: #33cccc">
+     (CTEST_LABELS_FOR_SUBPROJECTS mysubproj1 mysubproj2)
+    </span>
+   </span>
+  </strong>
+ </p>
+ <h4>
+ </h4>
+ <h4>
+  Step 3: build and test your project as normal.
+ </h4>
+ <p>
+  The beauty of the all-at-once subproject approach is that you don’t need to change your
+  <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html#dashboard-client-via-ctest-script">
+   CTest driver script
+  </a>
+  to reap the benefits of a subproject dashboard.
+ </p>
+ <p>
+  After you’ve set up your labels and
+  <span style="font-family: 'courier new', courier">
+   CTEST_LABELS_FOR_SUBPROJECTS
+  </span>
+  you should be able to
+  <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif">
+   build and test your project as normal. The only other caveat is that you need to use
+   <a href="https://cmake.org/cmake/help/latest/module/CTestUseLaunchers.html">
+    CTest launchers
+   </a>
+   so CTest &amp; CDash can assign build errors and warnings to the appropriate subproject.
+  </span>
+ </p>
+ <p style="padding-left: 30px">
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span style="color: #33cccc">
+     <span style="color: #ff9900">
+      set
+     </span>
+    </span>
+    <span style="color: #33cccc">
+     (CTEST_USE_LAUNCHERS 1)
+    </span>
+   </span>
+  </strong>
+  <br/>
+  <strong>
+   <span style="font-family: 'courier new', courier">
+    <span style="color: #ff9900">
+     set
+    </span>
+    <span style="color: #33cccc">
+     (ENV{CTEST_USE_LAUNCHERS_DEFAULT} 1)
+    </span>
+   </span>
+  </strong>
+ </p>
+ <p style="padding-left: 30px">
+  <span style="color: #000000">
+   <strong>
+    <span style="font-family: 'courier new', courier">
+     ctest_start
+     <span style="color: #33cccc">
+      (Experimental)
+     </span>
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <span style="color: #000000">
+   <strong>
+    <span style="font-family: 'courier new', courier">
+     ctest_configure
+     <span style="color: #33cccc">
+      ()
+     </span>
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <span style="color: #000000">
+   <strong>
+    <span style="font-family: 'courier new', courier">
+     ctest_build
+     <span style="color: #33cccc">
+      ()
+     </span>
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <span style="color: #000000">
+   <strong>
+    <span style="font-family: 'courier new', courier">
+     ctest_test
+     <span style="color: #33cccc">
+      ()
+     </span>
+    </span>
+   </strong>
+  </span>
+  <br/>
+  <span style="color: #000000">
+   <strong>
+    <span style="font-family: 'courier new', courier">
+     ctest_submit
+     <span style="color: #33cccc">
+      ()
+     </span>
+    </span>
+   </strong>
+  </span>
+ </p>
+ <h4>
+  Download and run the example
+ </h4>
+ <p>
+  <a href="https://blog.kitware.com/wp-content/uploads/2018/01/all_at_once_subproject_example-1.zip">
+   Download and run our example project
+  </a>
+  to see this new feature in action.  Before you start, make sure that you have
+  <a href="https://cmake.org/download/">
+   CMake 3.10
+  </a>
+  installed locally.
+ </p>
+ <p>
+  You may want to modify
+  <span style="font-family: 'courier new', courier">
+   build_and_test.cmake
+  </span>
+  to change the build name, site name, or type of generator to use.  Once you’re satisfied, you can run an example build.
+ </p>
+ <p style="padding-left: 30px">
+  <span style="font-family: 'courier new', courier">
+   ctest -VV -S build_and_test.cmake
+  </span>
+ </p>
+ <p>
+  View the results here:
+ </p>
+ <p>
+  <a href="https://open.cdash.org/index.php?project=SubProjectExample">
+   https://open.cdash.org/index.php?project=SubProjectExample
+  </a>
+ </p>
+</div>

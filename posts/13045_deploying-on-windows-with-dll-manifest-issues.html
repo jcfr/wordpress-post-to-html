@@ -1,0 +1,428 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <strong>
+   Some history and explaining of manifests and
+  </strong>
+  DLL
+  <strong>
+   hell or:
+  </strong>
+ </p>
+ <h1>
+  This application has failed to start
+ </h1>
+ <p>
+  As of
+  <a class="mw-redirect" href="http://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B" title="Microsoft Visual C++">
+   Microsoft Visual C++
+  </a>
+  2005, visual studio has supported the concept of a side by side assembly.  This is basically a bit of XML that describes run time DLL dependencies for an executable or a DLL.  The XML text can be embeded inside a binary executable or a DLL.  This allows the executable or DLL to specify the exact version of things it depends on.  This avoids what is known as DLL hell (
+  <a href="http://en.wikipedia.org/wiki/DLL_hell">
+   http://en.wikipedia.org/wiki/DLL_hell
+  </a>
+  ).   For more information about manifests you can see this article:
+  <a href="http://en.wikipedia.org/wiki/Side-by-Side_Assembly">
+   http://en.wikipedia.org/wiki/Side-by-Side_Assembly
+  </a>
+  .   However, the manifests can cause their own set of problems.
+ </p>
+ <p>
+  Since the exact version of a DLL can now be specified, merely having a DLL with the right name is no longer enough to be able to use it.   When the DLL in question is a Microsoft run time library, there are two ways to get the DLL onto the deployment machine.  You can install it into the system as an admin, or you can copy the DLL and put it next to your executable.  However, you must also put an additional manifest file next to the DLL so the loader will know it is the right one.
+ </p>
+ <p>
+  If you do some google searches on this: “Results
+  <strong>
+   1
+  </strong>
+  –
+  <strong>
+   10
+  </strong>
+  of about
+  <strong>
+   6,690,000
+  </strong>
+  for
+  <strong>
+   This application has failed to start
+  </strong>
+  “, it is pretty clear this is a problem for lots of people.
+ </p>
+ <p>
+  <strong>
+   CMake/CPack and InstallRequiredSystemLibraries.cmake can help
+  </strong>
+  <br/>
+  If you are using CMake/CPack, you can use InstallRequiredSystemLibraries.cmake to install the DLLs and the manifest file from the run time of your compiler.   This all works great, except when it does not work…  The main problem comes about when a DLL or executable ends up depending on multiple versions of the MS run time libraries, which causes applications to fail to open.  The tricky part is that this will work on the machine that you are building the software on becuase it will have the system installed versions of all DLL’s that your exe or DLL depends on installed from the compiler install.
+ </p>
+ <p>
+  <strong>
+   Bad things can still happen
+  </strong>
+  <br/>
+  There are two known ways that this can happen:
+ </p>
+ <ol>
+  <li>
+   VS (2009 Service Pack 1): In this version of VS 2009, the XML text file that ships from MS has the wrong version number in it.  So, the .exe files created by that compiler have embedded manifest files that do not match the XML file.  The fix for this is to hand edit the .manifest XML files in the VS 2009 install tree and make the version match what the compiler is putting into the .exe files. The files can be found  in the redist folder for your VS 9 installation tree.  A common location is here:
+   <ul>
+    <li>
+     c:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\redist/amd64/Microsoft.VC90.CRT/Microsoft.VC90.CRT.manifest
+    </li>
+    <li>
+     c:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\redist\x86\Microsoft.VC90.CRT\Microsoft.VC90.CRT.manifest
+    </li>
+   </ul>
+  </li>
+  <li>
+   VS (any version): If a service pack or security update is installed for VS, it may change the version of the MS runtime libraries that the .exe needs to run.  If that happens,
+   <strong>
+    ALL
+   </strong>
+   code needs to be recompiled before you can create an .exe that can be shipped from that machine.  The problem is that the .exe files will have TWO versions of the runtime embedded in them, one for any code that was compiled
+   <strong>
+    BEFORE
+   </strong>
+   the update, and one for files compiled after the update.   This includes third party libraries like Qt.  To see if this is a problem, you can load a .exe into emacs or some other text editor and look for something like this:
+  </li>
+ </ol>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c76e41c61862227643" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+&lt;dependency&gt; 
+    &lt;dependentAssembly&gt; 
+      &lt;assemblyIdentity type="win32" name="Microsoft.VC90.DebugCRT" version="9.0.21022.8" processorArchitecture="x86" publicKeyToken="1fc8b3b9a1e18e3b"&gt;&lt;/assemblyIdentity&gt; 
+    &lt;/dependentAssembly&gt; 
+  &lt;/dependency&gt;</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c76e41c61862227643-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c61862227643-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c61862227643-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c61862227643-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c61862227643-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c76e41c61862227643-1">
+        <span class="crayon-r ">
+         &lt;dependency&gt;
+        </span>
+        <span class="crayon-i ">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c61862227643-2">
+        <span class="crayon-i ">
+        </span>
+        <span class="crayon-r ">
+         &lt;dependentAssembly&gt;
+        </span>
+        <span class="crayon-i ">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c61862227643-3">
+        <span class="crayon-i ">
+        </span>
+        <span class="crayon-r ">
+         &lt;assemblyIdentity
+        </span>
+        <span class="crayon-e ">
+         type
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "win32"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "Microsoft.VC90.DebugCRT"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         version
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "9.0.21022.8"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         processorArchitecture
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "x86"
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e ">
+         publicKeyToken
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "1fc8b3b9a1e18e3b"
+        </span>
+        <span class="crayon-r ">
+         &gt;
+        </span>
+        <span class="crayon-r ">
+         &lt;/assemblyIdentity&gt;
+        </span>
+        <span class="crayon-i ">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c61862227643-4">
+        <span class="crayon-i ">
+        </span>
+        <span class="crayon-r ">
+         &lt;/dependentAssembly&gt;
+        </span>
+        <span class="crayon-i ">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c61862227643-5">
+        <span class="crayon-i ">
+        </span>
+        <span class="crayon-r ">
+         &lt;/dependency&gt;
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  There should only be ONE version=”9.0.21022.8″ requirement, and it has to match the one found in this file: Microsoft.VC90.CRT.manifest
+  <br/>
+  If there is more than one of these lines (with different versions):
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c76e41c6a926504298" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+name="Microsoft.VC90" version="9.0.21022.8"</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c76e41c6a926504298-1">
+        1
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c76e41c6a926504298-1">
+        <span class="crayon-e ">
+         name
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "Microsoft.VC90"
+        </span>
+        <span class="crayon-e ">
+         version
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s ">
+         "9.0.21022.8"
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  in the .exe, then you have a problem… and it shows that the code was not all compiled with the same exact version of the compiler.
+  <br/>
+  <strong>
+   <br/>
+   CMake can help you keep bad things from happening
+  </strong>
+  <br/>
+  However, looking at binary and exe files in a text editor can be a bit of a pain…  So, I created a new module in CMake that can be used to diagnose manifest issues. In CVS CMake (soon to be git, but that is another blog post..),  you can find the new module that can be used to verify an install tree.   The script is in CVS CMake here:
+  <a href="http://public.kitware.com/cgi-bin/viewcvs.cgi/Modules/CMakeVerifyManifest.cmake?revision=1.6&amp;root=CMake&amp;view=markup">
+   Modules/CMakeVerifyManifest.cmake.
+  </a>
+  To run the script, cd into the binary install directory for your project and run cmake -P /path/to/CMakeVerifyManifest.cmake. Here is an example:
+ </p>
+ <p>
+  For CMake 2.8, you get this output:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c76e41c6d298870410" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+$ c:/Program\ Files/CMake\ 2.8/bin/cmake -P 
+c:/hoffman/My\ Builds/CMake/Modules/CMakeVerifyManifest.cmake
+Versions found in C:/Program Files/CMake 2.8/bin/Microsoft.VC90.CRT.manifest: 9.0.21022.8
+Information: no embeded manifest in: C:/Program Files/CMake 2.8/bin/msvcm90.DLL
+Information: no embeded manifest in: C:/Program Files/CMake 2.8/bin/msvcp90.DLL
+Information: no embeded manifest in: C:/Program Files/CMake 2.8/bin/msvcr90.DLL</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c76e41c6d298870410-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c6d298870410-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c6d298870410-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c6d298870410-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c6d298870410-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c6d298870410-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c76e41c6d298870410-1">
+        $ c:/Program\ Files/CMake\ 2.8/bin/cmake -P
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c6d298870410-2">
+        c:/hoffman/My\ Builds/CMake/Modules/CMakeVerifyManifest.cmake
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c6d298870410-3">
+        Versions found in C:/Program Files/CMake 2.8/bin/Microsoft.VC90.CRT.manifest: 9.0.21022.8
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c6d298870410-4">
+        Information: no embeded manifest in: C:/Program Files/CMake 2.8/bin/msvcm90.DLL
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c6d298870410-5">
+        Information: no embeded manifest in: C:/Program Files/CMake 2.8/bin/msvcp90.DLL
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c6d298870410-6">
+        Information: no embeded manifest in: C:/Program Files/CMake 2.8/bin/msvcr90.DLL
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  This script will return non-zero if there are errors.  So, it could be used as the final install rule for a project, in which case CPack would not run if there were errors during the install.  The script should be able to detect both of the failure cases mentioned above.
+ </p>
+ <p>
+  <strong>
+   One last problem….
+  </strong>
+  <br/>
+  There is one other odd case that seems to be a problem.  If you have a Qt plugin that is in a different directory than the main .exe of your project, even if you copy the DLL and the .manifest file for the plugin into the plugin directory, it will not load the plugin on Windows XP service pack 2!   To get around this issue with XP service pack 2, you have to remove the embeded manifest from the plugin DLL.  To do this in a CMake project, you do this:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c76e41c70460299014" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+if (MSVC)   # Do not generate manifests for the plugins - caused issues loading plugins
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /MANIFEST:NO")
+endif()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c76e41c70460299014-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c70460299014-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c76e41c70460299014-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c76e41c70460299014-1">
+        if (MSVC)   # Do not generate manifests for the plugins - caused issues loading plugins
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c70460299014-2">
+        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /MANIFEST:NO")
+       </div>
+       <div class="crayon-line" id="crayon-5c41c76e41c70460299014-3">
+        endif()
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0000 seconds] -->
+ <p>
+  BTW, Marcus Hanwell, discovered this fix while working on Avogadro. 🙂
+ </p>
+ <p>
+  <strong>
+   The end for now
+  </strong>
+  <br/>
+  Since every time I think I have this all figured out something else comes up, if I have something wrong in here, or if you find a new case, let me know.  Thanks!
+ </p>
+ <p>
+  -Bill
+ </p>
+</div>

@@ -1,0 +1,2242 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  I am proud to announce the first CMake 3.12 release candidate.
+  <br/>
+  <a href="https://cmake.org/download/">
+   https://cmake.org/download/
+  </a>
+ </p>
+ <p>
+  Documentation is available at:
+  <br/>
+  <a href="https://cmake.org/cmake/help/v3.12">
+   https://cmake.org/cmake/help/v3.12
+  </a>
+ </p>
+ <p>
+  Release notes appear below and are also published at
+  <br/>
+  <a href="https://cmake.org/cmake/help/v3.12/release/3.12.html">
+   https://cmake.org/cmake/help/v3.12/release/3.12.html
+  </a>
+ </p>
+ <p>
+  Some of the more significant changes in CMake 3.12 are:
+ </p>
+ <ul>
+  <li>
+   The “target_link_libraries()” command now supports Object
+   <br/>
+   Libraries. Linking to an object library uses its object files in
+   <br/>
+   direct dependents and also propagates usage requirements.
+  </li>
+  <li>
+   The “target_link_libraries()” command may now be called to modify
+   <br/>
+   targets created outside the current directory.
+  </li>
+  <li>
+   The “file(GLOB)” and “file(GLOB_RECURSE)” commands learned a new
+   <br/>
+   flag “CONFIGURE_DEPENDS” which enables expression of build system
+   <br/>
+   dependency on globbed directory’s contents.
+  </li>
+  <li>
+   The “Compile Features” functionality is now aware of C++ 20. No
+   <br/>
+   specific features are yet enumerated besides the “cxx_std_20” meta-
+   <br/>
+   feature.
+  </li>
+  <li>
+   The Visual Studio Generators for VS 2017 learned to support a
+   <br/>
+   “version=14.##” option in the “CMAKE_GENERATOR_TOOLSET” value (e.g.
+   <br/>
+   via the “cmake(1)” “-T” option) to specify a toolset version number.
+  </li>
+  <li>
+   The “cmake(1)” Build Tool Mode (“cmake –build”) gained “–
+   <br/>
+   parallel [&lt;jobs&gt;]” and “-j [&lt;jobs&gt;]” options to specify a parallel
+   <br/>
+   build level. They map to corresponding options of the native build
+   <br/>
+   tool.
+  </li>
+  <li>
+   The “add_compile_definitions()” command was added to set
+   <br/>
+   preprocessor definitions at directory level. This supersedes
+   <br/>
+   “add_definitions()”.
+  </li>
+  <li>
+   The “cmake_minimum_required()” and “cmake_policy(VERSION)”
+   <br/>
+   commands now accept a version range using the form
+   <br/>
+   “&lt;min&gt;[…&lt;max&gt;]”. The “&lt;min&gt;” version is required but policies are
+   <br/>
+   set based on the “&lt;max&gt;” version. This allows projects to specify a
+   <br/>
+   range of versions for which they have been updated and avoid
+   <br/>
+   explicit policy settings.
+  </li>
+  <li>
+   The “find_package()” command now searches a prefix specified by a
+   <br/>
+   “PackageName_ROOT” CMake or environment variable. Package roots are
+   <br/>
+   maintained as a stack so nested calls to all “find_*” commands
+   <br/>
+   inside find modules also search the roots as prefixes. See policy
+   <br/>
+   “CMP0074”.
+  </li>
+  <li>
+   A new “$&lt;GENEX_EVAL:…&gt;” and “$&lt;TARGET_GENEX_EVAL:target,…&gt;”
+   <br/>
+   “generator expression” has been added to enable consumption of
+   <br/>
+   generator expressions whose evaluation results itself in generator
+   <br/>
+   expressions.
+  </li>
+  <li>
+   A new “$&lt;TARGET_EXISTS:…&gt;” “generator expression” has been
+   <br/>
+   added.
+  </li>
+  <li>
+   A new “$&lt;TARGET_NAME_IF_EXISTS:…&gt;” “generator expression” has
+   <br/>
+   been added.
+  </li>
+  <li>
+   The “FindCURL” module now provides imported targets.
+  </li>
+  <li>
+   The “FindJPEG” module now provides imported targets.
+  </li>
+  <li>
+   A “FindODBC” module was added to find an Open Database
+   <br/>
+   Connectivity (ODBC) library.
+  </li>
+  <li>
+   New “FindPython3” and “FindPython2” modules, as well as a new
+   <br/>
+   “FindPython” module, have been added to provide a new way to locate
+   <br/>
+   python environments.
+  </li>
+ </ul>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e89098c3f803906926" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+CMake 3.12 Release Notes
+************************
+
+Changes made since CMake 3.11 include the following.
+
+
+New Features
+============
+
+
+Generators
+----------
+
+* The Visual Studio Generators for VS 2017 learned to support a
+  "version=14.##" option in the "CMAKE_GENERATOR_TOOLSET" value (e.g.
+  via the "cmake(1)" "-T" option) to specify a toolset version number.
+
+
+Command-Line
+------------
+
+* The "cmake(1)" Build Tool Mode ("cmake --build") gained "--
+  parallel [&lt;jobs&gt;]" and "-j [&lt;jobs&gt;]" options to specify a parallel
+  build level.  They map to corresponding options of the native build
+  tool.
+
+
+Commands
+--------
+
+* The "add_compile_definitions()" command was added to set
+  preprocessor definitions at directory level.  This supersedes
+  "add_definitions()".
+
+* The "cmake_minimum_required()" and "cmake_policy(VERSION)"
+  commands now accept a version range using the form
+  "&lt;min&gt;[...&lt;max&gt;]". The "&lt;min&gt;" version is required but policies are
+  set based on the "&lt;max&gt;" version.  This allows projects to specify a
+  range of versions for which they have been updated and avoid
+  explicit policy settings.
+
+* The "file(GLOB)" and "file(GLOB_RECURSE)" commands learned a new
+  flag "CONFIGURE_DEPENDS" which enables expression of build system
+  dependency on globbed directory's contents.
+
+* The "file(TOUCH)" and "file(TOUCH_NOCREATE)" commands were added
+  to expose "TOUCH" functionality without having to use CMake's
+  command- line tool mode with "execute_process()".
+
+* The "find_package()" command now searches a prefix specified by a
+  "PackageName_ROOT" CMake or environment variable.  Package roots are
+  maintained as a stack so nested calls to all "find_*" commands
+  inside find modules also search the roots as prefixes. See policy
+  "CMP0074".
+
+* The "install()" command learned an optional "NAMELINK_COMPONENT"
+  parameter, which allows you to change the component for a shared
+  library's namelink. If none is specified, the value of "COMPONENT"
+  is used by default.
+
+* The "list()" command learned a "JOIN" sub-command to concatenate
+  list's elements separated by a glue string.
+
+* The "list()" command learned a "SUBLIST" sub-command to get a
+  sublist of the list.
+
+* The "list()" command learned a "TRANSFORM" sub-command to apply
+  various string transformation to list's elements.
+
+* The "project()" command learned an optional "HOMEPAGE_URL"
+  parameter which has the effect of setting variables like
+  "PROJECT_HOMEPAGE_URL", "&lt;PROJECT-NAME&gt;_HOMEPAGE_URL" and
+  "CMAKE_PROJECT_HOMEPAGE_URL".
+
+* The "string()" command learned a "JOIN" sub-command to concatenate
+  input strings separated by a glue string.
+
+* "target_compile_options()" and "add_compile_options()" commands
+  gained a "SHELL:" prefix to specify a group of related options using
+  shell-like quoting.
+
+* The "target_link_libraries()" command now supports Object
+  Libraries. Linking to an object library uses its object files in
+  direct dependents and also propagates usage requirements.
+
+* The "target_link_libraries()" command may now be called to modify
+  targets created outside the current directory.
+
+
+Variables
+---------
+
+* The "CMAKE_FOLDER" variable was added to initialize the "FOLDER"
+  property on all targets.
+
+* The "CMAKE_DOTNET_TARGET_FRAMEWORK_VERSION" variable was defined
+  to initialize all "DOTNET_TARGET_FRAMEWORK_VERSION" target
+  properties.
+
+* "CMAKE_PROJECT_VERSION*" variables have been introduced:
+
+  * "CMAKE_PROJECT_VERSION"
+
+  * "CMAKE_PROJECT_VERSION_MAJOR"
+
+  * "CMAKE_PROJECT_VERSION_MINOR"
+
+  * "CMAKE_PROJECT_VERSION_PATCH"
+
+  * "CMAKE_PROJECT_VERSION_TWEAK"
+
+* The "CMAKE_SUPPRESS_REGENERATION" variable was extended to support
+  the "Ninja" and Makefile Generators. It is also now documented.
+
+* "CMAKE_VS_SDK_*_DIRECTORIES" variables were defined to tell Visual
+  Studio Generators for VS 2010 and above how to populate fields in
+  ".vcxproj" files that specify SDK directories.  The variables are:
+
+  * "CMAKE_VS_SDK_EXCLUDE_DIRECTORIES"
+
+  * "CMAKE_VS_SDK_EXECUTABLE_DIRECTORIES"
+
+  * "CMAKE_VS_SDK_INCLUDE_DIRECTORIES"
+
+  * "CMAKE_VS_SDK_LIBRARY_DIRECTORIES"
+
+  * "CMAKE_VS_SDK_LIBRARY_WINRT_DIRECTORIES"
+
+  * "CMAKE_VS_SDK_REFERENCE_DIRECTORIES"
+
+  * "CMAKE_VS_SDK_SOURCE_DIRECTORIES"
+
+* A "MSVC_TOOLSET_VERSION" variable was added to provide the MSVC
+  toolset version associated with the current MSVC compiler version in
+  "MSVC_VERSION".
+
+
+Properties
+----------
+
+* The "COMMON_LANGUAGE_RUNTIME" target property was introduced to
+  configure the use of managed C++ for Visual Studio Generators for VS
+  2010 and above. A corresponding "IMPORTED_COMMON_LANGUAGE_RUNTIME"
+  target property was added to support "C++/CLI" for imported targets.
+
+* The "DOTNET_TARGET_FRAMEWORK_VERSION" target property was
+  introduced as replacement for "VS_DOTNET_TARGET_FRAMEWORK_VERSION",
+  which is considered deprecated now.
+
+* An "EXPORT_PROPERTIES" target property was added to specify a
+  custom list of target properties to include in targets exported by
+  the "install(EXPORT)" and "export()" commands.
+
+* The "PDB_OUTPUT_DIRECTORY" property learned to support "generator
+  expressions".
+
+* A "TESTS" directory property was added to hold the list of tests
+  defined by the "add_test()" command.
+
+* A "VS_DEBUGGER_COMMAND" target property was created to set the
+  debugging command line with Visual Studio Generators for VS 2010 and
+  above.
+
+* HLSL source file properties "VS_SHADER_DISABLE_OPTIMIZATIONS" and
+  "VS_SHADER_ENABLE_DEBUG" gained support for generator expressions.
+
+* HLSL source file property "VS_SHADER_OBJECT_FILE_NAME" has been
+  added to the Visual Studio Generators for VS 2010 and above. The
+  property specifies the file name of the compiled shader object.
+
+
+Modules
+-------
+
+* The "FindALSA" module now provides imported targets.
+
+* The "FindCURL" module now provides imported targets.
+
+* The "FindJPEG" module now provides imported targets.
+
+* The "FindLibXml2" module now provides imported targets.
+
+* A "FindODBC" module was added to find an Open Database
+  Connectivity (ODBC) library.
+
+* The "FindPkgConfig" module has learned to export the found
+  libraries with full path for direct consumption with the
+  "target_link_libraries()" command.
+
+* New "FindPython3" and "FindPython2" modules, as well as a new
+  "FindPython" module, have been added to provide a new way to locate
+  python environments.
+
+* The "UseSWIG" module gained a whole refresh and is now more
+  consistent with standard CMake commands to generate libraries and is
+  fully configurable through properties.
+
+* The "UseSWIG" module learned to manage multiple behaviors through
+  "UseSWIG_MODULE_VERSION" variable to ensure legacy support as well
+  as more robust handling of "SWIG" advanced features (like
+  "%template").
+
+* The "UseSWIG" module learned to support CSHARP variant wrapper
+  files.
+
+* The "WriteCompilerDetectionHeader" module gained a "BARE_FEATURES"
+  option to add a compatibility define for the exact keyword of a new
+  language feature.
+
+
+Generator Expressions
+---------------------
+
+* A new "$&lt;GENEX_EVAL:...&gt;" and "$&lt;TARGET_GENEX_EVAL:target,...&gt;"
+  "generator expression" has been added to enable consumption of
+  generator expressions whose evaluation results itself in generator
+  expressions.
+
+* A new "$&lt;IN_LIST:...&gt;" "generator expression" has been added.
+
+* A new "$&lt;TARGET_EXISTS:...&gt;" "generator expression" has been
+  added.
+
+* A new "$&lt;TARGET_NAME_IF_EXISTS:...&gt;" "generator expression" has
+  been added.
+
+
+CTest
+-----
+
+* The "ctest_start()" command has been reworked so that you can
+  simply call "ctest_start(APPEND)" and it will read all the needed
+  information from the TAG file. The argument parsing has also been
+  relaxed so that the order of the arguments is less significant.
+
+* A "PROCESSOR_AFFINITY" test property was added to request that
+  CTest run a test with CPU affinity for a set of processors disjoint
+  from other concurrently running tests with the property set.
+
+
+CPack
+-----
+
+* The "CPack" module now uses variables
+  "CMAKE_PROJECT_VERSION_MAJOR", "CMAKE_PROJECT_VERSION_MINOR" and
+  "CMAKE_PROJECT_VERSION_PATCH" to initialize corresponding CPack
+  variables.
+
+* "cpack(1)" gained basic support for NuGet. See the "CPackNuGet"
+  module.
+
+
+Other
+-----
+
+* The "Compile Features" functionality is now aware of C++ 20.  No
+  specific features are yet enumerated besides the "cxx_std_20" meta-
+  feature.
+
+* The "Compile Features" functionality is now aware of the
+  availability of C features in MSVC since VS 2010.
+
+* The "Compile Features" functionality is now aware of C language
+  standards supported by Texas Instruments C compilers.
+
+
+Deprecated and Removed Features
+===============================
+
+* The "Visual Studio 8 2005" generator has been removed.
+
+* CMake no longer produces "&lt;tgt&gt;_LIB_DEPENDS" cache entries for
+  library targets.  See policy "CMP0073".
+
+
+Other Changes
+=============
+
+* Include flags for directories marked as "SYSTEM" are now moved
+  after non-system directories.  The "-isystem" flag does this
+  automatically, so moving them explicitly to the end makes the
+  behavior consistent on compilers that do not have any "-isystem"
+  flag.
+
+* Fortran dependency scanning now supports dependencies implied by
+  Fortran Submodules.
+
+* The existence and functionality of the file
+  "${CMAKE_BINARY_DIR}/cmake_install.cmake" has now been documented in
+  the "install()" documentation so that external packaging software
+  can take advantage of CPack-style component installs.
+
+* The "CheckIncludeFile" module "check_include_file" macro learned
+  to honor the "CMAKE_REQUIRED_LIBRARIES" variable. See policy
+  "CMP0075".
+
+* The "CheckIncludeFileCXX" module "check_include_file_cxx" macro
+  learned to honor the "CMAKE_REQUIRED_LIBRARIES" variable. See policy
+  "CMP0075".
+
+* The "CheckIncludeFiles" module "check_include_files" macro learned
+  to honor the "CMAKE_REQUIRED_LIBRARIES" variable. See policy
+  "CMP0075".
+
+* The "cmake(1)" "-E copy_directory" tool now fails when the source
+  directory does not exist.  Previously it succeeded by creating an
+  empty destination directory.
+
+* The "UseSWIG" module "swig_add_library()" command (and legacy
+  "swig_add_module" command) now set the prefix of Java modules to
+  """" for MINGW, MSYS, and CYGWIN environments.</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="hide">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-42">
+        42
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-43">
+        43
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-44">
+        44
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-45">
+        45
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-46">
+        46
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-47">
+        47
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-48">
+        48
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-49">
+        49
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-50">
+        50
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-51">
+        51
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-52">
+        52
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-53">
+        53
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-54">
+        54
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-55">
+        55
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-56">
+        56
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-57">
+        57
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-58">
+        58
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-59">
+        59
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-60">
+        60
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-61">
+        61
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-62">
+        62
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-63">
+        63
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-64">
+        64
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-65">
+        65
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-66">
+        66
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-67">
+        67
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-68">
+        68
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-69">
+        69
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-70">
+        70
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-71">
+        71
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-72">
+        72
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-73">
+        73
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-74">
+        74
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-75">
+        75
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-76">
+        76
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-77">
+        77
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-78">
+        78
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-79">
+        79
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-80">
+        80
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-81">
+        81
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-82">
+        82
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-83">
+        83
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-84">
+        84
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-85">
+        85
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-86">
+        86
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-87">
+        87
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-88">
+        88
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-89">
+        89
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-90">
+        90
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-91">
+        91
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-92">
+        92
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-93">
+        93
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-94">
+        94
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-95">
+        95
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-96">
+        96
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-97">
+        97
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-98">
+        98
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-99">
+        99
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-100">
+        100
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-101">
+        101
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-102">
+        102
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-103">
+        103
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-104">
+        104
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-105">
+        105
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-106">
+        106
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-107">
+        107
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-108">
+        108
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-109">
+        109
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-110">
+        110
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-111">
+        111
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-112">
+        112
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-113">
+        113
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-114">
+        114
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-115">
+        115
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-116">
+        116
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-117">
+        117
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-118">
+        118
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-119">
+        119
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-120">
+        120
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-121">
+        121
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-122">
+        122
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-123">
+        123
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-124">
+        124
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-125">
+        125
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-126">
+        126
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-127">
+        127
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-128">
+        128
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-129">
+        129
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-130">
+        130
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-131">
+        131
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-132">
+        132
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-133">
+        133
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-134">
+        134
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-135">
+        135
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-136">
+        136
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-137">
+        137
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-138">
+        138
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-139">
+        139
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-140">
+        140
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-141">
+        141
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-142">
+        142
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-143">
+        143
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-144">
+        144
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-145">
+        145
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-146">
+        146
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-147">
+        147
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-148">
+        148
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-149">
+        149
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-150">
+        150
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-151">
+        151
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-152">
+        152
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-153">
+        153
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-154">
+        154
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-155">
+        155
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-156">
+        156
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-157">
+        157
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-158">
+        158
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-159">
+        159
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-160">
+        160
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-161">
+        161
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-162">
+        162
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-163">
+        163
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-164">
+        164
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-165">
+        165
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-166">
+        166
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-167">
+        167
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-168">
+        168
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-169">
+        169
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-170">
+        170
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-171">
+        171
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-172">
+        172
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-173">
+        173
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-174">
+        174
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-175">
+        175
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-176">
+        176
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-177">
+        177
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-178">
+        178
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-179">
+        179
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-180">
+        180
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-181">
+        181
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-182">
+        182
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-183">
+        183
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-184">
+        184
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-185">
+        185
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-186">
+        186
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-187">
+        187
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-188">
+        188
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-189">
+        189
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-190">
+        190
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-191">
+        191
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-192">
+        192
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-193">
+        193
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-194">
+        194
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-195">
+        195
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-196">
+        196
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-197">
+        197
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-198">
+        198
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-199">
+        199
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-200">
+        200
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-201">
+        201
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-202">
+        202
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-203">
+        203
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-204">
+        204
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-205">
+        205
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-206">
+        206
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-207">
+        207
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-208">
+        208
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-209">
+        209
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-210">
+        210
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-211">
+        211
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-212">
+        212
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-213">
+        213
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-214">
+        214
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-215">
+        215
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-216">
+        216
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-217">
+        217
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-218">
+        218
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-219">
+        219
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-220">
+        220
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-221">
+        221
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-222">
+        222
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-223">
+        223
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-224">
+        224
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-225">
+        225
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-226">
+        226
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-227">
+        227
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-228">
+        228
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-229">
+        229
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-230">
+        230
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-231">
+        231
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-232">
+        232
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-233">
+        233
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-234">
+        234
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-235">
+        235
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-236">
+        236
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-237">
+        237
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-238">
+        238
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-239">
+        239
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-240">
+        240
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-241">
+        241
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-242">
+        242
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-243">
+        243
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-244">
+        244
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-245">
+        245
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-246">
+        246
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-247">
+        247
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-248">
+        248
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-249">
+        249
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-250">
+        250
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-251">
+        251
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-252">
+        252
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-253">
+        253
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-254">
+        254
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-255">
+        255
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-256">
+        256
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-257">
+        257
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-258">
+        258
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-259">
+        259
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-260">
+        260
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-261">
+        261
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-262">
+        262
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-263">
+        263
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-264">
+        264
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-265">
+        265
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-266">
+        266
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-267">
+        267
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-268">
+        268
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-269">
+        269
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-270">
+        270
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-271">
+        271
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-272">
+        272
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-273">
+        273
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-274">
+        274
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-275">
+        275
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-276">
+        276
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-277">
+        277
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-278">
+        278
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-279">
+        279
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-280">
+        280
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-281">
+        281
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-282">
+        282
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-283">
+        283
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-284">
+        284
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-285">
+        285
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-286">
+        286
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-287">
+        287
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-288">
+        288
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-289">
+        289
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-290">
+        290
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-291">
+        291
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-292">
+        292
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-293">
+        293
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-294">
+        294
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-295">
+        295
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-296">
+        296
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-297">
+        297
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-298">
+        298
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-299">
+        299
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-300">
+        300
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-301">
+        301
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-302">
+        302
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-303">
+        303
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-304">
+        304
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-305">
+        305
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-306">
+        306
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-307">
+        307
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-308">
+        308
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-309">
+        309
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-310">
+        310
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e89098c3f803906926-311">
+        311
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-1">
+        CMake 3.12 Release Notes
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-2">
+        ************************
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-3">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-4">
+        Changes made since CMake 3.11 include the following.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-7">
+        New Features
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-8">
+        ============
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-10">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-11">
+        Generators
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-12">
+        ----------
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-13">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-14">
+        * The Visual Studio Generators for VS 2017 learned to support a
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-15">
+        "version=14.##" option in the "CMAKE_GENERATOR_TOOLSET" value (e.g.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-16">
+        via the "cmake(1)" "-T" option) to specify a toolset version number.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-17">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-18">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-19">
+        Command-Line
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-20">
+        ------------
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-21">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-22">
+        * The "cmake(1)" Build Tool Mode ("cmake --build") gained "--
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-23">
+        parallel [&lt;jobs&gt;]" and "-j [&lt;jobs&gt;]" options to specify a parallel
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-24">
+        build level.  They map to corresponding options of the native build
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-25">
+        tool.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-26">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-27">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-28">
+        Commands
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-29">
+        --------
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-30">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-31">
+        * The "add_compile_definitions()" command was added to set
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-32">
+        preprocessor definitions at directory level.  This supersedes
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-33">
+        "add_definitions()".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-34">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-35">
+        * The "cmake_minimum_required()" and "cmake_policy(VERSION)"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-36">
+        commands now accept a version range using the form
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-37">
+        "&lt;min&gt;[...&lt;max&gt;]". The "&lt;min&gt;" version is required but policies are
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-38">
+        set based on the "&lt;max&gt;" version.  This allows projects to specify a
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-39">
+        range of versions for which they have been updated and avoid
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-40">
+        explicit policy settings.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-41">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-42">
+        * The "file(GLOB)" and "file(GLOB_RECURSE)" commands learned a new
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-43">
+        flag "CONFIGURE_DEPENDS" which enables expression of build system
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-44">
+        dependency on globbed directory's contents.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-45">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-46">
+        * The "file(TOUCH)" and "file(TOUCH_NOCREATE)" commands were added
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-47">
+        to expose "TOUCH" functionality without having to use CMake's
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-48">
+        command- line tool mode with "execute_process()".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-49">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-50">
+        * The "find_package()" command now searches a prefix specified by a
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-51">
+        "PackageName_ROOT" CMake or environment variable.  Package roots are
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-52">
+        maintained as a stack so nested calls to all "find_*" commands
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-53">
+        inside find modules also search the roots as prefixes. See policy
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-54">
+        "CMP0074".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-55">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-56">
+        * The "install()" command learned an optional "NAMELINK_COMPONENT"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-57">
+        parameter, which allows you to change the component for a shared
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-58">
+        library's namelink. If none is specified, the value of "COMPONENT"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-59">
+        is used by default.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-60">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-61">
+        * The "list()" command learned a "JOIN" sub-command to concatenate
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-62">
+        list's elements separated by a glue string.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-63">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-64">
+        * The "list()" command learned a "SUBLIST" sub-command to get a
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-65">
+        sublist of the list.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-66">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-67">
+        * The "list()" command learned a "TRANSFORM" sub-command to apply
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-68">
+        various string transformation to list's elements.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-69">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-70">
+        * The "project()" command learned an optional "HOMEPAGE_URL"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-71">
+        parameter which has the effect of setting variables like
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-72">
+        "PROJECT_HOMEPAGE_URL", "&lt;PROJECT-NAME&gt;_HOMEPAGE_URL" and
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-73">
+        "CMAKE_PROJECT_HOMEPAGE_URL".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-74">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-75">
+        * The "string()" command learned a "JOIN" sub-command to concatenate
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-76">
+        input strings separated by a glue string.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-77">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-78">
+        * "target_compile_options()" and "add_compile_options()" commands
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-79">
+        gained a "SHELL:" prefix to specify a group of related options using
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-80">
+        shell-like quoting.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-81">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-82">
+        * The "target_link_libraries()" command now supports Object
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-83">
+        Libraries. Linking to an object library uses its object files in
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-84">
+        direct dependents and also propagates usage requirements.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-85">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-86">
+        * The "target_link_libraries()" command may now be called to modify
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-87">
+        targets created outside the current directory.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-88">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-89">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-90">
+        Variables
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-91">
+        ---------
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-92">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-93">
+        * The "CMAKE_FOLDER" variable was added to initialize the "FOLDER"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-94">
+        property on all targets.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-95">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-96">
+        * The "CMAKE_DOTNET_TARGET_FRAMEWORK_VERSION" variable was defined
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-97">
+        to initialize all "DOTNET_TARGET_FRAMEWORK_VERSION" target
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-98">
+        properties.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-99">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-100">
+        * "CMAKE_PROJECT_VERSION*" variables have been introduced:
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-101">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-102">
+        * "CMAKE_PROJECT_VERSION"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-103">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-104">
+        * "CMAKE_PROJECT_VERSION_MAJOR"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-105">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-106">
+        * "CMAKE_PROJECT_VERSION_MINOR"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-107">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-108">
+        * "CMAKE_PROJECT_VERSION_PATCH"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-109">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-110">
+        * "CMAKE_PROJECT_VERSION_TWEAK"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-111">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-112">
+        * The "CMAKE_SUPPRESS_REGENERATION" variable was extended to support
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-113">
+        the "Ninja" and Makefile Generators. It is also now documented.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-114">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-115">
+        * "CMAKE_VS_SDK_*_DIRECTORIES" variables were defined to tell Visual
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-116">
+        Studio Generators for VS 2010 and above how to populate fields in
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-117">
+        ".vcxproj" files that specify SDK directories.  The variables are:
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-118">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-119">
+        * "CMAKE_VS_SDK_EXCLUDE_DIRECTORIES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-120">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-121">
+        * "CMAKE_VS_SDK_EXECUTABLE_DIRECTORIES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-122">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-123">
+        * "CMAKE_VS_SDK_INCLUDE_DIRECTORIES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-124">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-125">
+        * "CMAKE_VS_SDK_LIBRARY_DIRECTORIES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-126">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-127">
+        * "CMAKE_VS_SDK_LIBRARY_WINRT_DIRECTORIES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-128">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-129">
+        * "CMAKE_VS_SDK_REFERENCE_DIRECTORIES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-130">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-131">
+        * "CMAKE_VS_SDK_SOURCE_DIRECTORIES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-132">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-133">
+        * A "MSVC_TOOLSET_VERSION" variable was added to provide the MSVC
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-134">
+        toolset version associated with the current MSVC compiler version in
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-135">
+        "MSVC_VERSION".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-136">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-137">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-138">
+        Properties
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-139">
+        ----------
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-140">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-141">
+        * The "COMMON_LANGUAGE_RUNTIME" target property was introduced to
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-142">
+        configure the use of managed C++ for Visual Studio Generators for VS
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-143">
+        2010 and above. A corresponding "IMPORTED_COMMON_LANGUAGE_RUNTIME"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-144">
+        target property was added to support "C++/CLI" for imported targets.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-145">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-146">
+        * The "DOTNET_TARGET_FRAMEWORK_VERSION" target property was
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-147">
+        introduced as replacement for "VS_DOTNET_TARGET_FRAMEWORK_VERSION",
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-148">
+        which is considered deprecated now.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-149">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-150">
+        * An "EXPORT_PROPERTIES" target property was added to specify a
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-151">
+        custom list of target properties to include in targets exported by
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-152">
+        the "install(EXPORT)" and "export()" commands.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-153">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-154">
+        * The "PDB_OUTPUT_DIRECTORY" property learned to support "generator
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-155">
+        expressions".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-156">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-157">
+        * A "TESTS" directory property was added to hold the list of tests
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-158">
+        defined by the "add_test()" command.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-159">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-160">
+        * A "VS_DEBUGGER_COMMAND" target property was created to set the
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-161">
+        debugging command line with Visual Studio Generators for VS 2010 and
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-162">
+        above.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-163">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-164">
+        * HLSL source file properties "VS_SHADER_DISABLE_OPTIMIZATIONS" and
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-165">
+        "VS_SHADER_ENABLE_DEBUG" gained support for generator expressions.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-166">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-167">
+        * HLSL source file property "VS_SHADER_OBJECT_FILE_NAME" has been
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-168">
+        added to the Visual Studio Generators for VS 2010 and above. The
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-169">
+        property specifies the file name of the compiled shader object.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-170">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-171">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-172">
+        Modules
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-173">
+        -------
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-174">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-175">
+        * The "FindALSA" module now provides imported targets.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-176">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-177">
+        * The "FindCURL" module now provides imported targets.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-178">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-179">
+        * The "FindJPEG" module now provides imported targets.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-180">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-181">
+        * The "FindLibXml2" module now provides imported targets.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-182">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-183">
+        * A "FindODBC" module was added to find an Open Database
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-184">
+        Connectivity (ODBC) library.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-185">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-186">
+        * The "FindPkgConfig" module has learned to export the found
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-187">
+        libraries with full path for direct consumption with the
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-188">
+        "target_link_libraries()" command.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-189">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-190">
+        * New "FindPython3" and "FindPython2" modules, as well as a new
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-191">
+        "FindPython" module, have been added to provide a new way to locate
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-192">
+        python environments.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-193">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-194">
+        * The "UseSWIG" module gained a whole refresh and is now more
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-195">
+        consistent with standard CMake commands to generate libraries and is
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-196">
+        fully configurable through properties.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-197">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-198">
+        * The "UseSWIG" module learned to manage multiple behaviors through
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-199">
+        "UseSWIG_MODULE_VERSION" variable to ensure legacy support as well
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-200">
+        as more robust handling of "SWIG" advanced features (like
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-201">
+        "%template").
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-202">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-203">
+        * The "UseSWIG" module learned to support CSHARP variant wrapper
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-204">
+        files.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-205">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-206">
+        * The "WriteCompilerDetectionHeader" module gained a "BARE_FEATURES"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-207">
+        option to add a compatibility define for the exact keyword of a new
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-208">
+        language feature.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-209">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-210">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-211">
+        Generator Expressions
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-212">
+        ---------------------
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-213">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-214">
+        * A new "$&lt;GENEX_EVAL:...&gt;" and "$&lt;TARGET_GENEX_EVAL:target,...&gt;"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-215">
+        "generator expression" has been added to enable consumption of
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-216">
+        generator expressions whose evaluation results itself in generator
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-217">
+        expressions.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-218">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-219">
+        * A new "$&lt;IN_LIST:...&gt;" "generator expression" has been added.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-220">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-221">
+        * A new "$&lt;TARGET_EXISTS:...&gt;" "generator expression" has been
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-222">
+        added.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-223">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-224">
+        * A new "$&lt;TARGET_NAME_IF_EXISTS:...&gt;" "generator expression" has
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-225">
+        been added.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-226">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-227">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-228">
+        CTest
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-229">
+        -----
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-230">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-231">
+        * The "ctest_start()" command has been reworked so that you can
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-232">
+        simply call "ctest_start(APPEND)" and it will read all the needed
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-233">
+        information from the TAG file. The argument parsing has also been
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-234">
+        relaxed so that the order of the arguments is less significant.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-235">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-236">
+        * A "PROCESSOR_AFFINITY" test property was added to request that
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-237">
+        CTest run a test with CPU affinity for a set of processors disjoint
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-238">
+        from other concurrently running tests with the property set.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-239">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-240">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-241">
+        CPack
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-242">
+        -----
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-243">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-244">
+        * The "CPack" module now uses variables
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-245">
+        "CMAKE_PROJECT_VERSION_MAJOR", "CMAKE_PROJECT_VERSION_MINOR" and
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-246">
+        "CMAKE_PROJECT_VERSION_PATCH" to initialize corresponding CPack
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-247">
+        variables.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-248">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-249">
+        * "cpack(1)" gained basic support for NuGet. See the "CPackNuGet"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-250">
+        module.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-251">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-252">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-253">
+        Other
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-254">
+        -----
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-255">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-256">
+        * The "Compile Features" functionality is now aware of C++ 20.  No
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-257">
+        specific features are yet enumerated besides the "cxx_std_20" meta-
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-258">
+        feature.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-259">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-260">
+        * The "Compile Features" functionality is now aware of the
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-261">
+        availability of C features in MSVC since VS 2010.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-262">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-263">
+        * The "Compile Features" functionality is now aware of C language
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-264">
+        standards supported by Texas Instruments C compilers.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-265">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-266">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-267">
+        Deprecated and Removed Features
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-268">
+        ===============================
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-269">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-270">
+        * The "Visual Studio 8 2005" generator has been removed.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-271">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-272">
+        * CMake no longer produces "&lt;tgt&gt;_LIB_DEPENDS" cache entries for
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-273">
+        library targets.  See policy "CMP0073".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-274">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-275">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-276">
+        Other Changes
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-277">
+        =============
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-278">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-279">
+        * Include flags for directories marked as "SYSTEM" are now moved
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-280">
+        after non-system directories.  The "-isystem" flag does this
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-281">
+        automatically, so moving them explicitly to the end makes the
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-282">
+        behavior consistent on compilers that do not have any "-isystem"
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-283">
+        flag.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-284">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-285">
+        * Fortran dependency scanning now supports dependencies implied by
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-286">
+        Fortran Submodules.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-287">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-288">
+        * The existence and functionality of the file
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-289">
+        "${CMAKE_BINARY_DIR}/cmake_install.cmake" has now been documented in
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-290">
+        the "install()" documentation so that external packaging software
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-291">
+        can take advantage of CPack-style component installs.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-292">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-293">
+        * The "CheckIncludeFile" module "check_include_file" macro learned
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-294">
+        to honor the "CMAKE_REQUIRED_LIBRARIES" variable. See policy
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-295">
+        "CMP0075".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-296">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-297">
+        * The "CheckIncludeFileCXX" module "check_include_file_cxx" macro
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-298">
+        learned to honor the "CMAKE_REQUIRED_LIBRARIES" variable. See policy
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-299">
+        "CMP0075".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-300">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-301">
+        * The "CheckIncludeFiles" module "check_include_files" macro learned
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-302">
+        to honor the "CMAKE_REQUIRED_LIBRARIES" variable. See policy
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-303">
+        "CMP0075".
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-304">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-305">
+        * The "cmake(1)" "-E copy_directory" tool now fails when the source
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-306">
+        directory does not exist.  Previously it succeeded by creating an
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-307">
+        empty destination directory.
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-308">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-309">
+        * The "UseSWIG" module "swig_add_library()" command (and legacy
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-310">
+        "swig_add_module" command) now set the prefix of Java modules to
+       </div>
+       <div class="crayon-line" id="crayon-5c41e89098c3f803906926-311">
+        """" for MINGW, MSYS, and CYGWIN environments.
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0004 seconds] -->
+ <p>
+ </p>
+ <p>
+ </p>
+</div>

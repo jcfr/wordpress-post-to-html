@@ -1,0 +1,233 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Open source tools have been developed for seamless segmentation and creating high quality 3D tetrahedral meshes from medical images for applications in tissue optics. By measuring functional tissue parameters such as blood oxygen saturation, water content, and lipid concentration, tissue spectroscopy can provide valuable information for detecting breast cancer, imaging brain functions, and other applications. Multi-modal methods, such as MRI or CT-guided optical spectroscopy, provide structural information for optical modeling and image reconstruction. User-friendly, automatic image segmentation routines based on these structural images will facilitate efficient segmentation of common tissue types and contrast profiles in tissue optics. In this work, tools integrated in the freely-available software package NIRFAST are described, which allows users to go all the way from the importing of standard DICOM images (and other related formats) to segmentation and meshing, through to light simulation and optical property recovery. The segmentation tools have been developed in collaboration with Kitware Inc. (Clifton Park, NY). Creating suitable volumetric meshes of complex tissue geometries is a particular challenge for multi-modal tissue spectroscopy, due to the variety of contrast characteristics present in different imaging modalities and tissue types/models. Manual manipulation of the segmentation and mesh often requires a significant time investment. It is also very important to retain both the outer and inner region surfaces (internal boundaries) in a mesh to allow the application of prior knowledge for modeling. The new tools help to address the difficulties surrounding image-guided tissue spectroscopy.
+ </p>
+ <p>
+  <strong>
+   <span style="color: #000080; font-size: small;">
+    Implementation
+   </span>
+  </strong>
+  <br/>
+  The segmentation and mesh creation tools in NIRFAST allow for a variety of different inputs, including standard DICOM formats for medical images, general image formats (stacks of bmp, jpg, png, etc.), and geometry formats (vtk, mha, etc.). It can be used for many different medical imaging modalities, such as CT, MR, and Ultrasound. Both automatic and manual means of segmenting these images have been provided, and mesh creation is fully automated with
+  <br/>
+  customizable parameters.
+ </p>
+ <p>
+  The general procedure for processing the images begins by importing the medical images into the segmentation interface, shown in Figure 1 for a human brain example.
+ </p>
+ <p>
+  Next, automatic segmentation modules are used to identify tissue types as different regions as accurately as possible. There are general modules such as thresholding, dilation, erosion, and hole-filling. There are also more specific modules aimed at either particular imaging modes or types of contrast profiles seen in tissue optics. One such module is MR bias field correction, which can remove the low frequency gradient often seen in MR images.
+ </p>
+ <p>
+  Another specific module is MR breast skin extraction, which helps extract the skin in MR images specifically when segmenting breast tissue, as it is often lumped in with the glandular region by other automatic modules. There is additionally a K-Means and Markov random field module used to cluster grayscale values and then further refine the classification by taking spatial coherence into account using a Markov Random Field algorithm.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_173386406.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_173386406.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="60%"/>
+  </a>
+  <em>
+   Fig. 1. The interface for segmenting tissue types in medical images is shown, with 3D and 2D orthogonal views at right and histogram information at left. This screenshot shows a human head MR example.
+  </em>
+ </p>
+ <p>
+  There are also manual manipulation tools available for fixing any remaining issues with the segmentation, such as misclassified volumes. The final segmentation is used by the meshing routine, which creates a 3D tetrahedral mesh from the stack of 2D masks. The resulting mesh is multi-region, and can preserve the structural boundaries of segmented tissue regions. The user has control over element size, element quality, and approximation error. Figure 2 shows visualizations of mesh creation from medical images of
+  <br/>
+  the brain.
+ </p>
+ <p style="text-align: center;">
+  <a href="/source/files/28_106955843.jpg" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.28_106955843.jpg" style="display: block; margin-left: auto; margin-right: auto;" width="70%"/>
+  </a>
+  <em>
+   Fig. 2. The interface for mesh creation, source/detector allocation, and a cropped cross-section of a volume meshed layer of a human head model.
+  </em>
+ </p>
+ <p>
+  Figure 3 shows a comparison of the segmentation and mesh creation times in NIRFAST with that of the commercial package Mimics, designed for medical image processing based on a breast MR example.
+  <br/>
+  <span style="color: #000080; font-size: small;">
+   <strong>
+    <br/>
+    Summary
+   </strong>
+  </span>
+  <br/>
+  New segmentation and mesh creation tools have been implemented, with the ability to work from the variety of medical images encountered in optical tomography. There is a large difference in time benchmarks between NIRFAST and the commercial package Mimics, with NIRFAST being far more efficient by ~5 fold for segmentation, and ~22 fold for mesh creation. In segmentation, this is due to the efficiency of the automatic segmentation methods, and the availability of many advanced segmentation tools that are useful for the typical contrast profiles seen in MR/CT. A good example is MR-guided tissue spectroscopy, where low frequency gradients are often seen in the images. In the past, this has often hindered the ability to segment these images, as grayscale values of the same tissue type will no longer be in the same range for region classification. These gradients can be easily removed using the MR bias removal module, thus greatly reducing the amount of manual fixes needed after automatic segmentation. In meshing, the improved computational time is in part due to the fact that the new meshing tools are completely automatic, and do not require any fixing after mesh creation. A benefit that is not evident from the time benchmarks is the usability in the workflow. Since the package has been designed around seamlessly segmenting, creating a mesh, modeling light transport, and visualizing the result, it has greater ease of use than a combination of packages that are not optimized for tissue optical modeling.
+ </p>
+ <p>
+  The tools have been presented with a focus on tissue optics and the types of medical images often encountered in image-guided tissue spectroscopy. However these tools are usable for other applications involving 3D tetrahedral mesh creation from 2D image slices, such as electrical impedance tomography. The intentional modularity of the segmentation and meshing tools facilitates this flexibility to other applications. One of the advantages of the meshing tools presented is the fact that interior region surfaces are maintained in the 3D mesh, as opposed to simply identifying interior elements based on region proximity. This is very important in tissue optical modeling, as having the boundary of a surface inaccurately represented can lead to poor quantification of optical values. The ease and speed of segmentation and meshing is very useful in promoting the use of tissue spectroscopy, which has suffered from long, difficult, and non-robust meshing procedures. The tools are provided as part of a complete open source package for a seamless light modeling workflow that has never before been available.
+ </p>
+ <p>
+  <span style="font-size: small;">
+   <strong>
+    <span style="color: #000080;">
+     Acknowledgements
+    </span>
+   </strong>
+  </span>
+  <br/>
+  This work has been funded by RO1 CA132750 (MJ, HG, BWP, HD), P01 CA84203 (BWP, MJ), Department of Defense award W81XWH-09-1-0661 (SCD), and a Neukom Graduate Fellowship (MJ). The segmentation tools in NIRFAST have been developed in collaboration with Kitware Inc. (Clifton Park, NY) under subcontract.
+ </p>
+ <p>
+  Thank you to Dr. Wesley Turner, Sébastien Barré, and Karthik Krishnan who contributed to the coordination of this article.
+ </p>
+ <p>
+  <a href="/source/files/28_2115962344.jpg" rel="noopener" target="_blank">
+   <img alt="" height="127" src="https://blog.kitware.com/source/files/Small.28_2115962344.jpg" style="float: left;" width="101"/>
+  </a>
+  <em>
+   <strong>
+    Michael Jermyn
+   </strong>
+   is a PhD Student at Dartmouth College. His research is in light simulation for pre-treatment planning of photodynamic therapy to treat cancer. He also works on mathematical and computational methods in optical tomography, and is the lead developer of the light modeling package Nirfast, developed at Dartmouth College.
+  </em>
+ </p>
+ <p>
+  <p>
+   <p>
+    <p>
+     <a href="/source/files/28_137454718.jpg" rel="noopener" target="_blank">
+      <img alt="" height="127" src="https://blog.kitware.com/source/files/Small.28_137454718.jpg" style="float: left;" width="101"/>
+     </a>
+     <em>
+      <strong>
+       Hamid Ghadyani
+      </strong>
+      is a research fellow at Dartmouth College. He is an expert in mesh generation for biomedical applications, and has done significant research in using the Boundary Element Method (BEM) in image-guided optical tomography of the breast.
+     </em>
+    </p>
+    <p>
+     <p>
+      <p>
+       <p>
+        <p>
+         <a href="/source/files/28_171691858.jpg" rel="noopener" target="_blank">
+          <img alt="" height="127" src="https://blog.kitware.com/source/files/Small.28_171691858.jpg" style="float: left;" width="101"/>
+         </a>
+         <em>
+          <strong>
+           Michael A. Mastanduno
+          </strong>
+          is a PhD Student at Dartmouth College. His research is in MR-guided near infrared optical spectroscopy for structural and functional in-vivo imaging of breast cancer. He has also made significant contributions to the spectral capabilities of the light modeling software developed at Dartmouth College.
+         </em>
+        </p>
+        <p>
+         <p>
+          <p>
+           <p>
+            <em>
+             <strong>
+              Scott C. Davis
+             </strong>
+             is a research scientist at Dartmouth College. His research is in fluorescence tomography, and he has developed the fluorescence based tools for modeling light propagation at Dartmouth College. He also works on photodynamic therapy photosensitizer dosimetry, and MR-guided optical tomography.
+            </em>
+           </p>
+           <p>
+           </p>
+           <p>
+            <a href="/source/files/28_1853932757.jpg" rel="noopener" target="_blank">
+             <img alt="" height="127" src="https://blog.kitware.com/source/files/Small.28_1853932757.jpg" style="float: left;" width="101"/>
+            </a>
+            <em>
+             <strong>
+              Hamid Dehghani
+             </strong>
+             is a senior lecturer at the School of Computer Science, University of Birmingham, UK, and an adjunct assistant professor of engineering at Dartmouth College. His research is in finite element modeling of light transport in tissue, and image reconstruction in optical tomography and electrical impedance tomography. He is the original developer of Nirfast, developed at Dartmouth College.
+            </em>
+           </p>
+           <p>
+            <p>
+             <p>
+              <p>
+               <a href="/source/files/28_1603759785.jpg" rel="noopener" target="_blank">
+                <img alt="" height="127" src="https://blog.kitware.com/source/files/Small.28_1603759785.jpg" style="float: left;" width="101"/>
+               </a>
+               <em>
+                <strong>
+                 Brian W. Pogue
+                </strong>
+                is a Professor of Engineering Science, Physics &amp; Astronomy, and Surgery at Dartmouth College. His research is in cancer imaging using near-infrared light, photodynamic therapy for cancer treatment, modeling of tumor pathophysiology and contrast, and spectroscopy of tissue.
+               </em>
+              </p>
+              <p>
+               <p>
+                <p>
+                 <em>
+                 </em>
+                </p>
+                <p>
+                 <strong>
+                  <span style="color: #000080; font-size: small;">
+                   References
+                  </span>
+                 </strong>
+                </p>
+                <ol>
+                 <li>
+                  A.P. Gibson, J.C. Hebden, and S.R. Arridge, “Recent advances in diffuse optical imaging,” Physics in Medicine and Bioliogy, vol. 50, R1-R43 (2005).
+                 </li>
+                 <li>
+                  S. Srinivasan, B.W. Pogue, S. Jiang, H. Dehghani, C. Kogel, S. Soho, J.J. Gibson. T.D. Tosteson, S.P Poplack, and K.D. Paulsen, “Interpreting Hemoglobin and Water Concentration, Oxygen Saturation and Scattering Measured In Vivo by Near-Infrared Breast Tomography,” PNAS, vol. 100, 12349-12354 (2003).
+                 </li>
+                 <li>
+                  S.R. Arridge, “Optical tomography in medical imaging,” Inverse Problems, vol. 15(2), R41-R93 (1999).
+                 </li>
+                 <li>
+                  B. Brooksby, S. Jiang, C. Kogel, M. Doyley, H. Dehghani, J.B. Weaver, S.P. Poplack, B.W. Pogue, and K.D. Paulsen, “Magnetic resonance-guided near-infrared tomography of the breast,” Review of Scientific Instruments, vol. 75(12), 5262-5270 (2004).
+                 </li>
+                 <li>
+                  S.C. Davis, K.S. Samkoe, J.A. O’Hara, S.L. Gibbs-Strauss,K.D. Paulsen, and B.W. Pogue, “Comparing implementations of magnetic-resonance-guided fluorescence molecular tomography for diagnostic classification of brain tumors,” Journal of Biomedical Optics, vol. 15(5), 051602 (2010).
+                 </li>
+                 <li>
+                  B. Brooksby, S. Jiang, C. Kogel, M. Doyley, H. Dehghani, J.B. Weaver, S.P. Poplack, B.W. Pogue, and K.D. Paulsen, “Magnetic resonance-guided near-infrared tomography of the breast,” Rev. Sci. Instrum., vol. 75(12), 5262-5270 (2004).
+                 </li>
+                 <li>
+                  M. Schweiger and S.R. Arridge, “Optical tomographic reconstruction in a complex head model using a priori boundary information,” Phys. Med. Biol., vol. 44(11), 2703-2722 (1999).
+                 </li>
+                 <li>
+                  G. Gulsen, H. Yu, J. Wang, O. Nalcioglu, S. Merritt, F. Bevilacqua, A.J. Durkin, D.J. Cuccia, R. Lanning, and B.J. Tromberg, “Congruent MRI and near-infrared spectroscopy for functional and structural imaging of tumors,” Technol. Cancer Res. Treat., vol. 1(6), 497-505 (2002).
+                 </li>
+                 <li>
+                  S.C. Davis, H. Dehghani, J. Wang, S. Jiang, B.W. Pogue, and K.D. Paulsen, “Image-guided diffuse optical fluorescence tomography implemented with Laplacian-type regularization,” Opt. Express, vol. 15 (2007).
+                 </li>
+                 <li>
+                  H. Dehghani, M.E. Eames, P.K. Yalavarthy, S.C. Davis, S. Srinivasan, C.M. Carpenter, B.W. Pogue, and K.D. Paulsen, “Near infrared optical tomography using NIRFAST: Algorithm for numerical model and image reconstruction,” Communications in Numerical Methods in Engineering, vol. 25, 711-732 (2009). http://www.cs.bham.ac.uk/~dehghanh/research/downloads/Dehghani_CNM_2008.pdf.
+                 </li>
+                 <li>
+                  M. Jermyn, B.W. Pogue, H. Ghadyani, S.C. Davis, M. Mastanduno, and H. Dehghani, “A User-Enabling Visual Workflow for Near-Infrared Light Transport Modeling in Tissue,” in Biomedical Optics, OSA Technical Digest (Optical Society of America, 2012), paper BW1A.7.
+                 </li>
+                 <li>
+                  S.C. Davis, B.W. Pogue, R. Springett, C. Leussler, P. Mazurkewitz, S.B. Tuttle, S.L. Gibbs-Strauss, S.S. Jiang, H. Dehghani, and K.D. Paulsen, “Magnetic resonance-coupled fluorescence tomography scanner for molecular imaging of tissue,” Rev. Sci. Instrum., vol. 79(6), 064302 (2008).
+                 </li>
+                 <li>
+                  K.M. Tichauer, R.W. Holt, K.S. Samkoe, F. El-Ghussein, J.R. Gunn, M. Jermyn, H. Dehghani, F. Leblond, and B.W. Pogue, “Computed tomography-guided time-domain diffuse fluorescence tomography in small animals for localization of cancer biomarkers,” J. Vis. Exp., vol. 65, Jul. 17 (2012).
+                 </li>
+                 <li>
+                  M. Mastanduno, S. Jiang, R. DiFlorio-Alexander, B.W. Pogue, and K.D. Paulsen, “Remote positioning optical breast magnetic resonance coil for slice-selection during image-guided near-infrared spectroscopy of breast cancer,” J Biomed Opt., vol. 16(6), 066001 (2011).
+                 </li>
+                 <li>
+                  H. Dehghani, B.W. Pogue, S. Jiang, B. Brooksby, and K.D. Paulsen,”Three-dimensional optical tomography: resolution in small-object imaging,” Applied Optics, vol. 42(16), 3117 (2003).
+                 </li>
+                </ol>
+                <p>
+                 <em>
+                 </em>
+                </p>
+               </p>
+              </p>
+             </p>
+            </p>
+           </p>
+          </p>
+         </p>
+        </p>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</div>

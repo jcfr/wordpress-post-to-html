@@ -1,0 +1,453 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p dir="ltr">
+  <iframe allowfullscreen="" frameborder="0" height="281" mozallowfullscreen="" src="//player.vimeo.com/video/91640435" webkitallowfullscreen="" width="500">
+  </iframe>
+ </p>
+ <div>
+  <p>
+   <a href="http://vimeo.com/91640435">
+    Interactive Visualization of Google Project Tango Data with ParaView
+   </a>
+   from
+   <a href="http://vimeo.com/kitware">
+    Kitware
+   </a>
+   on
+   <a href="https://vimeo.com">
+    Vimeo
+   </a>
+   .
+  </p>
+ </div>
+ <div>
+ </div>
+ <h1>
+  Introduction
+ </h1>
+ <p>
+  Kitware has been working with the
+  <a href="https://www.google.com/atap/projecttango/">
+   Google Project Tango
+  </a>
+  team to help them create software dashboards with
+  <a href="http://www.cdash.org/">
+   CDash
+  </a>
+  and track algorithm performance over time with
+  <a href="http://www.midasplatform.org/">
+   MIDAS
+  </a>
+  . Google describes the project as “an attempt to create a mobile device unlike like any other, a mobile device that shares our sense of space and movement, that understands and perceives the world the same way we do.”
+ </p>
+ <p>
+  As part of the Kitware effort, we were fortunate enough to receive two Project Tango development kits for testing purposes. The dev kits are essentially mobile phones that provide advanced 3D-sensing capabilities for producing colorized point clouds of the environment. After receiving the devices and walking around the office looking at depth maps and point clouds on the device—and taking plenty of selfies—we were excited to view the data in our favorite scientific visualization tool
+  <a href="http://www.paraview.org/">
+   ParaView
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   This post describes how to acquire data from a Project Tango development kit and visualize it using ParaView—without writing a single line of code.
+  </strong>
+  If you have been lucky enough to get your hands on a demo device, you will learn how to download and view data within ParaView. For everyone else, we have provided links to sample data that you can download and try out.
+ </p>
+ <p>
+  We plan a series of follow-up posts to cover more advanced interaction and analysis of Tango data using ParaView,
+  <a href="http://www.vtk.org/">
+   VTK
+  </a>
+  filters, and the
+  <a href="http://pointclouds.org/">
+   Point Cloud Library
+  </a>
+  (PCL) filters. Stay tuned.
+ </p>
+ <h1>
+  Installing ParaView with Tango Extensions
+ </h1>
+ <p>
+  In order to easily process Tango data we added a few extra goodies to the standard ParaView installer. These include the
+  <a href="http://www.paraview.org/Wiki/ParaView/PCL_Plugin">
+   ParaView PCL plugin
+  </a>
+  and some extra Tango-specific filters. You can download pre-built binaries using the following links. Once you’ve installed the application you should be able to launch ParaView.
+ </p>
+ <ul>
+  <li>
+   <a href="http://midas3.kitware.com/midas/download/item/233558/ParaViewTango-4.1.0-Tango-Darwin-64bit.dmg">
+    Mac
+   </a>
+   (10.8 and higher); 83MB
+  </li>
+  <li>
+   <a href="http://midas3.kitware.com/midas/download/item/233559/ParaViewTango-4.1.0-Tango-Linux-64bit.tar.gz">
+    Linux
+   </a>
+   179MB
+  </li>
+  <li>
+   <a href="http://midas3.kitware.com/midas/download/?items=233562">
+    Windows
+   </a>
+   x86 71MB
+  </li>
+ </ul>
+ <p>
+  <a href="/blog/files/49_1537398135.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.49_1537398135.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  <em>
+   Note on Mac: you can install ParaView in your Applications folder by dragging it to the Application folder link. You can also run ParaView directly by CTRL-clicking and selecting Open.
+  </em>
+ </p>
+ <p>
+  It is also possible to use these extra goodies with an already-installed version of ParaView, or build everything from source. For now we’ll assume you are using the pre-built binaries.
+ </p>
+ <h1>
+  Capturing Data
+ </h1>
+ <h2>
+  Collecting data with Tango Mapper
+ </h2>
+ <p>
+  You can collect 3D data from the Project Tango development kit using the Tango Mapper application that comes preinstalled on the phone. We ran the application in the Report Failure mode menu option in the upper left on the Tango Mapper screen.  Select [Superframes 4MP], then just walked around and point the camera at interesting scenes. When you are done, select the back arrow.  This will save the data in /data/data/com.motorola.atap.tangomapper on the device.
+ </p>
+ <p>
+  <a href="/blog/files/49_782319998.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.49_782319998.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  <a href="/blog/files/331_1128989833.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.331_1128989833.png" style="width: 691px; height: 388px;"/>
+  </a>
+ </p>
+ <h2>
+  Getting the data from the phone to your computer
+ </h2>
+ <p>
+  You will need a working adb executable from the Android SDK.  Once you have that, you connect the dev kit to your computer via the USB 3.0 connector.  Then you should be able to use adb pull to copy the data directory that you are interested in.  You can also use the adb shell for Unix commands like cd and ls to find your data.
+ </p>
+ <p>
+  Here is a sample adb pull to get the data set in the directory
+  <em>
+   2014Mar28_114300:
+  </em>
+ </p>
+ <p style="margin-left:.5in;">
+  <strong>
+   <em>
+    $ adb pull /data/data/com.motorola.atap.tangomapper/files/2014Mar28_114300
+   </em>
+  </strong>
+ </p>
+ <p style="margin-left:.5in;">
+  <em>
+   pull: building file list…
+  </em>
+ </p>
+ <p style="margin-left:.5in;">
+  <em>
+   pull: /data/data/com.motorola.atap.tangomapper/files/2014Mar28_114300/superframes/m0008948.pgm -&gt; ./superframes/m0008948.pgm
+  </em>
+ </p>
+ <p style="margin-left:.5in;">
+  <em>
+   pull: /data/data/com.motorola.atap.tangomapper/files/2014Mar28_114300/superframes/m0008947.pgm -&gt; ./superframes/m0008947.pgm
+  </em>
+ </p>
+ <p style="margin-left:.5in;">
+  <em>
+   ….
+  </em>
+ </p>
+ <p>
+  At this point you should have all the data from your collect and you should be ready to have a look with ParaView!
+ </p>
+ <h1>
+  Downloading Sample Data
+ </h1>
+ <p>
+  If you can’t get your hands on a device you can download test data here:
+ </p>
+ <ul>
+  <li>
+   <a href="http://midas3.kitware.com/midas/download/item/233539/tango_20140401.zip">
+    Conference room data set
+   </a>
+   (267MB; unused small frames were removed to reduce file size)
+  </li>
+  <li>
+   <a href="http://midas3.kitware.com/midas/download/item/233560/2014Apr10_133430_skateboard.zip">
+    Smaller skateboard data set
+   </a>
+   (69MB; unused small frames were removed to reduce file size)
+  </li>
+ </ul>
+ <p>
+  After unzipping you will have a folder called
+  <strong>
+   tango_20140401
+  </strong>
+  (or
+  <strong>
+  </strong>
+  2014Apr10_133430_skateboard if you use the smaller data set). This folder contains the raw data that we collected using the process above.
+ </p>
+ <h1>
+  Visualizing Tango Data with ParaView
+ </h1>
+ <p>
+  To view the Tango data in ParaView, launch ParaView, create a source filter and set its parameters, apply the filter to load the data, and finally animate the view.
+ </p>
+ <h2>
+  Create a Tango Source Filter
+ </h2>
+ <p>
+  From the
+  <strong>
+   Sources
+  </strong>
+  menu, select
+  <strong>
+   Tango Source
+  </strong>
+  . This creates a source filter that will read your Tango data. The parameters for the filter are listed in the lower left of the GUI. Set the
+  <span style="color:#FFA500;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     Directory
+    </span>
+   </strong>
+  </span>
+  parameter to your data directory (e.g., /Volumes/Macintosh HD/Users/davisb/Downloads/tango_20140401). If you use the file open dialog you should pick any file in the data directory (e.g., /Volumes/Macintosh HD/Users/davisb/Downloads/tango_20140401/states.txt). You can ignore the other parameters for now; the defaults are fine.
+ </p>
+ <h2>
+  Load the Data
+ </h2>
+ <p>
+  Now click the
+  <span style="color:#40E0D0;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     Apply
+    </span>
+   </strong>
+  </span>
+  button to load the data. After a second or two you will see the first frame of point cloud data. You can use your mouse to interact with the scene (e.g., click and drag will rotate scene and CTRL-click-drag – or right click drag – will scale).
+ </p>
+ <p>
+  <a href="/blog/files/49_925474676.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.49_925474676.png" width="100%"/>
+  </a>
+ </p>
+ <h2>
+  Animate the View
+ </h2>
+ <p>
+  Now start an animation to view all of the recorded point cloud frames.  From the
+  <strong>
+   View
+  </strong>
+  menu, open
+  <strong>
+   Animation View
+  </strong>
+  .  Now you can use the
+  <span style="color:#FFA500;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     Animation Toolbar
+    </span>
+   </strong>
+  </span>
+  at the top of the GUI to play through the frames. The
+  <span style="color:#40E0D0;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     End Time
+    </span>
+   </strong>
+  </span>
+  field of the
+  <strong>
+   Animation View
+  </strong>
+  shows the total number of available frames.  Currently, only frames with high-resolution RGB images are available.
+ </p>
+ <p>
+  <a href="/blog/files/49_1875040654.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.49_1875040654.png" width="100%"/>
+  </a>
+ </p>
+ <h2>
+  A closer look at the Tango Source Options
+ </h2>
+ <p>
+  The Tango Source filter contains several options that you may want to investigate.
+ </p>
+ <p>
+  <a href="/blog/files/49_1236191057.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.49_1236191057.png" style="width: 60%;"/>
+  </a>
+ </p>
+ <ul>
+  <li>
+   <strong>
+    Directory
+   </strong>
+   – the source data location. If you use the “…” file browser button it will require you to select a file rather than a directory; select any file, such as the states.txt file, in the source data directory.
+  </li>
+  <li>
+   <strong>
+    Apply Pose
+   </strong>
+   – If true, apply the reconstructed pose information to the point clouds.  If false, the clouds appear in the depth camera’s coordinate system.
+  </li>
+  <li>
+   <strong>
+    Static
+   </strong>
+   – Ignore time information when loading data.
+  </li>
+  <li>
+   <strong>
+    Upsample Depth
+   </strong>
+   – By default the high-resolution image is downsampled to the resolution of the depth-buffer.  With this option the depth-buffer is upsampled.  Performance of animation playback is slower with an upsampled depth buffer.
+  </li>
+  <li>
+   <strong>
+    Stride
+   </strong>
+   – A non-zero value downsamples the input data by selecting one out of every Stride points. Setting Stride to 1 will load all of the data.
+  </li>
+  <li>
+   <strong>
+    Time Offset
+   </strong>
+   – When the animation view requests data at a given time, provide data at that time plus this offset—used to simultaneously animate different views from multiple sources.
+  </li>
+ </ul>
+ <h1>
+  Visualizing the Camera’s Path
+ </h1>
+ <p>
+  In addition to importing point clouds from the depth camera, ParaView’s Tango plugin provides a way to visualize the camera’s motion over time. First, create a
+  <strong>
+   Tango Path
+  </strong>
+  source by selecting
+  <strong>
+   Tango Path
+  </strong>
+  from the
+  <strong>
+   Sources
+  </strong>
+  menu. This source will produce the full sensor path as a line. You will see the new source filter in the pipeline browser. Select the new filter, set the
+  <span style="color:#FFA500;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     Directory
+    </span>
+   </strong>
+  </span>
+  to your data directory (same as for the
+  <strong>
+   Tango Source
+  </strong>
+  above), and click
+  <span style="color:#40E0D0;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     Apply
+    </span>
+   </strong>
+  </span>
+  . To color the sensor path by time, select androidTime using the
+  <strong>
+   <span style="color:#FFFF00;">
+    <span style="background-color: rgb(105, 105, 105);">
+     Coloring
+    </span>
+   </span>
+  </strong>
+  drop down menu.
+ </p>
+ <p>
+  <a href="/blog/files/49_959675038.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.49_959675038.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+  The sensor frame can also be visualized and animated through time using the
+  <strong>
+   Tango Camera Annotation Filter
+  </strong>
+  . First, click on the
+  <strong>
+   TangoSource
+  </strong>
+  filter in the
+  <strong>
+   Pipeline Browser
+  </strong>
+  to make sure it is selected; this will ensure that the new filter is added with the
+  <strong>
+   TangoSource
+  </strong>
+  as its input. Next, select
+  <strong>
+   Tango Camera Annotation Filter
+  </strong>
+  from the
+  <strong>
+   Filters-&gt;Alphabetical
+  </strong>
+  menu. The new filter will appear in the
+  <strong>
+   Pipeline Browser
+  </strong>
+  as a child of the
+  <strong>
+   TangoSource
+  </strong>
+  filter. The default settings for this filter are fine, so click
+  <span style="color:#FFA500;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     Apply
+    </span>
+   </strong>
+  </span>
+  . Now you should see the current camera position represented as a
+  <span style="color:#40E0D0;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     frame
+    </span>
+   </strong>
+  </span>
+  . If you
+  <span style="color:#FFFF00;">
+   <strong>
+    <span style="background-color: rgb(105, 105, 105);">
+     start animation
+    </span>
+   </strong>
+  </span>
+  the sensor frame will update in time with the point cloud data.
+ </p>
+ <p>
+  <a href="/blog/files/49_181848040.png" target="_blank">
+   <img src="https://blog.kitware.com/blog/files/Small.49_181848040.png" width="100%"/>
+  </a>
+ </p>
+ <p>
+ </p>
+</div>

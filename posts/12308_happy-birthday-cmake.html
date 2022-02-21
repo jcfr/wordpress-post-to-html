@@ -1,0 +1,615 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  The CMake project officially launched on this day in 2000 on the Insight Segmentation and Registration Toolkit (
+  <a href="http://www.itk.org">
+   ITK
+  </a>
+  ) mailing list:
+ </p>
+ <p>
+  <a href="http://public.kitware.com/pipermail/insight-developers/2000-August/024248.html">
+   http://public.kitware.com/pipermail/insight-developers/2000-August/024248.html
+  </a>
+ </p>
+ <p>
+  A small, five-person company, called
+  <a href="https://www.kitware.com">
+   Kitware
+  </a>
+  (here is our
+  <a href="https://web.archive.org/web/20000622033052/http://www.kitware.com/">
+   2000 web page
+  </a>
+  ), was taking part in a project funded by the
+  <a href="https://www.nlm.nih.gov/">
+   National Library of Medicine
+  </a>
+  to create a cross-platform C++ toolkit that would codify the state-of-the-art in segmentation and registration algorithms and complement the data in the
+  <a href="http://www.nlm.nih.gov/research/visible/visible_human.html">
+   Visible Human project
+  </a>
+  . One of Kitware’s tasks was to create a build system that would work on Unix, Windows, and Mac OS.  Kitware’s founding project,
+  <a href="http://www.vtk.org">
+   VTK
+  </a>
+  , had a build system called pcmaker, which used autotools on Unix and a C++ program that created nmake makefiles on Windows. CMake was created with the limitations of that tool in mind.
+ </p>
+ <p>
+  One of the main objectives of
+  <a href="http://www.cmake.org">
+   CMake
+  </a>
+  was to not add external dependencies to the project. Since CMake was used to build C++, the only thing on which we could depend would be a valid C++ compiler. That is why CMake is written entirely in C/C++, so that it can be built on any system on which you need to build your C++ project.  This avoids what I like to call the Easter egg hunt build process.  First find/build/install these five things and then you are ready to build the project you actually want to use.
+ </p>
+ <p>
+  Although we were tasked with creating a build system for ITK, to really be effective, I knew that CMake would have to be much more general purpose. When I first announced the CMake concept to the ITK development team at the auditorium at Lister Hall at NLM, someone asked me why I was creating the “ITK build system”.  I sort of gave him a long stare, and before he waited for me to answer, he answered his own question: “I get it, you don’t want to build just ITK, you want to build ALL C++ in the world!”  Yes, I admitted, World Domination was the goal.
+ </p>
+ <p>
+  Early CMake was far from perfect.   Here is one of the very first CMake files:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e232a2bfd981505995" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+CMakeLists.txt
+
+SUBDIRS = \
+Code/Common \
+Code/Insight3DParty/vxl \
+Testing/Code/Common \
+Testing/Code/Insight3DParty/vxl/vnl/tests
+ME = ITK
+
+Code/Common/CMakeLists.txt 
+
+ME = ITKCommon
+
+COMPILE_CLASSES =\
+itkDataObject \
+itkDirectory \
+itkDynamicLoader \
+itkExceptionObject \
+itkImageBase \
+itkIndent \
+itkLightObject \
+itkNumericTraits \
+itkObject \
+itkObjectFactoryBase \
+itkOutputWindow \
+itkProcessObject \
+itkTimeStamp \
+itkVersion \
+itkWriter
+
+WIN32_CLASSES =\
+itkWin32OutputWindow</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e232a2bfd981505995-32">
+        32
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-1">
+        <span class="crayon-v">
+         CMakeLists
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         txt
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-3">
+        <span class="crayon-v">
+         SUBDIRS
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-4">
+        <span class="crayon-v">
+         Code
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-i">
+         Common
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-5">
+        <span class="crayon-v">
+         Code
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Insight3DParty
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-i">
+         vxl
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-6">
+        <span class="crayon-v">
+         Testing
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Code
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-i">
+         Common
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-7">
+        <span class="crayon-v">
+         Testing
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Code
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Insight3DParty
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vxl
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         vnl
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-e">
+         tests
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-8">
+        <span class="crayon-v">
+         ME
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ITK
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-10">
+        <span class="crayon-v">
+         Code
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         Common
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         CMakeLists
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         txt
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-11">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-12">
+        <span class="crayon-v">
+         ME
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ITKCommon
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-13">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-14">
+        <span class="crayon-v">
+         COMPILE_CLASSES
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-15">
+        <span class="crayon-i">
+         itkDataObject
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-16">
+        <span class="crayon-i">
+         itkDirectory
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-17">
+        <span class="crayon-i">
+         itkDynamicLoader
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-18">
+        <span class="crayon-i">
+         itkExceptionObject
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-19">
+        <span class="crayon-i">
+         itkImageBase
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-20">
+        <span class="crayon-i">
+         itkIndent
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-21">
+        <span class="crayon-i">
+         itkLightObject
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-22">
+        <span class="crayon-i">
+         itkNumericTraits
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-23">
+        <span class="crayon-i">
+         itkObject
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-24">
+        <span class="crayon-i">
+         itkObjectFactoryBase
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-25">
+        <span class="crayon-i">
+         itkOutputWindow
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-26">
+        <span class="crayon-i">
+         itkProcessObject
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-27">
+        <span class="crayon-i">
+         itkTimeStamp
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-28">
+        <span class="crayon-i">
+         itkVersion
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-29">
+        <span class="crayon-e">
+         itkWriter
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-30">
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-31">
+        <span class="crayon-v">
+         WIN32_CLASSES
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-sy">
+         \
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e232a2bfd981505995-32">
+        <span class="crayon-v">
+         itkWin32OutputWindow
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0006 seconds] -->
+ <p>
+  Interestingly enough, it was a declarative language back then. CMake has evolved over the past 15 years.  One of the biggest milestones was the
+  <a href="https://lwn.net/Articles/188693/">
+   KDE adoption of CMake in 2006
+  </a>
+  .
+  <a href="https://www.google.com/trends/explore#q=cmake%2C%20automake%2C%20autotools&amp;cmpt=q&amp;tz=Etc%2FGMT%2B4">
+   This adoption
+  </a>
+  was good for both projects. CMake had to follow standards of library naming and installation rules and many other improvements to be able to build and install KDE on the major Linux distributions. In addition, many valuable contributions to CMake have come from KDE developers.
+ </p>
+ <p>
+  CMake is close to, if not already, a de facto standard for building cross-platform C++ code.  Thanks to all who have helped grow this project and those who will help in the future.
+ </p>
+ <p>
+  I would like to give a special thanks to the following people:
+ </p>
+ <p>
+  <strong>
+   Brad King
+  </strong>
+  – Without Brad, CMake would undoubtedly be a horrible hack.
+ </p>
+ <p>
+  <strong>
+   Alex Neundorf
+  </strong>
+  – Alex led the way for KDE to adopt CMake.
+ </p>
+ <p>
+  <span style="color: #2e3436; font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 20.7999992370605px;">
+   <strong>
+    Stephen Kelly
+   </strong>
+  </span>
+  – Stephen has moved CMake forward in many ways and has contributed countless hours to the project.
+ </p>
+ <div>
+  <strong>
+   Clint Stimpson
+  </strong>
+  – Clint gave CMake a Qt GUI.
+ </div>
+ <div>
+  <strong>
+   Dr. Terry Yoo
+  </strong>
+  – Terry created the ITK project that provided the funding and inspiration to make CMake a reality.
+ </div>
+ <p>
+  Here is to the next 15 years!
+ </p>
+ <p>
+  -Bill
+ </p>
+</div>

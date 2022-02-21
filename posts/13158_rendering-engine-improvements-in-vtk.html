@@ -1,0 +1,159 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="/source/files/4_298694191.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_298694191.png" style="width: 100px; float: left; padding-right: 5px;"/>
+  </a>
+ </p>
+ <p>
+  Back in the days of the Wild West, you knew when you were being challenged. The cowboy in black would slam the empty shot of whisky down on the table, stand up, unhitch his holster, and call you a coward. At tech companies, challenges tend to be more subtle and involve slamming down empty cups of espresso instead of whisky.  So, two months ago, when the empty espresso cup hit the table at Kitware, I knew we had a challenge. It all started with one of our co-workers lamenting that he needed to render a lot of small models quickly and that the Visualization Toolkit (VTK) did not do it well. It turns out that there are many application areas where rendering thousands of small models quickly is important. Molecular visualization, hedgehog techniques, and computer-aided design all have this requirement. We had been working on a new rendering engine for VTK and knew the challenge was to show that the engine could solve this long-standing issue.
+ </p>
+ <p>
+  In July, Marcus Hanwell wrote about our plans to create a new high-performance rendering engine for VTK [1]. At a high level, the goal is to create a rendering engine that will allow VTK to handle larger, more demanding visualizations and, at the same time, expand its capabilities into tablet and embedded device platforms. Now that nine months have passed, the results are looking very good. The new rendering engine has almost all of the capabilities of the old engine, while showing significant performance improvements. But, getting back to our challenge: Can the new engine render a lot of small models quickly? Let us look at some specific use cases that involve rendering a lot of small models and see.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Molecular Rendering
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Molecular rendering often involves rendering many balls and sticks (spheres and cylinders). Some large, complex molecules may have thousands of atoms of different sizes and colors. Their bonds are represented as cylinders of varying colors and order, depending on the nature of the bonds. The old rendering engine would draw molecules as spheres, made up of a couple thousand triangles, and cylinders, also made up of many triangles. This resulted in both a large memory footprint and slow rendering performance.
+ </p>
+ <p>
+  The new backend uses a rendering technique, called imposters, to render both the spheres and cylinders. Each sphere is drawn as a single triangle that is colored and lighted at the fragment level to look like a sphere. Each cylinder is drawn as four triangles that are colored and lighted at the fragment level to look like a capped cylinder. This creates a huge reduction in memory footprint, as atoms are going from 2,500 triangles down to one, and cylinders are likewise reduced.
+ </p>
+ <p>
+  This allows us to fit much larger molecules in memory and render them far more quickly. We can now render molecules about ten thousand times faster than we could with the old rendering engine. On a windows laptop, we can render molecules with a million atoms at one hundred frames a second.
+ </p>
+ <p>
+  While that level of performance may seem extreme, it opens up the ability to render large molecules interactively on less powerful platforms such as tablets. We have implemented this in VTK as subclasses to vtkOpenGLPolyDataMapper that override the creation of the vertex buffers and provide additional vertex and fragment shader code. If you are using the new rendering engine, by default, vtkMoleculeMapper will use the new imposter technique.
+ </p>
+ <p>
+  <a href="/source/files/4_1280753603.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1280753603.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Close up of a Lysozyme molecule: Each sphere in this image is rendered using one triangle, and cylinders are rendered using four triangles.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Glyphing
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Glyphing is another case of efficiently drawing a lot of models. In this case, a single model is rendered many times with different parameters. The position, orientation, scale, and color of the model are common parameters that can be changed. One example of glyphing is using many arrows that are scaled and oriented to show the speed and direction of blood flow in magnetic resonance angiography. With the old rendering engine, the model was duplicated in memory for every location we were glyphing. The new rendering engine uses a technique, called instancing, to perform glyphing. This takes advantage of special commands in OpenGL such as glDrawElementsInstanced that allow us to keep just one copy of the model in memory and render it multiple times with an array of parameters.
+ </p>
+ <p>
+  We are seeing a 20-fold performance improvement with the new rendering engine. If you are using vtkGlyph3DMapper and building with the new rendering engine, then VTK will automatically use the new instanced rendering technique.
+ </p>
+ <p>
+  <a href="/source/files/4_1687194538.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1687194538.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Multi-model glyphing in Reactor Geometry Generator.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Composite Mapping
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Sometimes, you need to render thousands of different models with various properties. This is where vtkCompositePolyDataMapper2 comes into play. It is designed to render many different models, while allowing you to independently adjust their color, opacity, and visibility. This is useful for applications such as a body atlas or parts of a car.
+ </p>
+ <p>
+  The new rendering engine in VTK uses a two-pass approach in this case. The first pass determines what models share the same properties and can, therefore, be rendered in one call. The second pass does the actual rendering. As with the other techniques, we are seeing significant speedups when using the new rendering engine. In some cases, the speedup is by a factor of twenty or more. If you are already using vtkCompositePolyDataMapper2, then you should not need to change your code, and you should see a nice performance improvement.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Taking it for a Ride
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  The new rendering engine is still under development, but you can try it out by setting VTK_RENDERING_BACKEND to OpenGL2 when configuring VTK. The new engine is available in VTK version 6.2 or later and is mostly backwards compatible with older versions. If you are directly using or subclassing OpenGL-specific classes, then you may run into some compatibility issues, as the API at that level has changed. As always, if you see a case where the performance is not what you think it should be, slam down the espresso cup, issue the challenge, and let us know. To help test the performance of the new rendering engine, we have added a benchmark in VTK, called TimingTests, that can be built by turning on the Utilities/Benchmarks module. That executable will test a variety of rendering techniques on your system and report the results.
+ </p>
+ <p>
+  While this article focuses on the challenge to quickly render a lot of small models, do not forget that the new rendering engine includes many other improvements. We are now able to render far larger models in memory and at performance rates of three billion triangles per second. There also is an all-new volume mapper [2] and alpha support for using VTK on iOS and Android platforms.
+ </p>
+ <p>
+  In the future, we are planning a number of further improvements to VTK, which include:
+ </p>
+ <ul>
+  <li>
+   Adding back in support for line integral convolutions
+  </li>
+  <li>
+   Developing post-render anti-aliasing techniques
+  </li>
+  <li>
+   Improving multi-touch support and widgets
+  </li>
+ </ul>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Acknowledgements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  We would especially like to recognize the National Institutes of Health for sponsoring this work under the grant NIH R01EB014955, “Accelerating Community-Driven Medical Innovation with VTK.”
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [1]
+  <a href="https://blog.kitware.com/new-opengl-rendering-in-vtk/">
+   http://www.kitware.com/source/home/post/144
+  </a>
+  <br/>
+  [2]
+  <a href="https://blog.kitware.com/volume-rendering-improvements-in-vtk/">
+   http://www.kitware.com/source/home/post/154
+  </a>
+ </p>
+ <p>
+  <a href="/source/files/4_1307144190.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1307144190.png" style="width: 100px; float: left; padding-right: 5px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Ken Martin
+  </strong>
+  is chairman and CFO of Kitware. He is a developer of the Visualization toolkit and a coauthor of the textbook titled The Visualization Toolkit: An Object Oriented Approach to Computer Graphics.
+ </p>
+ <p>
+ </p>
+</div>

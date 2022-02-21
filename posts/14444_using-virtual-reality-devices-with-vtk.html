@@ -1,0 +1,148 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <em>
+   <strong>
+    Updated September 2016 to include Oculus Rift support
+   </strong>
+  </em>
+ </p>
+ <p>
+  Virtual reality (VR) is a technological game changer. It allows us to look at and interact with data sets, models, and point clouds to give us a glimpse of what we can accomplish with our information. As hardware and rendering performance improve, the use of VR will only become more compelling.
+ </p>
+ <p>
+  With this in mind, we added two new modules into the
+  <a href="http://www.vtk.org">
+   Visualization Toolkit
+  </a>
+  (VTK) to make it possible to use Oculus and OpenVR-compatible devices. The new modules
+  <span style="font-family: 'courier new', courier;">
+   vtkRenderingOculus
+  </span>
+  and
+  <span style="font-family: 'courier new', courier;">
+   vtkRenderingOpenVR
+  </span>
+  have been tested on the Oculus Rift and HTC Vive devices respectively.
+ </p>
+ <div class="wp-caption alignnone" id="attachment_14550" style="width: 1034px">
+  <img alt="ViveTownData" class="wp-image-14550 size-large" height="471" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-1024x471.jpg" srcset="https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-1024x471.jpg 1024w, https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-300x138.jpg 300w, https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-768x353.jpg 768w, https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-220x101.jpg 220w, https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-250x115.jpg 250w, https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-355x163.jpg 355w, https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-730x335.jpg 730w, https://blog.kitware.com/wp-content/uploads/2016/05/ViveTownData-1-90x41.jpg 90w" width="1024"/>
+  <p class="wp-caption-text">
+   Rendering of a PointCloud within VTK using the HTC Vive (dataset courtesy of SenseFLY SA).
+  </p>
+ </div>
+ <h2>
+  Getting Started
+ </h2>
+ <p>
+  To use these new modules, download the master branch of VTK from the
+  <a href="https://github.com/Kitware/VTK">
+   VTK respository
+  </a>
+  on GitHub. Before configuring VTK you should make sure you have downloaded and installed the Simple DirectMedia Layer 2 (
+  <a href="https://wiki.libsdl.org/Installation" target="_blank">
+   SDL2
+  </a>
+  ) as the Oculus Rift and HTV Vive modules require it. If you are targeting the HTC Vive you will also need the
+  <a href="https://github.com/ValveSoftware/openvr" target="_blank">
+   OpenVR
+  </a>
+  SDK, for the Oculus Rift you will need the
+  <a href="https://developer3.oculus.com/downloads/">
+   Oculus Windows SDK
+  </a>
+  . At this point you can configure VTK and turn on the modules you desire and start the build process. To maximize performance, make sure you build an optimized version of VTK.
+ </p>
+ <h2>
+  What’s Included
+ </h2>
+ <p>
+  Our goal is to allow VTK programs to use the Oculus and OpenVR modules with few changes, if any. If you link your executable to the
+  <span style="font-family: courier new,courier;">
+   vtkRenderingOpenVR
+  </span>
+  module, the object factory mechanism should replace the core rendering classes (e.g.,
+  <span style="font-family: courier new,courier;">
+   vtkRenderWindow
+  </span>
+  ) with the OpenVR-specialized versions in VTK.
+  <span style="font-family: courier new,courier;">
+   vtkRenderingOpenVR
+  </span>
+  contains the following classes as drop-in replacements.
+ </p>
+ <p>
+  <strong>
+   vtkOpenVRRenderWindow
+  </strong>
+ </p>
+ <p>
+  This class handles the bulk of interfacing to OpenVR. It currently supports one renderer that covers the entire window.
+ </p>
+ <p>
+  <strong>
+   vtkOpenVRCamera
+  </strong>
+ </p>
+ <p>
+  <span style="font-family: courier new,courier;">
+   vtkOpenVRCamera
+  </span>
+  gets the matrices from OpenVR to use for rendering. It contains a scale and translation that are designed to map world coordinates into the head-mounted display (HMD) space. Accordingly, you can keep world coordinates in the units that are best suited to your problem domain, and the camera will shift and scale the coordinates into the units that make sense for the HMD.
+ </p>
+ <p>
+  <strong>
+   vtkOpenVRRenderer
+  </strong>
+ </p>
+ <p>
+  The
+  <span style="font-family: courier new,courier;">
+   vtkOpenVRRenderer
+  </span>
+  class computes a reasonable scale and translation. It sets these computations on
+  <span style="font-family: courier new,courier;">
+   OpenVRCamera
+  </span>
+  . It also sets an appropriate default clipping range expansion.
+ </p>
+ <p>
+  <strong>
+   vtkOpenVRRenderWindowInteractor
+  </strong>
+ </p>
+ <p>
+  While VTK is designed to pick and interact based on X,Y mouse/window coordinates, OpenVR provides XYZ world coordinates and WXYZ orientations.
+  <span style="font-family: courier new,courier;">
+   vtkOpenVRRenderWindowInteractor
+  </span>
+  catches controller events and converts them to mouse/window events. The class also stores the world coordinate positions and orientations for the styles or pickers that can use them.
+  <span style="font-family: courier new,courier;">
+   vtkOpenVRRenderWindowInteractor
+  </span>
+  supports multiple controllers through the standard
+  <span style="font-family: courier new,courier;">
+   PointerIndex
+  </span>
+  approach that VTK uses for
+  <span style="font-family: courier new,courier;">
+   MultiTouch
+  </span>
+  .
+ </p>
+ <h2>
+  Future Developments
+ </h2>
+ <div>
+  <p>
+   These new Virtual Reality modules are currently still improving. Moving forward, we look to add support for the OpenVR overlay, which is great for displaying a user interface. We also aim to make the module faster and include more event interactions. Stay tuned to our blog for updates.
+  </p>
+  <p>
+   In the meantime, download VTK and test the modules for yourself. Let us know what you think by adding your experiences on the
+   <a href="http://www.vtk.org/mailing-lists/">
+    VTK mailing lists
+   </a>
+   !
+  </p>
+ </div>
+</div>

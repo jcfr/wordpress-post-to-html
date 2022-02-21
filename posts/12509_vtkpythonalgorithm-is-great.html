@@ -1,0 +1,5308 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Here is the blog I meant to write
+  <a href="{% post_url 2014-9-2-programmable-filter %}">
+   last time
+  </a>
+  . In this blog, I will actually talk about
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  . I will also cover some VTK pipeline and algorithm basics so those that want to start developing C++ algorithms will also benefit from reading it.
+ </p>
+ <p>
+  As I covered previously,
+  <span style="font-family: courier;">
+   vtkProgrammableFilter
+  </span>
+  is a great tool and useful for many purposes. However, it has the following drawbacks:
+ </p>
+ <ul>
+  <li>
+   Its output type is always the same as its input type. So one cannot implement filters such as a contour filter (which accepts a
+   <span style="font-family: courier;">
+    vtkDataSet
+   </span>
+   and outputs a
+   <span style="font-family: courier;">
+    vtkPolyData
+   </span>
+   ) using it.
+  </li>
+  <li>
+   It is not possible to properly manipulate pipeline execution by setting keys when using a
+   <span style="font-family: courier;">
+    vtkProgrammableFilter
+   </span>
+   .
+  </li>
+  <li>
+   The source counterpart of
+   <span style="font-family: courier;">
+    vtkProgrammableFilter
+   </span>
+   ,
+   <span style="font-family: courier;">
+    vtkProgrammableSource
+   </span>
+   , is very difficult to use and is very limited.
+  </li>
+ </ul>
+ <p>
+  We developed
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  to remedy these issues. At its heart,
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  is very simple (although more complicated than
+  <span style="font-family: courier;">
+   vtkProgrammableFilter
+  </span>
+  ).
+ </p>
+ <ul>
+  <li>
+   It is an algorithm,
+  </li>
+  <li>
+   You assign to it a Python object using
+   <span style="font-family: courier;">
+    SetPythonObject()
+   </span>
+   ,
+  </li>
+  <li>
+   It calls
+   <span style="font-family: courier;">
+    Initialize(self, vtkself)
+   </span>
+   on this Python object, passing a reference of itself,
+  </li>
+  <li>
+   It delegates the following methods to the Python object:
+   <ul>
+    <li>
+     <span style="font-family: courier;">
+      ProcessRequest(self, vtkself, request, inInfo, outInfo)
+     </span>
+    </li>
+    <li>
+     <span style="font-family: courier;">
+      FillInputPortInformation(self, vtkself, port, info)
+     </span>
+    </li>
+    <li>
+     <span style="font-family: courier;">
+      FillOutputPortInformation(self, vtkself, port, info)
+     </span>
+    </li>
+   </ul>
+  </li>
+ </ul>
+ <p>
+  By implementing some of these 4 methods in your Python class, you have access to the entire pipeline execution capability of VTK, including managing parallel execution, streaming, passing arbitrary keys up and down the pipeline etc.
+ </p>
+ <p>
+  For those that are not familiar with how VTK algorithms work, it is worthwhile to explain what these methods do.
+ </p>
+ <p>
+  <strong>
+   Initialize
+  </strong>
+  : The main purpose of this method is to initialize the number of input and output ports an algorithm has. This is normally done in a C++ algorithm’s constructor. But since the Python object’s constructor is called
+  <em>
+   before
+  </em>
+  it is passed to
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  , we can’t do it there. Hence
+  <span style="font-family: courier;">
+   Initialize()
+  </span>
+  . This method takes 1 argument : the
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  calling it. Here is a simple example:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d1833115983152" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import vtk
+
+class MyAlgorithm(object):
+    def Initialize(self, vtkself):
+        vtkself.SetNumberOfInputPorts(1)
+        vtkself.SetNumberOfOutputPorts(1)&lt;code class="language-lang"&gt;
+</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1833115983152-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1833115983152-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1833115983152-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1833115983152-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1833115983152-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1833115983152-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1833115983152-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d1833115983152-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1833115983152-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1833115983152-3">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         MyAlgorithm
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         object
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1833115983152-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         Initialize
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1833115983152-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfInputPorts
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1833115983152-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfOutputPorts
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         &lt;
+        </span>
+        <span class="crayon-e">
+         code
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         "language-lang"
+        </span>
+        <span class="crayon-o">
+         &gt;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1833115983152-7">
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+ </p>
+ <ul>
+  <li>
+   1 input port + 1 output port == your common VTK filter.
+  </li>
+  <li>
+   0 input port + 1 output port == your common VTK source.
+  </li>
+  <li>
+   1 input port + 0 output port == your common VTK sink (writer, mapper etc.).
+  </li>
+ </ul>
+ <p>
+  <strong>
+   FillInputPortInformation and FillOutputPortInformation
+  </strong>
+  : These methods are overwritten to tell the VTK pipeline what data type an algorithm expects as input and what data type it will produce. This information is used to do run-time sanity checking. It can also be used to ask the pipeline to automatically create the output of the algorithm, if an concrete data type is known when the algorithm is initialized.
+ </p>
+ <p>
+  Here is a simple example:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d183b235870039" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import vtk
+
+class MyAlgorithm(object):
+
+    def FillInputPortInformation(self, vtkself, port, info):
+        info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet")
+        return 1
+
+    def FillOutputPortInformation(self, vtkself, port, info):
+        info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkPolyData")
+        return 1</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d183b235870039-11">
+        11
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-3">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         MyAlgorithm
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         object
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-4">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         FillInputPortInformation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         port
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkAlgorithm
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         INPUT_REQUIRED_DATA_TYPE
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "vtkDataSet"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         FillOutputPortInformation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         port
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         DATA_TYPE_NAME
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "vtkPolyData"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d183b235870039-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0004 seconds] -->
+ <p>
+  This is a classic VTK filter that accepts a
+  <span style="font-family: courier;">
+   vtkDataSet
+  </span>
+  and produces
+  <span style="font-family: courier;">
+   vtkPolyData
+  </span>
+  . Think a contour filter, a streamline filter, a slice filter etc. Note that this is impossible to achieve with
+  <span style="font-family: courier;">
+   vtkProgrammableFilter
+  </span>
+  , which always produces the same type of output as input.
+ </p>
+ <p>
+  A few things to note here:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier;">
+    port
+   </span>
+   is an integer referring to the index of the current input or output port. These methods are called once for each input and output port.
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    info
+   </span>
+   is a key-value store object (
+   <span style="font-family: courier;">
+    vtkInformation
+   </span>
+   ) used to hold meta-data about the current input or output port. The keys are
+   <span style="font-family: courier;">
+    vtkObject
+   </span>
+   s that are accessed through class methods. This allows VTK to avoid any key collisions while still supporting run-time addition of keys.
+  </li>
+  <li>
+   If the output
+   <span style="font-family: courier;">
+    DATA_TYPE_NAME()
+   </span>
+   is a concrete class name, the pipeline (executive) will create the output data object for that port automatically before the filter executes. If it is the name of an abstract class, it is the developer’s responsibility to create the output data object later.
+  </li>
+ </ul>
+ <p>
+  In addition to setting the input and output data types, these methods can be used to define additional properties. Here are a few:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier;">
+    vtkAlgorithm.INPUT_IS_REPEATABLE()
+   </span>
+   : This means that a particular input port can accept multiple connections. Think
+   <span style="font-family: courier;">
+    vtkAppendFilter
+   </span>
+   .
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    vtkAlgorithm.INPUT_IS_OPTIONAL()
+   </span>
+   : Can be used to mark an input as optional. Which means that it is not an error if a connection is not made to that port.
+  </li>
+ </ul>
+ <p>
+  <strong>
+   ProcessRequest:
+  </strong>
+  This is the meat of the algorithm. This method is called for each pipeline pass VTK implements. It is used to ask the algorithm to create its output data object(s), to provide meta-data to downstream, to modify a request coming from downstream and to fill the output data object(s). Each of these pipeline passes are identified by the request type. Let’s look at an example:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d185e484898402" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import vtk
+
+class MyAlgorithm(object):
+    def ProcessRequest(self, vtkself, request, inInfo, outInfo):
+        if request.Has(vtk.vtkDemandDrivenPipeline.REQUEST_DATA()):
+            print 'I am supposed to execute'
+        return 1</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d185e484898402-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d185e484898402-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d185e484898402-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d185e484898402-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d185e484898402-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d185e484898402-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d185e484898402-7">
+        7
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d185e484898402-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d185e484898402-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d185e484898402-3">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         MyAlgorithm
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         object
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d185e484898402-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         ProcessRequest
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d185e484898402-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Has
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDemandDrivenPipeline
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         REQUEST_DATA
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d185e484898402-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         print
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'I am supposed to execute'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d185e484898402-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0003 seconds] -->
+ <p>
+  The arguments need explaining:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier;">
+    request
+   </span>
+   : What the pipeline is asking of the algorithm. Common requests are
+   <ul>
+    <li>
+     <span style="font-family: courier;">
+      REQUEST_DATA_OBJECT()
+     </span>
+     : create your output data object(s)
+    </li>
+    <li>
+     <span style="font-family: courier;">
+      REQUEST_INFORMATION()
+     </span>
+     : provide meta-data for downstream
+    </li>
+    <li>
+     <span style="font-family: courier;">
+      REQUEST_UPDATE_EXTENT()
+     </span>
+     : modify any data coming from downstream or create a data request (for sinks)
+    </li>
+    <li>
+     <span style="font-family: courier;">
+      REQUEST_DATA()
+     </span>
+     : do your thing. Take input data (if any), do something with it, produce output data (if any)
+    </li>
+   </ul>
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    inInfo
+   </span>
+   : a list of vectors of key-value store objects (
+   <span style="font-family: courier;">
+    vtkInformation
+   </span>
+   ). It is a list because each member corresponds to an input port. The list contains vectors because each input port can have multiple connections.
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    outInfo
+   </span>
+   : a vector of key-value store objects. Each entry in the vector corresponds to an output port.
+  </li>
+ </ul>
+ <p>
+  Let’s put it all together
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d1866682100282" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+import vtk
+
+class MyAlgorithm(object):
+    def Initialize(self, vtkself):
+        vtkself.SetNumberOfInputPorts(1)
+        vtkself.SetNumberOfOutputPorts(1)
+
+    def FillInputPortInformation(self, vtkself, port, info):
+        info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet")
+        return 1
+
+    def FillOutputPortInformation(self, vtkself, port, info):
+        info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkPolyData")
+        return 1
+
+    def ProcessRequest(self, vtkself, request, inInfo, outInfo):
+        if request.Has(vtk.vtkDemandDrivenPipeline.REQUEST_DATA()):
+            print 'I am supposed to execute'
+        return 1
+
+w = vtk.vtkRTAnalyticSource()
+
+pa = vtk.vtkPythonAlgorithm()
+pa.SetPythonObject(MyAlgorithm())
+pa.SetInputConnection(w.GetOutputPort())
+
+pa.Update()
+print pa.GetOutputDataObject(0).GetClassName()
+print pa.GetOutputDataObject(0).GetNumberOfCells()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1866682100282-29">
+        29
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-1">
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-2">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-3">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         MyAlgorithm
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         object
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         Initialize
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfInputPorts
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetNumberOfOutputPorts
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-7">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         FillInputPortInformation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         port
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkAlgorithm
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         INPUT_REQUIRED_DATA_TYPE
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "vtkDataSet"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-11">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         FillOutputPortInformation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         port
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         info
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Set
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         DATA_TYPE_NAME
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         "vtkPolyData"
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         ProcessRequest
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Has
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDemandDrivenPipeline
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         REQUEST_DATA
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         print
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'I am supposed to execute'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-20">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-21">
+        <span class="crayon-v">
+         w
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkRTAnalyticSource
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-22">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-23">
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkPythonAlgorithm
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-24">
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetPythonObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-e">
+         MyAlgorithm
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-25">
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         w
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-26">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-27">
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-28">
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetClassName
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1866682100282-29">
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfCells
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0009 seconds] -->
+ <p>
+  This will print:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d186b117045859" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+I am supposed to execute
+vtkPolyData
+0</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186b117045859-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186b117045859-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186b117045859-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d186b117045859-1">
+        <span class="crayon-i">
+         I
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         am
+        </span>
+        <span class="crayon-e">
+         supposed
+        </span>
+        <span class="crayon-st">
+         to
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         execute
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186b117045859-2">
+        <span class="crayon-i">
+         vtkPolyData
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186b117045859-3">
+        <span class="crayon-cn">
+         0
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h2 id="dealing-with-data">
+  Dealing With Data
+ </h2>
+ <p>
+  Let’s change
+  <span style="font-family: courier;">
+   ProcessRequest()
+  </span>
+  to accept input data and produce output data.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d186d087192093" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+    def ProcessRequest(self, vtkself, request, inInfo, outInfo):
+        if request.Has(vtk.vtkDemandDrivenPipeline.REQUEST_DATA()):
+            inp = inInfo[0].GetInformationObject(0).Get(vtk.vtkDataObject.DATA_OBJECT())
+            opt = outInfo.GetInformationObject(0).Get(vtk.vtkDataObject.DATA_OBJECT())
+
+            cf = vtk.vtkContourFilter()
+            cf.SetInputData(inp)
+            cf.SetValue(0, 200)
+
+            sf = vtk.vtkShrinkPolyData()
+            sf.SetInputConnection(cf.GetOutputPort())
+            sf.Update()
+
+            opt.ShallowCopy(sf.GetOutput())
+        return 1</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186d087192093-15">
+        15
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-1">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         ProcessRequest
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtkself
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Has
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDemandDrivenPipeline
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         REQUEST_DATA
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inp
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetInformationObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         DATA_OBJECT
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetInformationObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Get
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDataObject
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         DATA_OBJECT
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-5">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkContourFilter
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         inp
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         200
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-9">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkShrinkPolyData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-13">
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ShallowCopy
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186d087192093-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0006 seconds] -->
+ <p>
+  On line 3, we get the data object from the information object (key-value store) associated with the first connection of the first port (
+  <span style="font-family: courier;">
+   inInfo[0]
+  </span>
+  corresponds to all connections of the first port). This is our input.
+  <span style="font-family: courier;">
+   vtkDataObject.DATA_OBJECT()
+  </span>
+  is the key used to refer to input and output data objects. On line 4, we get the data object associated with the first output port. This is our output. Lines 6-12 create a simple pipeline. On line 14, we copy the output from the shrink filter to the output of the
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  .
+ </p>
+ <p>
+  When run, this filter will produce:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d186f851115993" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+vtkPolyData
+3124</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186f851115993-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d186f851115993-2">
+        2
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d186f851115993-1">
+        <span class="crayon-i">
+         vtkPolyData
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d186f851115993-2">
+        <span class="crayon-cn">
+         3124
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  <strong>
+   <em>
+    Tip:
+   </em>
+  </strong>
+  Lines 3 and 4 can be simplified by using convenience functions as follows.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d1871379887370" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+            inp = vtk.vtkDataSet.GetData(inInfo[0])
+            opt = vtk.vtkPolyData.GetData(outInfo)</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1871379887370-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1871379887370-4">
+        4
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d1871379887370-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inp
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDataSet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1871379887370-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkPolyData
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+ </p>
+ <h2 id="a-convenience-superclass">
+  A Convenience Superclass
+ </h2>
+ <p>
+  <strong>
+   <em>
+    Note:
+   </em>
+  </strong>
+  For what is described here, you need VTK from a very recent master. As of writing of this blog, VTKPythonAlgorithmBase had been in VTK git master for only a few days.
+ </p>
+ <p>
+  Now that we covered the basics of
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  , let me introduce a convenience class that makes algorithms development a bit more convenient. Let’s start with updating our previous example.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d1873037888294" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+  import vtk
+  from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
+  
+  class ContourShrink(VTKPythonAlgorithmBase):
+      def __init__(self):
+          VTKPythonAlgorithmBase.__init__(self)
+  
+      def RequestData(self, request, inInfo, outInfo):
+          inp = vtk.vtkDataSet.GetData(inInfo[0])
+          opt = vtk.vtkPolyData.GetData(outInfo)
+  
+          cf = vtk.vtkContourFilter()
+          cf.SetInputData(inp)
+          cf.SetValue(0, 200)
+  
+          sf = vtk.vtkShrinkPolyData()
+          sf.SetInputConnection(cf.GetOutputPort())
+          sf.Update()
+  
+          opt.ShallowCopy(sf.GetOutput())
+  
+          return 1
+  
+  w = vtk.vtkRTAnalyticSource()
+  
+  pa = ContourShrink()
+  pa.SetInputConnection(w.GetOutputPort())
+  
+  pa.Update()
+  print pa.GetOutputDataObject(0).GetClassName()
+  print pa.GetOutputDataObject(0).GetNumberOfCells()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1873037888294-31">
+        31
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-1">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-2">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         util
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkAlgorithm
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         VTKPythonAlgorithmBase
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-3">
+        <span class="crayon-e">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-4">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ContourShrink
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         VTKPythonAlgorithmBase
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         __init__
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         VTKPythonAlgorithmBase
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         __init__
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-7">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         RequestData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-9">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inp
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDataSet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkPolyData
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-11">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-12">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkContourFilter
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         inp
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         200
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-15">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-16">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkShrinkPolyData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-17">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-19">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ShallowCopy
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-21">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-23">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-24">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         w
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkRTAnalyticSource
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-25">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ContourShrink
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         w
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-28">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-29">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-30">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetClassName
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1873037888294-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfCells
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0013 seconds] -->
+ <p>
+  Neat huh? I am not going to explain how this works under the covers because it is a bit convoluted. Suffice it to say that you can subclass
+  <span style="font-family: courier;">
+   VTKPythonAlgorithmBase
+  </span>
+  to overwrite a number of methods and also treat it as a
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  . In fact, it is a subclass of
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  . The methods available to be overwritten are:
+ </p>
+ <ul>
+  <li>
+   <span style="font-family: courier;">
+    FillInputPortInformation(self, port, info)
+   </span>
+   : Same as described above. Except
+   <span style="font-family: courier;">
+    self == vtkself
+   </span>
+   .
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    FillOutputPortInformation(self, port, info)
+   </span>
+   : Same as described above. Except
+   <span style="font-family: courier;">
+    self == vtkself
+   </span>
+   .
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    RequestDataObject(self, request, inInfo, outInfo)
+   </span>
+   : This is where you can create output data objects if the output
+   <span style="font-family: courier;">
+    DATA_TYPE_NAME()
+   </span>
+   is not a concrete type.
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    RequestInformation(self, request, inInfo, outInfo)
+   </span>
+   : Provide meta-data downstream. More on this on later blogs.
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    RequestUpdateExtent(self, request, inInfo, outInfo)
+   </span>
+   : Modify requests coming from downstream. More on this on later blogs.
+  </li>
+  <li>
+   <span style="font-family: courier;">
+    RequestData(self, request, inInfo, outInfo)
+   </span>
+   : Produce data. As described before.
+  </li>
+ </ul>
+ <p>
+  In addtion, you can use the constructor to manage the number of input and output ports the static input and output types (rather than overwriting
+  <span style="font-family: courier;">
+   FillInputPortInformation()
+  </span>
+  and
+  <span style="font-family: courier;">
+   FillOutputPortInformation()
+  </span>
+  ). For example, we could have done this:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d1877948393294" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+class ContourShrink(VTKPythonAlgorithmBase):
+    def __init__(self):
+        VTKPythonAlgorithmBase.__init__(self,
+            nInputPorts=1, inputType='vtkDataSet',
+            nOutputPorts=1, outputType='vtkPolyData')</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1877948393294-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1877948393294-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1877948393294-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1877948393294-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d1877948393294-5">
+        5
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d1877948393294-1">
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ContourShrink
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         VTKPythonAlgorithmBase
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1877948393294-2">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         __init__
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1877948393294-3">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         VTKPythonAlgorithmBase
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         __init__
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1877948393294-4">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nInputPorts
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inputType
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'vtkDataSet'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d1877948393294-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nOutputPorts
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outputType
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'vtkPolyData'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  We didn’t have to do this in our example because these happen to be the default values.
+ </p>
+ <p>
+  <strong>
+   <em>
+    Important
+   </em>
+  </strong>
+  : You have to define an
+  <span style="font-family: courier;">
+   __init__()
+  </span>
+  method that chains to
+  <span style="font-family: courier;">
+   VTKPythonAlgorithmBase
+  </span>
+  for all of this to work. Don’t leave it out!
+ </p>
+ <h2 id="adding-parameters">
+  Adding Parameters
+ </h2>
+ <p>
+  This blog has gotten long. Let’s look at one more capability to wrap up. Say you want to change the contour value or the shrink factor. You could of course edit the class every time but since that’s lame, you’d probably rather use methods. There are a few things to know to get this right. Here is an updated version:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d187b462188674" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+  import vtk
+  from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
+  
+  class ContourShrink(VTKPythonAlgorithmBase):
+      def __init__(self):
+          VTKPythonAlgorithmBase.__init__(self,
+              nInputPorts=1, inputType='vtkDataSet',
+              nOutputPorts=1, outputType='vtkPolyData')
+  
+          self.__ShrinkFactor = 0.5
+          self.__ContourValue = 200
+  
+      def SetShrinkFactor(self, factor):
+          if factor != self.__ShrinkFactor:
+              self.__ShrinkFactor = factor
+              self.Modified()
+  
+      def GetShrinkFactor(self):
+          return self.__ShrinkFactor
+  
+      def SetContourValue(self, value):
+          if value != self.__ContourValue:
+              self.__ContourValue = value
+              self.Modified()
+  
+      def GetContourValue(self):
+          return self.__ContourValue
+  
+      def RequestData(self, request, inInfo, outInfo):
+          print 'Executing'
+          inp = vtk.vtkDataSet.GetData(inInfo[0])
+          opt = vtk.vtkPolyData.GetData(outInfo)
+  
+          cf = vtk.vtkContourFilter()
+          cf.SetInputData(inp)
+          cf.SetValue(0, self.__ContourValue)
+  
+          sf = vtk.vtkShrinkPolyData()
+          sf.SetShrinkFactor(self.__ShrinkFactor)
+          sf.SetInputConnection(cf.GetOutputPort())
+          sf.Update()
+  
+          opt.ShallowCopy(sf.GetOutput())
+  
+          return 1
+  
+  w = vtk.vtkRTAnalyticSource()
+  
+  pa = ContourShrink()
+  pa.SetInputConnection(w.GetOutputPort())
+  
+  pa.Update()
+  print pa.GetOutputDataObject(0).GetClassName()
+  print pa.GetOutputDataObject(0).GetNumberOfCells()
+  
+  pa.SetShrinkFactor(0.7)
+  pa.SetContourValue(100)
+  pa.Update()
+  print pa.GetOutputDataObject(0).GetClassName()
+  print pa.GetOutputDataObject(0).GetNumberOfCells()</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-42">
+        42
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-43">
+        43
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-44">
+        44
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-45">
+        45
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-46">
+        46
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-47">
+        47
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-48">
+        48
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-49">
+        49
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-50">
+        50
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-51">
+        51
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-52">
+        52
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-53">
+        53
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-54">
+        54
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-55">
+        55
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-56">
+        56
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-57">
+        57
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-58">
+        58
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-59">
+        59
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187b462188674-60">
+        60
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-1">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         vtk
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-2">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         from
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         util
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkAlgorithm
+        </span>
+        <span class="crayon-e">
+         import
+        </span>
+        <span class="crayon-e">
+         VTKPythonAlgorithmBase
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-3">
+        <span class="crayon-e">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-4">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-t">
+         class
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ContourShrink
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         VTKPythonAlgorithmBase
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         __init__
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         VTKPythonAlgorithmBase
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         __init__
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nInputPorts
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inputType
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'vtkDataSet'
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         nOutputPorts
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outputType
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-s">
+         'vtkPolyData'
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-9">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-10">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ShrinkFactor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0.5
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-11">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ContourValue
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         200
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-12">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-13">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         SetShrinkFactor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         factor
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-14">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         factor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         !=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ShrinkFactor
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-15">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ShrinkFactor
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         factor
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-16">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Modified
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-17">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-18">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         GetShrinkFactor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         __ShrinkFactor
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-20">
+        <span class="crayon-e">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-21">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         SetContourValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         value
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-22">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         value
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         !=
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ContourValue
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-23">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ContourValue
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         value
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-24">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Modified
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-25">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         GetContourValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-27">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         __ContourValue
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-28">
+        <span class="crayon-e">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-29">
+        <span class="crayon-e">
+        </span>
+        <span class="crayon-e">
+         def
+        </span>
+        <span class="crayon-e">
+         RequestData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         request
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-o">
+         :
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-30">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-i">
+         print
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-s">
+         'Executing'
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         inp
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkDataSet
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         inInfo
+        </span>
+        <span class="crayon-sy">
+         [
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ]
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-32">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         vtkPolyData
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         outInfo
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-33">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-34">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkContourFilter
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-35">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         inp
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-36">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ContourValue
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-37">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-38">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkShrinkPolyData
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-39">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetShrinkFactor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-r">
+         self
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         __ShrinkFactor
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-40">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         cf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-41">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-42">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-43">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         opt
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         ShallowCopy
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         sf
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutput
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-44">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-45">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-46">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-47">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         w
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         vtk
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         vtkRTAnalyticSource
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-48">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-49">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ContourShrink
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-50">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetInputConnection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         w
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputPort
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-51">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-52">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-53">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetClassName
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-54">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfCells
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-55">
+        <span class="crayon-h">
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-56">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetShrinkFactor
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0.7
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-57">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         SetContourValue
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         100
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-58">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         Update
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-59">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetClassName
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187b462188674-60">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         print
+        </span>
+        <span class="crayon-v">
+         pa
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetOutputDataObject
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e">
+         GetNumberOfCells
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0016 seconds] -->
+ <p>
+  This will print the following.
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41c2c3d187e259278718" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+Executing
+vtkPolyData
+3124
+Executing
+vtkPolyData
+2516</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187e259278718-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187e259278718-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187e259278718-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187e259278718-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187e259278718-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41c2c3d187e259278718-6">
+        6
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41c2c3d187e259278718-1">
+        <span class="crayon-e">
+         Executing
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187e259278718-2">
+        <span class="crayon-i">
+         vtkPolyData
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187e259278718-3">
+        <span class="crayon-cn">
+         3124
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187e259278718-4">
+        <span class="crayon-e">
+         Executing
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187e259278718-5">
+        <span class="crayon-i">
+         vtkPolyData
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41c2c3d187e259278718-6">
+        <span class="crayon-cn">
+         2516
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0001 seconds] -->
+ <p>
+  There are a few things to note here:
+ </p>
+ <ul>
+  <li>
+   Instead of directly setting data members, we used setters and getters. The main reason behind this is what happens on lines 16 and 24. Unless you call
+   <span style="font-family: courier;">
+    Modified()
+   </span>
+   as shown, the filter will not re-execute after you change a value.
+  </li>
+  <li>
+   We did not use Python properties for
+   <span style="font-family: courier;">
+    ShrinkFactor
+   </span>
+   and
+   <span style="font-family: courier;">
+    ContourValue
+   </span>
+   . As nice as this would have been, it is not currently possible. This is because
+   <span style="font-family: courier;">
+    VTKPythonAlgorithmBase
+   </span>
+   derives from a wrapped VTK class, which does not support properties. Properties are only supported by class that descend from
+   <span style="font-family: courier;">
+    object
+   </span>
+   .
+  </li>
+  <li>
+   It is good practice to do the values comparisons on lines 14 and 22 to avoid unnecessary re-execution of the filter.
+  </li>
+ </ul>
+ <h2>
+  Next
+ </h2>
+ <p>
+  We have covered a lot of ground. In my next blog, I will put what we learned to use to develop a simple HDF5 reader. We will cover cool concepts such as providing meta-data in a reader and asking for a subset in a filter. Until then cheers.
+ </p>
+ <p>
+  Special thanks to Ben Boeckel who developed
+  <span style="font-family: courier;">
+   vtkPythonAlgorithm
+  </span>
+  .
+ </p>
+</div>

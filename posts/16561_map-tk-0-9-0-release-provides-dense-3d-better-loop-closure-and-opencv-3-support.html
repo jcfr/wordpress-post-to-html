@@ -1,0 +1,95 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <span class="repository-meta-content">
+   <a href="https://github.com/Kitware/maptk">
+    <img alt="MAPTK_Logo_128" class="size-full wp-image-14293 alignleft" height="128" sizes="(max-width: 128px) 100vw, 128px" src="https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128.png 128w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2016/04/MAPTK_Logo_128-96x96.png 96w" width="128"/>
+    Motion-imagery Aerial Photogrammetry Toolkit
+   </a>
+  </span>
+  (MAP-Tk) 0.9.0 is a minor release that adds new features and fixes bugs.  The most significant changes are support for loading and visualizing dense 3D depth maps, a new keyframe-based loop closure algorithm, and support for OpenCV 3.  MAP-TK is an open-source collection of libraries and tools for making measurements from aerial video. It is part of the
+  <a href="http://www.kwiver.org/">
+   KWIVER
+  </a>
+  toolkit, which tackles challenging image and video analysis problems. For an introduction to MAP-Tk, please read “
+  <a href="https://blog.kitware.com/getting-started-with-map-tk-for-aerial-photogrammetry/">
+   Getting Started with MAP-Tk for Aerial Photogrammetry
+  </a>
+  .”
+ </p>
+ <h2>
+  Significant Changes
+ </h2>
+ <p>
+  The MAP-Tk GUI application now supports loading dense depth maps and rendering them both in 2D and 3D.  The depth images are loaded from VTK image files (.vti) and rendered as colored 3D point clouds or as a triangulated mesh.  They are also rendered as color mapped images in a new 2D Depth Map View.  There are options to filter the points in both views using thresholds on point attributes.  MAP-Tk does not yet directly support estimation of these dense depth maps, but you can find a
+  <a href="https://github.com/bastienjacquet/PlaneSweepLib">
+   fork of PlaneSweepLib
+  </a>
+  by Bastien Jacquet that uses camera calibration from MAP-Tk as input and writes the output into the required VTI format.
+  <a href="https://cvg.ethz.ch/research/planeSweepLib/">
+   PlaneSweepLib
+  </a>
+  is the CUDA accelerated depth map estimation library developed by ETH Zurich.  For future releases we are working on integrating depth map estimation more tightly with MAP-Tk by providing and abstract API for depth estimation that can be implemented by either PlaneSweepLib, Kitware’s
+  <a href="https://github.com/Kitware/super3d">
+   Super3D
+  </a>
+  , or other algorithms.
+ </p>
+ <div class="wp-caption alignnone" style="width: 1357px">
+  <img alt="MAP-Tk GUI Screenshot" height="598" src="https://raw.githubusercontent.com/Kitware/maptk/v0.9.0/doc/screenshot/mapgui_screenshot_windows.png" width="1347"/>
+  <p class="wp-caption-text">
+   Results of processing FMV from the VIRAT public data in MAP-Tk’s GUI application including a dense 3D point cloud produced by PlaneSweepLib
+  </p>
+ </div>
+ <p>
+  The new keyframe-based loop closure algorithm produces significantly better loop closures than the ground plane mapping approach that was previously the default algorithm.  The new algorithm matches each image to the past
+  <em>
+   N
+  </em>
+  (e.g. 5) frames as well as the set of established key frames.  A new key frame is established when the current frame does not match any of the existing key frames.  The number of keyframes is dynamic and grows as a function of scene content change.  Unlike the ground plane (i.e. homography) approach, the key frame approach does not rely on roughly planar scenes.  A related new feature in 0.9.0 is support for fundamental matrix based filtering of feature matches instead of homography based filtering.  Combining fundamental matrix based filtering and key frame loop closure makes MAP-Tk much more effective at non-video and non-aerial applications where the scene is highly non-planar and the baseline between images is large.
+ </p>
+ <p>
+  The OpenCV plugin for MAP-Tk now supports building against OpenCV versions equal or greater than 3.0.  We’ve also retained support for building against OpenCV 2.4.  OpenCV 3.X provides many new algorithms that we will begin to make use of in future MAP-Tk releases.  Unfortunately it also removes a key feature that MAP-Tk had been relying on: the ability to introspect and instantiate algorithms dynamically.  Previously, if OpenCV were to release a new algorithm — a new type of feature detector, for example — MAP-Tk would be able to automatically use it with just a configuration file change and no code changes.  Since dynamic algorithm construction is no longer supported in OpenCV 3, we have overhauled the MAP-Tk OpenCV plugin to manually wrap each of the algorithms.  The configuration of OpenCV algorithms in MAP-Tk is now a bit cleaner as a result of the manual wrapping of each algorithm, but there is more code to maintain as we track changes in OpenCV going forward.  Some algorithm modifiers (e.g.
+  <em>
+   GridAdaptedFeatureDetector
+  </em>
+  ) were dropped in OpenCV 3 and are no longer available to MAP-Tk, but otherwise the capabilities provided to MAP-Tk are unchanged.
+ </p>
+ <p>
+  There were many other minor features and bug fixes added in MAP-Tk 0.9.0. For additional details please read the
+  <a href="https://github.com/Kitware/maptk/releases/tag/v0.9.0">
+   release notes
+  </a>
+  .  As usual, installer packages are available for Windows, Linux, and Mac.
+ </p>
+ <h2>
+  Looking Ahead
+ </h2>
+ <p>
+  In the previous MAP-Tk release (0.8.0) we
+  <a href="https://blog.kitware.com/0-8-0-release-refactors-and-improves-capabilities-of-map-tk/">
+   refactored MAP-Tk
+  </a>
+  into two repositories: a new repository called
+  <a href="https://github.com/Kitware/vital">
+   Vital
+  </a>
+  and the existing MAP-Tk repository. This organization remains the same for the 0.9.0 release.  However, another big refactoring is scheduled for the next MAP-Tk release.  The
+  <a href="http://www.kwiver.org/">
+   Kitware Image and Video Exploitation and Retrieval
+  </a>
+  (KWIVER) toolkit was originally a name for a loose collection of tools that included MAP-Tk.
+  <a href="https://blog.kitware.com/new-version-of-kwiver-refactors-toolkit/">
+   KWIVER has now been refactored
+  </a>
+  to be an actual code repository.  Among other things, Vital has moved into the new KWIVER repository and development of the standalone Vital repository is discontinued.  The plugins from MAP-Tk have also been copied into the new KWIVER repository are are now called
+  <strong>
+   Arrows
+  </strong>
+  .  The next release of MAP-Tk will lose its copy of the plugins and build directly against KWIVER to access Vital and Arrows.  In essence, the computing framework and algorithms developed originally as MAP-Tk are
+  <em>
+   becoming
+  </em>
+  the KWIVER toolkit.  The photogrammetry applications (the GUI, command line tools, and scripts) will remain in the MAP-Tk repository.  KWIVER is already growing into new areas, like object recognition with CNNs, this growth and a larger user base will benefit MAP-Tk in the long run.
+ </p>
+</div>

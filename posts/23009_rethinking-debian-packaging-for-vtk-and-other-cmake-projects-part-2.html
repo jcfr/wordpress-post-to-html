@@ -1,0 +1,56 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <h1>
+  Introduction
+ </h1>
+ <p>
+  In my
+  <a href="https://blog.kitware.com/rethinking-debian-packaging-for-vtk-and-other-cmake-projects-part-1/">
+   last post
+  </a>
+  , I introduced dh-cmake and its role in our efforts to officially support the Visualization Toolkit (VTK) on Debian and its derivatives. In this post, I go into more technical detail on our VTK packaging process, how it led to the development of dh-cmake, and the challenges we faced during its development.
+ </p>
+ <p>
+  This post assumes that you already have some knowledge of both the CMake build system and the Debian packaging process.
+ </p>
+ <h1>
+  Getting Started
+ </h1>
+ <p>
+  Early on in our efforts, we contacted the Debian Science team to get feedback on what we could do to simplify the Debian packaging process for VTK. The team requested that we make it easier to build VTK with the external versions of third-party libraries that are included in the toolkit. The team also asked that we make it easier to break up VTK into subpackages, sorted by functionality, rather than leave the whole distribution in one large package.
+ </p>
+ <p>
+  The first thing we did was set up an instance of Debian Sid (the unstable rolling development branch of Debian) to ensure that VTK always stays up-to-date with the latest version of Debian. Then, we attempted to build VTK with the system versions of the third-party packages. We also set up a rudimentary nightly testing script on the Debian Sid instance that simply builds VTK with external third-party packages enabled. In addition, we set up a nightly build of the .deb files, though this existed separately from the nightly test build for a while. As VTK has been developed, and as new versions of the third-party libraries have been pushed to Debian, the nightly testing has uncovered issues, and they have been fixed very quickly.
+ </p>
+ <p>
+  Note that we wanted to build VTK with the Ninja build system due to the sheer size of the toolkit. So, we filed a wishlist bug report with debhelper, requesting support for CMake’s Ninja generator. Niels Thykier responded with a patch, and the functionality was made available in Debhelper 11.2. For more information on the update, please read
+  <a href="https://nthykier.wordpress.com/2018/04/08/build-system-changes-in-debhelper/" rel="noopener" target="_blank">
+   Thykier’s blog post
+  </a>
+  .
+ </p>
+ <h1>
+  CMake Component Installation
+ </h1>
+ <p>
+  One of the things we found in the Debian packages for the older versions of VTK is that each *.install file had a very long list of files that needed to be installed in the output package. We decided that this wasn’t ideal. CMake already has its own method for dividing an installation into multiple components, so we wanted to find a way to exploit the functionality. While the most rudimentary way to do this was to invoke “cmake -P cmake_install.cmake” inside the debian/rules file, we wanted it to be easier. After doing some research on the debhelper architecture, we realized that we could write our own debhelper extensions to automate the process. Thus, the concept of dh-cmake was born.
+ </p>
+ <p>
+  The first thing we did when writing dh-cmake was to add component-based installation. Instead of having a series of *.install files in a Debian directory, which enumerates all the file globs that need to be installed, you can now write a file called debian/example.cmake-components, which lists what CMake installation components should be put in the “example” package. Then you can add “–with cmake” to the top-level “dh” call, and the call will automatically invoke the dh_cmake_install command, which carries out the component installation.
+ </p>
+ <p>
+  Stay tuned for
+  <a href="https://blog.kitware.com/rethinking-debian-packaging-for-vtk-and-other-cmake-projects-part-3/">
+   part three
+  </a>
+  of this post series, in which I will talk about how we integrated CTest and CPack into dh-cmake. Until then, you can download the source code for dh-cmake from
+  <a href="https://gitlab.kitware.com/debian/dh-cmake" rel="noopener" target="_blank">
+   https://gitlab.kitware.com/debian/dh-cmake
+  </a>
+  , or install the binaries from our APT repository,
+  <a href="https://apt.kitware.com/" rel="noopener" target="_blank">
+   https://apt.kitware.com/
+  </a>
+  . Until next time!
+ </p>
+</div>

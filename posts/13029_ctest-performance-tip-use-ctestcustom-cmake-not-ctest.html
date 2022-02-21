@@ -1,0 +1,21 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  When running dashboards via ctest, there is a mechanism for customizing ctest behavior with respect to properties such as maximum test output size and warning and error matching expressions. The mechanism is simple: write a file named “CTestCustom.cmake” at the top of your build tree, in ${CMAKE_BINARY_DIR}. If that file exists, ctest reads it when running a dashboard. If not, ctest uses its own built-in behaviors.
+ </p>
+ <p>
+  When this mechanism was originally introduced, the file name used was “CTestCustom.ctest.” (Note the file extension was originally .ctest, not .cmake.) The behavior was slightly different, too. If this .ctest file exists at the top of your build tree, ctest scans the entire build tree using a “recursive glob” for additional CTestCustom.ctest files. If it finds any, it reads them in too. This was deemed useful for projects that contained other projects, as it made it easy to get the custom settings for all contained projects when running a dashboard on the outermost project. (Think VTK inside of ParaView.)
+ </p>
+ <p>
+  But… this “recursive glob” behavior quickly became a performance problem. Especially for Continuous dashboards, or other incrementally built dashboards where the build tree was not cleaned first at the beginning of the dashboard run. Build trees of large projects take a long time to scan because they contain thousands, if not tens of thousands, of files.
+ </p>
+ <p>
+  Given the performance problem, the CMake development team came up with the following solution. Check first for a CTestCustom.cmake file, and if it exists, read that one and stop looking. Otherwise, check for CTestCustom.ctest next. If it exists, continue with the “recursive glob” behavior to preserve the same behavior as previous versions. Looking for the newly named file, CTestCustom.cmake, has been in CMake versions since CMake 2.4.
+ </p>
+ <p>
+  For projects that contain other projects, they can provide a CTestCustom.cmake now, and, if they so choose, include the CTestCustom files from contained sub-projects explicitly. Or, they may just prefer to have their own customizations only and ignore the ones from the sub-projects. Either way, the recursive glob is avoidable, resulting in faster dashboard runs.
+ </p>
+ <p>
+  So, the moral of this story is: if you need to customize ctest behavior by having a CTestCustom file at the top of your build tree, make sure you name it “CTestCustom.cmake” for the fastest possible dashboards.
+ </p>
+</div>

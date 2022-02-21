@@ -1,0 +1,1703 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Visualization is the practice of discerning meaning from data. To aid this practice, the
+  <a href="https://www.kitware.com/platforms/#vtk">
+   Visualization Toolkit
+  </a>
+  (VTK) provides two sets of facilities. One set massages data into more useful formats (filters), and another set displays data (rendering techniques). The major focus of the VTK 7 series has been improved and expanded rendering. Let’s examine the improvements we’ve made so far.
+ </p>
+ <p>
+  Things started rolling in version 7.0 with the promotion of the previously experimental
+  <a href="https://blog.kitware.com/new-opengl-rendering-in-vtk/">
+   “OpenGL2” rendering backend
+  </a>
+  to the default. The name is a misnomer, as it has nothing to do with OpenGL version 2. A more precise name would be “OpenGL&gt;=3.2” because we replaced our fixed-function rendering calls with modern and much faster programmable-shader-style rendering calls. VTK is a big library that supports many features, so this was a more arduous task than it may appear. It took at least 773 commits (and counting) and touched hundreds of classes as well as tens of thousands of lines of code to get everything displayed as least as well as before. It was well worth doing, though. Our tests show that volume rendering is roughly two times faster and that surface rendering is roughly 100 times faster.
+ </p>
+ <p>
+  One more thing about OpenGL2: Besides being faster, OpenGL2 makes it easier to inject low-level shader code to build up entirely new rendering capabilities. We recently added direct value rendering in floating point buffers to support deferred rendering in
+  <a href="http://cinemascience.org/">
+   Cinema
+  </a>
+  ,
+  <a href="https://blog.kitware.com/hidden-line-removal-now-available-in-vtk-and-paraview/">
+   hidden line removal
+  </a>
+  for wireframe renderings, and
+  <a href="https://blog.kitware.com/new-fxaa-anti-aliasing-option-in-paraviewvtk/">
+   Fast Approximate Anti-Aliasing
+  </a>
+  (FXAA) to make more appealing images and preserve the ability to perform depth compositing at scale (e.g., in IceT for
+  <a href="https://www.kitware.com/platforms/#paraview">
+   ParaView
+  </a>
+  ).
+ </p>
+ <p>
+  We’ve also been busy with several other rendering improvements. These include off-screen rendering with the
+  <a href="https://blog.kitware.com/off-screen-rendering-through-the-native-platform-interface-egl/">
+   EGL native platform interface
+  </a>
+  ; compatibility with the OpenSWR software rasterizer, which is optimized for Intel’s central processing units (CPUs); integration with the
+  <a href="https://blog.kitware.com/ray-traced-rendering-revisited/">
+   OSPRay ray tracer
+  </a>
+  , which is similarly optimized; and support for the new commodity-class
+  <a href="https://blog.kitware.com/taking-paraview-into-virtual-reality/">
+   virtual reality
+  </a>
+  systems like HTC Vive and Oculus Rift.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16069" style="width: 510px">
+  <img alt="VTK Technical Highlight 1" class="wp-image-16069 size-full" height="500" sizes="(max-width: 500px) 100vw, 500px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1.png 500w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-300x300.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-220x220.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-250x250.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-355x355.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-50x50.png 50w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-96x96.png 96w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-1-128x128.png 128w" width="500"/>
+  <p class="wp-caption-text">
+   OSPRay renders a Vector Particle-In-Cell (VPIC) dataset with scaled implicit spheres, shadows, and ambient occlusion.
+  </p>
+ </div>
+ <p>
+  Now, let’s focus on a new dual depth peeling algorithm that we added to VTK. To begin, let’s look at depth peeling.
+ </p>
+ <h2>
+  Depth Peeling
+ </h2>
+ <p>
+  Translucency is tricky with a rasterizer. Without a guarantee of the order in which primitives are drawn, the naive approach of simply accumulating translucent triangles onto the screen will produce incorrect pictures, where distant objects appear to be in front of nearby ones.
+  <a href="http://www.vtk.org/doc/nightly/html/classvtkDepthSortPolyData.html">
+   Sorting primitives by distance to the camera
+  </a>
+  can help, but it is compute intensive, it must be done every frame, and it will not work in cases where groups of primitives self overlap.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16070" style="width: 510px">
+  <img alt="With naive alpha blending, the blue dragon, which is nearest, appears to be behind the other dragons." class="wp-image-16070 size-full" height="500" sizes="(max-width: 500px) 100vw, 500px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2.png 500w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-300x300.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-220x220.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-250x250.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-355x355.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-50x50.png 50w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-96x96.png 96w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-2-128x128.png 128w" width="500"/>
+  <p class="wp-caption-text">
+   With naive alpha blending, the blue dragon, which is nearest, appears to be behind the other dragons.
+  </p>
+ </div>
+ <p>
+  Depth peeling is a technique for rendering translucent geometry correctly in a rasterizer like OpenGL. VTK’s first incarnation of depth peeling arrived in 2006. Back then, the required programmable shader features were somewhat rare, so the VTK code to enable and use them was necessarily convoluted. The code was widely used, however, and we strove to maintain and improve it over the years.
+ </p>
+ <p>
+  <strong>
+   Depth Peeling Algorithm
+  </strong>
+ </p>
+ <p>
+  VTK’s depth peeling algorithm renders the scene repeatedly. At each pass, the algorithm uses the depth buffer to only keep contributions from the next-nearest layer (or “peel”) of space. The algorithm then blends the contributions onto the already rendered results. The core of the algorithm is simplicity.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41cbe337351671158448" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+float fragDepth = gl_FragCoord.z
+float odepth = texture2D(opaqueZTexture, gl_FragCoord.xy/screenSize).r;
+float tdepth = texture2D(translucentZTexture, gl_FragCoord.xy/screenSize).r;
+if (fragDepth &amp;gt;= odepth || // Occluded by opaque geometry
+    fragDepth &amp;lt;= tdepth)   // Already handled in a previous peel
+  {
+  discard;
+  }</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe337351671158448-8">
+        8
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-1">
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         fragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gl_FragCoord
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-i">
+         z
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-2">
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         odepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         texture2D
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         opaqueZTexture
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gl_FragCoord
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         xy
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         screenSize
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         r
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-3">
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tdepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         texture2D
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         translucentZTexture
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gl_FragCoord
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         xy
+        </span>
+        <span class="crayon-o">
+         /
+        </span>
+        <span class="crayon-v">
+         screenSize
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         r
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-4">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         fragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         odepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ||
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Occluded by opaque geometry
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-5">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         fragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         tdepth
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Already handled in a previous peel
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-6">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-7">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         discard
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe337351671158448-8">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0005 seconds] -->
+ <p>
+ </p>
+ <p>
+  Over the series of passes, the image improves, and fewer and fewer pixels change.
+ </p>
+ <p>
+  Peel 1 draws the nearest sides of each dragon (left) onto the screen (right).
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16072" style="width: 1011px">
+  <img alt="VTK Technical Highlight 3" class="wp-image-16072 size-full" height="491" sizes="(max-width: 1001px) 100vw, 1001px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3.png 1001w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3-300x147.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3-768x377.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3-220x108.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3-250x123.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3-355x174.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3-730x358.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-3-90x44.png 90w" width="1001"/>
+  <p class="wp-caption-text">
+   The fragments processed / screen size equals 135 percent.
+  </p>
+ </div>
+ <p>
+  Peel 2 draws whatever is behind the nearest sides, i.e., the farthest sides.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16076" style="width: 994px">
+  <img alt="The fragments processes / screen size equals 96 percent." class="size-full wp-image-16076" height="491" sizes="(max-width: 984px) 100vw, 984px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4.png 984w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4-300x150.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4-768x383.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4-220x110.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4-250x125.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4-355x177.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4-730x364.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-4-90x45.png 90w" width="984"/>
+  <p class="wp-caption-text">
+   The fragments processed / screen size equals 96 percent.
+  </p>
+ </div>
+ <p>
+  Peel 3 draws whatever is next, behind the farthest sides.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16078" style="width: 994px">
+  <img alt="The fragments processes / screen size equals 56 percent." class="size-full wp-image-16078" height="491" sizes="(max-width: 984px) 100vw, 984px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5.png 984w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5-300x150.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5-768x383.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5-220x110.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5-250x125.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5-355x177.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5-730x364.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-5-90x45.png 90w" width="984"/>
+  <p class="wp-caption-text">
+   The fragments processed / screen size equals 56 percent.
+  </p>
+ </div>
+ <p>
+  After some number of passes (17 in this case), the algorithm exceeds the depth complexity of the scene. No more pixels will change, and we can terminate the algorithm.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16080" style="width: 510px">
+  <img alt="The final correct image shows the blue dragon in front and the red in back all on a gradient background." class="size-full wp-image-16080" height="500" sizes="(max-width: 500px) 100vw, 500px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6.png 500w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-300x300.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-220x220.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-250x250.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-355x355.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-90x90.png 90w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-32x32.png 32w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-50x50.png 50w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-64x64.png 64w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-96x96.png 96w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-6-128x128.png 128w" width="500"/>
+  <p class="wp-caption-text">
+   The final correct image shows the blue dragon in front and the red dragon in back, all on a gradient background.
+  </p>
+ </div>
+ <h2>
+  Dual Depth Peeling
+ </h2>
+ <p>
+  Dual depth peeling is an improvement over the above. Essentially, at each pass, VTK’s dual depth peeling algorithm,
+  <span style="font-family: courier new,courier;">
+   vtkDualDepthPeelingPass
+  </span>
+  , simultaneously peels layers of fragments from both the nearest and farthest sides of the scene. As such, the algorithm converges and terminates in approximately half the time. The algorithm was originally developed by NVIDIA in
+  <a href="http://developer.download.nvidia.com/SDK/10/opengl/src/dual_depth_peeling/doc/DualDepthPeeling.pdf">
+   2008
+  </a>
+  .
+ </p>
+ <p>
+  <strong>
+   Dual Depth Peeling Algorithm
+  </strong>
+ </p>
+ <p>
+  The code in
+  <span style="font-family: courier new,courier;">
+   vtkDualDepthPeelingPass
+  </span>
+  is somewhat complicated by the requirement to use a single blending specification while both peels’ color and depth information are computed and accumulated into separate render targets. The solution here is to use six input/output textures (
+  <span style="font-family: courier new,courier;">
+   BackPeel
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   BackAccum
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   FrontAccumIn
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   FrontAccumOut
+  </span>
+  ,
+  <span style="font-family: courier new,courier;">
+   MinMaxDepthIn
+  </span>
+  , and
+  <span style="font-family: courier new,courier;">
+   MinMaxDepthOut
+  </span>
+  ) and MAX blending for all render targets. To implement this solution, we play some tricks. We negate values that we expect to decrease (such as the front peel’s alpha value), and we write to an empty texture and blend in a separate pass with the appropriate blend state values that we think may either increase or decrease (such as the back peel RGBA information).
+ </p>
+ <p>
+  The core code is as follows.
+ </p>
+ <p>
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41cbe33735b489225716" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+vec4 front = texelFetch(lastFrontPeel, pixelCoord, 0);
+vec2 minMaxDepth = texelFetch(lastDepthPeel, pixelCoord, 0).xy;
+float minDepth = -minMaxDepth.x; // negated for MAX blending
+float maxDepth = minMaxDepth.y;
+gl_FragDepth = gl_FragCoord.z;
+
+
+
+// Default outputs (no data/change):
+fragOutput0 = vec4(0.);     // BackPeel - only write rgba for current back peel
+fragOutput1 = front;        // FrontA/B - write accumulated front peel rgba.
+fragOutput2.xy = vec2(-1.); // DepthA/B - blends to form (-min, max) depth for
+
+                           // next peel pair.
+
+
+
+if (gl_FragDepth &amp;lt; minDepth || gl_FragDepth &amp;gt; maxDepth)
+  { // Outside current peels
+  return; // Already peeled
+  }
+
+
+
+if (gl_FragDepth &amp;gt; minDepth &amp;amp;&amp;amp; gl_FragDepth &amp;lt; maxDepth)
+  { // Inside current peels. Write out depth info and let MAX blending resolve
+
+   // the next peel pair.
+  fragOutput2.xy = vec2(-gl_FragDepth, gl_FragDepth);
+  return;
+  }
+
+
+
+
+vec4 frag = ComputeFragmentRGBA(); // Current fragment color
+
+// This fragment is on a current peel:
+if (gl_FragDepth == minDepth)
+    { // Front peel:
+    front.a = 1. - front.a; // Front alpha is negated for MAX blending
+    // Use under-blending to combine with front color:
+    fragOutput1.rgb = front.a * frag.a * frag.rgb + front.rgb;
+    fragOutput1.a = 1. - (front.a * (1. - frag.a)); // negated again
+    }
+  else // (gl_FragDepth == maxDepth)
+    { // Back peel:
+    frag.rgb *= frag.a; // Fragment with premultiplied alpha
+    fragOutput0 = frag; // Blended in later fullscreen pass.
+    }</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-18">
+        18
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-19">
+        19
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-20">
+        20
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-21">
+        21
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-22">
+        22
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-23">
+        23
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-24">
+        24
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-25">
+        25
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-26">
+        26
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-27">
+        27
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-28">
+        28
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-29">
+        29
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-30">
+        30
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-31">
+        31
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-32">
+        32
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-33">
+        33
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-34">
+        34
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-35">
+        35
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-36">
+        36
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-37">
+        37
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-38">
+        38
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-39">
+        39
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-40">
+        40
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-41">
+        41
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-42">
+        42
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-43">
+        43
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-44">
+        44
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-45">
+        45
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-46">
+        46
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-47">
+        47
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-48">
+        48
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-49">
+        49
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41cbe33735b489225716-50">
+        50
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-1">
+        <span class="crayon-e">
+         vec4
+        </span>
+        <span class="crayon-v">
+         front
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         texelFetch
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         lastFrontPeel
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pixelCoord
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-2">
+        <span class="crayon-e">
+         vec2
+        </span>
+        <span class="crayon-v">
+         minMaxDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         texelFetch
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         lastDepthPeel
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         pixelCoord
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         0
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         xy
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-3">
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         minDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         minMaxDepth
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         x
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // negated for MAX blending
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-4">
+        <span class="crayon-t">
+         float
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         maxDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         minMaxDepth
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         y
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-5">
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gl_FragCoord
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         z
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-6">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-7">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-8">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-9">
+        <span class="crayon-c">
+         // Default outputs (no data/change):
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-10">
+        <span class="crayon-v">
+         fragOutput0
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vec4
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         0.
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // BackPeel - only write rgba for current back peel
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-11">
+        <span class="crayon-v">
+         fragOutput1
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         front
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // FrontA/B - write accumulated front peel rgba.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-12">
+        <span class="crayon-v">
+         fragOutput2
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         xy
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vec2
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // DepthA/B - blends to form (-min, max) depth for
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-13">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-14">
+        <span class="crayon-c">
+         // next peel pair.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-15">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-16">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-17">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-18">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         minDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ||
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         maxDepth
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-19">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Outside current peels
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-20">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Already peeled
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-21">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-22">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-23">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-24">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-25">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         gt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         minDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         amp
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         amp
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         &amp;
+        </span>
+        <span class="crayon-v">
+         lt
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         maxDepth
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-26">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Inside current peels. Write out depth info and let MAX blending resolve
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-27">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-28">
+        <span class="crayon-c">
+         // the next peel pair.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-29">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         fragOutput2
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         xy
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         vec2
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-30">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         return
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-31">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-32">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-33">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-34">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-35">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-36">
+        <span class="crayon-e">
+         vec4
+        </span>
+        <span class="crayon-v">
+         frag
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ComputeFragmentRGBA
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Current fragment color
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-37">
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-38">
+        <span class="crayon-c">
+         // This fragment is on a current peel:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-39">
+        <span class="crayon-st">
+         if
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         gl_FragDepth
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         ==
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         minDepth
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-40">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Front peel:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-41">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         front
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         front
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Front alpha is negated for MAX blending
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-42">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Use under-blending to combine with front color:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-43">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         fragOutput1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         rgb
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         front
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e ">
+         a *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         frag
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e ">
+         a *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         frag
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         rgb
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         +
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         front
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         rgb
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-44">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         fragOutput1
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         front
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e ">
+         a *
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         1.
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         -
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         frag
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // negated again
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-45">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-46">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-st">
+         else
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // (gl_FragDepth == maxDepth)
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-47">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         {
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Back peel:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-48">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         frag
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-e ">
+         rgb *
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         frag
+        </span>
+        <span class="crayon-sy">
+         .
+        </span>
+        <span class="crayon-v">
+         a
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Fragment with premultiplied alpha
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-49">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         fragOutput0
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         frag
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Blended in later fullscreen pass.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41cbe33735b489225716-50">
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         }
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0012 seconds] -->
+ <p>
+ </p>
+ <p>
+  In Peel 1, the left shows the back peel, the middle shows the min/max depth buffer, and the right shows the accumulated front peel.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16085" style="width: 1516px">
+  <img alt="VTK Technical Highlight 7" class="wp-image-16085 size-full" height="500" sizes="(max-width: 1506px) 100vw, 1506px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7.png 1506w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-300x100.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-768x255.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-1024x340.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-220x73.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-250x83.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-355x118.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-730x242.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-7-90x30.png 90w" width="1506"/>
+  <p class="wp-caption-text">
+   The dual depth peeling algorithm modifies 39 percent of screen pixels.
+  </p>
+ </div>
+ <p>
+  As in Peel 1, in Peel 2, the left shows the back peel, the middle shows the min/max depth buffer, and the right shows the accumulated front peel.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16088" style="width: 1516px">
+  <img alt="The shader modifies 21 percent of screen pixels." class="size-full wp-image-16088" height="500" sizes="(max-width: 1506px) 100vw, 1506px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8.png 1506w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-300x100.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-768x255.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-1024x340.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-220x73.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-250x83.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-355x118.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-730x242.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-8-90x30.png 90w" width="1506"/>
+  <p class="wp-caption-text">
+   The dual depth peeling algorithm modifies 21 percent of screen pixels.
+  </p>
+ </div>
+ <p>
+  Once again, in Peel 3, the left shows the back peel, the middle shows the min/max depth buffer, and the right shows the accumulated front peel.
+ </p>
+ <div class="wp-caption aligncenter" id="attachment_16090" style="width: 1516px">
+  <img alt="VTK Technical Highlight 10" class="wp-image-16090 size-full" height="500" sizes="(max-width: 1506px) 100vw, 1506px" src="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10.png 1506w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-300x100.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-768x255.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-1024x340.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-220x73.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-250x83.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-355x118.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-730x242.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/VTK-Technical-Highlight-10-90x30.png 90w" width="1506"/>
+  <p class="wp-caption-text">
+   The dual depth peeling algorithm modifies 5.7 percent of screen pixels.
+  </p>
+ </div>
+ <p>
+  We end up with the same image as before. Since dual depth peeling extracts two peels with each geometry pass, however, it takes half the time. In this case, the algorithm converged to a correct image in only nine peeling passes (compared to 17 for traditional depth peeling), plus the overhead of a single pass to initialize depth buffers. In other words, the frame rate for correct rendering of translucent geometry nearly doubled.
+ </p>
+ <p>
+  In summary, we’ve made great strides in VTK’s rendering capabilities. The updated OpenGL rendering code is an improvement not only because it is faster, but also because the coding paradigm is more familiar to today’s OpenGL programmers and because the low-level
+  <span class="_Tgc">
+   OpenGL Shading Language
+  </span>
+  code is easier to access. Overall, we can expect rendering improvements like the dual depth peeling implementation to come more frequently now, while VTK as a whole continues to move forward.
+ </p>
+ <p>
+  To learn more about dual depth peeling and the future of VTK, come see the Kitware booth (
+  <strong>
+   #3437
+  </strong>
+  ) at
+  <strong>
+   The International Conference for High Performance Computing, Networking, Storage and Analysis
+  </strong>
+  (SC16). In addition to the booth, you can find us at other activities, such as a tutorial on “Large Scale Visualization with ParaView.” For the dates and times of these activities, please refer to the
+  <a href="https://blog.kitware.com/events/supercomputing-2016/">
+   Kitware SC16 event listing
+  </a>
+  .
+ </p>
+</div>

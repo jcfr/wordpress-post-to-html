@@ -1,0 +1,375 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <a href="/source/files/4_482474958.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_482474958.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p>
+  Over the past two years, we have been developing Tangelo [1] in the pursuit of rich web applications for solving problems, both old and new. We recently passed 2,000 commits in the repository [2], and Tangelo will soon be ready for prime time. This article aims to inform you more about the technology with a high-level introduction to the Tangelo Web Framework. We then answer the question: Why Tangelo?
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     What is Tangelo?
+    </strong>
+   </span>
+  </span>
+  <br/>
+  At its heart, Tangelo is a web application development platform, geared primarily toward data analytics and visualization applications. This platform is made up of Tangelo itself (a web server with a twist), as well as JavaScript and Python APIs to help drive it. The platform also includes an ecosystem of plugins that provide support for data management, user interfaces, visualization, and more.
+ </p>
+ <p>
+  What is the twist? Simply that, in addition to serving the static components of a standard web application, Tangelo manufactures server-side components from Python scripts included among your HTML, CSS, and JavaScript files. These services can leverage the power and scope of Python to do Pythonic things in your web application.
+  <br/>
+  Here is a silly but illustrative example. Suppose you create this short Python script in the directory being served by Tangelo,
+  <code>
+   now.py
+  </code>
+  :
+ </p>
+ <p>
+  <code>
+   import datetime
+  </code>
+ </p>
+ <p>
+  <code>
+   def run():
+   <br/>
+   return str(datetime.datetime.now())
+  </code>
+ </p>
+ <p>
+  Because of the presence of that
+  <code>
+   run()
+  </code>
+  function, Tangelo will respond with a string representing the current time.
+ </p>
+ <p>
+  We can try it out right now. Sep one is to install Tangelo. The easiest way to do so is using the Python package manager Pip:
+ </p>
+ <p>
+  <code>
+   $ pip install tangelo
+  </code>
+ </p>
+ <p>
+  Step two is to create the file now.py from the code listing above. Step three is to start Tangelo, letting it know you want to serve files from the current directory:
+ </p>
+ <p>
+  <code>
+   $ tangelo --root .
+  </code>
+ </p>
+ <p>
+  (If you get an error in this step, it may be that your computer is already using port 8080, the default, for another application. You can add —
+  <tt>
+   port 9090
+  </tt>
+  to the command to choose a different port.)
+ </p>
+ <p>
+  Step four is to open
+  <a href="http://localhost:8080/now">
+   http://localhost:8080/now
+  </a>
+  in your favorite web browser. You should see the current time displayed. Refresh the browser, and the displayed time should update. Your first Tangelo application is complete!
+ </p>
+ <p>
+  Of course, the example is superfluous because JavaScript has the same ability to tell you the time with a simple
+  <br/>
+  <code>
+   console.log(new Date())
+  </code>
+  . But, there is plenty Python can do that JavaScript cannot. What if you want to:
+ </p>
+ <ul>
+  <li>
+   Retrieve data from a database using complex query and application-specific post-filtering
+  </li>
+  <li>
+   Kick off a long-running compute job on a cluster and periodically check on its progress
+  </li>
+  <li>
+   Use specialized visualization tools, such as Bokeh
+  </li>
+  <li>
+   Construct a PNG image to display in your webpage using Python imaging libraries
+  </li>
+  <li>
+   Use Whizbang, BeesKnees, CatsMeow, or some other new Python module that does something useful, sexy, and fun
+  </li>
+ </ul>
+ <p>
+  In each of these cases, and many others limited only by our collective imagination, Tangelo puts more power in your hands to do what you need to create data sources, analyses, and visualizations.
+ </p>
+ <p>
+  We have designed Tangelo around the simple idea that Python should be a first-class citizen alongside HTML and JavaScript. The core of Tangelo dedicated to this idea is lean and mean. Thus, it is well testable. To enable advanced functionality on top of this core, Tangelo includes a powerful and flexible plugin system. Several plugins come bundled with Tangelo to do the following:
+ </p>
+ <p>
+  <strong>
+   Interact with other Kitware software
+  </strong>
+ </p>
+ <ul>
+  <li>
+   Girder [3], for bringing high performance data storage to Tangelo applications
+  </li>
+  <li>
+   GeoJS [4], for creating map-based visualizations and animations
+  </li>
+  <li>
+   VTKWeb [5], to create, control, interact with, and terminate VTK-based visualizations in-browser
+  </li>
+ </ul>
+ <p>
+  <strong>
+   Interact with Python packages and other software
+  </strong>
+ </p>
+ <ul>
+  <li>
+   Bokeh [6], for applying ready-made visualizations to custom data sources
+  </li>
+  <li>
+   Vega [7], to create interactive charts and visualizations
+  </li>
+  <li>
+   PyPNG, to construct PNG images of data for use as a thumbnail or a clickable map, etc.
+  </li>
+ </ul>
+ <p>
+  <strong>
+   Implement powerful functionality unique to Tangelo
+  </strong>
+ </p>
+ <ul>
+  <li>
+   Convert a basic data service into a streaming service to enable the handling of “big data” sources
+  </li>
+ </ul>
+ <p>
+  <strong>
+   Provide help in constructing HTML user interfaces
+  </strong>
+ </p>
+ <ul>
+  <li>
+   A control panel for runtime application options that slides out of the way when not needed
+  </li>
+  <li>
+   An SVG legend for use with maps or other SVG diagrams
+  </li>
+ </ul>
+ <p>
+  We mentioned before that Tangelo is aimed toward visualization and analytics applications, and many of our clients, both inside and outside of Kitware, have been using it to good effect that way. But, you can always step outside the box a little bit too. For instance, Tangelo could be used to create system tools, such as a Wifi manager or a print monitor, since Python also affords a way to peek into such system-level services.
+ </p>
+ <p>
+  <a href="/source/files/4_895910419.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_895910419.png" style="width: 500px; margin-left: 100px; margin-right: 100px;"/>
+  </a>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   The hypothetical tree infographic depicts estimated transmission links using existing
+   <br/>
+   case count data and a generation-based model.
+  </em>
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Why Tangelo?
+    </strong>
+   </span>
+  </span>
+  <br/>
+  It is a good time to be developing applications for the web. There are many web application frameworks out there, which means lots of choices. It also makes it more likely that what you need exists. So, among the sea of choices, why choose Tangelo?
+ </p>
+ <p>
+  First, we have a quick disclaimer: If you are planning to build a traditional web application with a database, models to represent application data, and views to display it, then existing systems such as Ruby on Rails will match up to your project’s goals better than Tangelo. In our work, we have been looking beyond, toward scientific simulation and visualization, as well as toward other unusual applications that must pull together data from many unconventional sources, using experimental technology to process and visualize it.
+ </p>
+ <p>
+  As we mentioned earlier in the article, we believe that Python scripts should be considered first-class citizens alongside HTML, JavaScript, and CSS files, adding their voices and the richness of the Python ecosystem to your web applications. We have designed Tangelo to deliver this idea as simply as possible in order to open up web application programming to everyone, including those unfamiliar with terms such as “routing,” “content-type header,” and “RESTful.”
+ </p>
+ <p>
+  Django, Flask, Bottle, and CherryPy are all Python-based web frameworks. They tend, however, to relegate Python itself to second-class status, as it is wrapped up in a bit of red tape. Here is an example in a file called
+  <code>
+   bottle-hello.py
+  </code>
+  :
+ </p>
+ <p>
+  <code>
+   import bottle
+  </code>
+ </p>
+ <p>
+  app = bottle.Bottle()
+ </p>
+ <p>
+  <code>
+   @app.route("/hello/&lt;name&gt;")
+   <br/>
+   def greet(name="Earthling"):
+   <br/>
+   return "Greetings %s!" % (name)
+  </code>
+ </p>
+ <p>
+  <code>
+   bottle.run(app, host="localhost", port=8080)
+  </code>
+ </p>
+ <p>
+  When run with python
+  <code>
+   bottle-hello.py
+  </code>
+  , this application will serve a bit of dynamic content at /hello/Roni. Notice, however, how the simple code to create the content is suspended within a spider web of scaffolding. In Tangelo, things are much simpler. In your application directory, creating the following file, named
+  <code>
+   hello.py
+  </code>
+  , and then issuing the command
+  <code>
+   tangelo --root
+  </code>
+  . will serve this minimal application, which behaves the same way as the Bottle application but with fewer lines of code and without exposure of any framework API.
+ </p>
+ <p>
+  <code>
+   def run(name="Earthling"):
+   <br/>
+   return "Greetings %s!" % (name)
+  </code>
+ </p>
+ <p>
+  Tangelo’s internal server logic handles the scaffolding you see in the Bottle example, and the names of files and directories on disk implicitly determine the routing. All that remains is the heart of the web service, expressed in general, Pythonic terms. When we say “first-class citizen,” we mean the “zero-API” creation of Python web services in individual files that are composed almost entirely of application logic.
+ </p>
+ <p>
+  In the excitement over Python, we should not forget about the humble static content that serves as the foundation of any web application. Serving static content complicates things a bit further for the Bottle application. It needs to declare new routes, listing files or directories to serve at each one. In Tangelo, all you need to do is include the files on disk in paths that reflect the desired routing — zero-API static content for free.
+ </p>
+ <p>
+  The other frameworks mentioned above look largely similar to the Bottle example. We showed the Bottle example because the other frameworks are all at least as complicated (some significantly more so).
+ </p>
+ <p>
+  We designed Tangelo this way for simplicity, as well as for the flexibility that results. For example, thinking of a web application as a bundle of HTML, JavaScript, CSS, and Python files enables reusability. There are ways to reuse the Python callbacks that make up a Bottle application. None of these ways, however, are so simple or flexible as simply handing someone a Python file to drop into their web application. The question moves from “How do I get route X to do action Y?” to “How do I do action Y?” This is the same question with which any Python programmer in any context wants to be engaged. In other words, it frees the developer from the mechanics of web servers and, thereby, abstracts function from form, leaving our focus just on the substance of the problem at hand.
+ </p>
+ <p>
+  Hopefully this gives you a glimpse of the interesting and useful things that will arise from Tangelo’s wider debut. Please take a look at the Tangelo website (
+  <a href="http://www.tangelohub.org/tangelo/">
+   http://www.tangelohub.org/tangelo/
+  </a>
+  ) for general information or the documentation (
+  <a href="http://tangelo.readthedocs.org/en/latest/">
+   http://tangelo.readthedocs.org/en/latest/
+  </a>
+  ) to install, set up, and try Tangelo yourself. Drop us a note at
+  <a href="mailto:tangelo-users@public.kitware.com">
+   tangelo-users@public.kitware.com
+  </a>
+  if you run into trouble, if you have questions, or if you need help.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     Acknowledgements
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  Tangelo development is sponsored by the Air Force Research Laboratory and DARPA XDATA program.
+ </p>
+ <p>
+  <span style="font-size: 14px;">
+   <span style="color: #000080;">
+    <strong>
+     References
+    </strong>
+   </span>
+  </span>
+ </p>
+ <p>
+  [1]
+  <a href="http://www.tangelohub.org/tangelo">
+   http://www.tangelohub.org/tangelo
+  </a>
+  <br/>
+  [2]
+  <a href="https://github.com/Kitware/tangelo">
+   https://github.com/Kitware/tangelo
+  </a>
+  <br/>
+  [3]
+  <a href="http://girder.readthedocs.org/en/latest">
+   http://girder.readthedocs.org/en/latest
+  </a>
+  <br/>
+  [4]
+  <a href="https://github.com/OpenGeoscience/geojs">
+   https://github.com/OpenGeoscience/geojs
+  </a>
+  <br/>
+  [5]
+  <a href="https://blog.kitware.com/vtk-6-1-0-ready-for-release/">
+   http://www.kitware.com/news/home/browse/Kitware%3F2014_01_24%26VTK+6.1.0+Ready+for+Release
+  </a>
+  <br/>
+  [6]
+  <a href="http://bokeh.pydata.org">
+   http://bokeh.pydata.org
+  </a>
+  <br/>
+  [7]
+  <a href="http://trifacta.github.io/vega">
+   http://trifacta.github.io/vega
+  </a>
+  <br/>
+  [8]
+  <a href="http://tangelo.readthedocs.org/en/latest">
+   http://tangelo.readthedocs.org/en/latest
+  </a>
+  <br/>
+  [9]
+  <a href="http://tangelo-users@public.kitware.com">
+   tangelo-users@public.kitware.com
+  </a>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_1796436794.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_1796436794.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Dr. Roni Choudhury
+  </strong>
+  is a Research and Development Engineer at Kitware.  He has directed the design and development of Tangelo from the ground up to bring advanced and experimental information visualization techniques to the web.
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+ </p>
+ <p>
+  <a href="/source/files/4_479965501.png" rel="noopener" target="_blank">
+   <img alt="" src="https://blog.kitware.com/source/files/Small.4_479965501.png" style="width: 100px; float: left; padding-right: 10px;"/>
+  </a>
+ </p>
+ <p>
+  <strong>
+   Dr. Jeff Baumes
+  </strong>
+  is a Technical Leader and Data Scientist at Kitware. His primary responsibility is to create tools that effectively visualize large and complex data, spanning relational, geospatial, temporal, bioinformatics, financial, and textual data.
+ </p>
+</div>

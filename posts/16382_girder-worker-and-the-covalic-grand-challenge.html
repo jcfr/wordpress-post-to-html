@@ -1,0 +1,301 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  <i>
+   <span style="font-weight: 400">
+    This is a continuation of our series of posts about
+    <a href="http://resonant.kitware.com">
+     Resonant
+    </a>
+    , a data analytics and visualization platform for the web.
+   </span>
+  </i>
+ </p>
+ <blockquote>
+  <p>
+   <span style="font-size: 10pt">
+    <strong>
+     Posts in this series:
+    </strong>
+   </span>
+   <br/>
+   <span style="font-size: 10pt">
+    <a href="https://blog.kitware.com/the-resonant-platform/">
+     Understanding the Resonant Platform
+     <br/>
+    </a>
+    <a href="https://blog.kitware.com/girder-applications-an-inside-look/">
+     Girder Applications: An Inside Look
+    </a>
+   </span>
+   <br/>
+   <span style="font-size: 10pt">
+    <strong>
+     Girder Worker and the COVALIC Grand Challenge
+    </strong>
+   </span>
+   <br/>
+   <a href="https://blog.kitware.com/geospatial-visualizations-in-geojs/">
+    <span style="font-size: 10pt">
+     Geospatial Visualization with GeoJS
+    </span>
+   </a>
+   <br/>
+   <span style="font-size: 10pt">
+    <a href="https://blog.kitware.com/resonant-visualization-with-candela/">
+     Resonant Visualization with Candela
+     <br/>
+    </a>
+    <a href="https://blog.kitware.com/recapping-resonant/">
+     Recapping Resonant
+    </a>
+    <a href="http://Resonant Visualization with Candela">
+     <br/>
+    </a>
+   </span>
+  </p>
+ </blockquote>
+ <p>
+  <span style="font-weight: 400">
+   <a href="http://girder-worker.readthedocs.org/">
+    Girder Worker
+   </a>
+   is a distributed processing tool built on top of
+  </span>
+  <a href="http://www.celeryproject.org/">
+   <span style="font-weight: 400">
+    celery
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   ,
+  </span>
+  <a href="http://www.celeryproject.org/">
+   <span style="font-weight: 400">
+    a Python based distributed task queue,
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   that integrates with Gider data IO and job management. By virtue of using celery, processing of data stored in Girder can be scaled independently of the Girder server itself. New machines can be added to the pool of workers to increase the number of processing tasks that can occur in parallel. Girder Worker supports multiple execution modes for different sorts of general purpose tasks. Tasks can be written in Python, R, pyspark, Julia, Swift, or even Docker containers.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   This post will focus on the COVALIC project, funded by the NIH, which used both Girder &amp; Girder Worker to create infrastructure for hosting and administering grand challenges in the web, with a particular focus on medical imaging challenges.
+  </span>
+ </p>
+ <h2>
+  <b>
+   The Grand Challenge
+  </b>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   There are two main roles associated with a grand challenge: administrators and participants.
+  </span>
+ </p>
+ <p>
+  <b>
+   The administrators
+  </b>
+  <span style="font-weight: 400">
+   : this is typically a set of institutions or individuals who are stakeholders in the outcome of the challenge. They present the challenge to their target audience of participants to solicit submissions of candidate solutions to the problem. They have an interest in advancing the state of the art in the domain of the challenge problem.
+  </span>
+ </p>
+ <p>
+  <b>
+   The participants
+  </b>
+  <span style="font-weight: 400">
+   : this is the set of institutions or individuals who submit candidate solutions to the challenge as a way of demonstrating the efficacy of their novel algorithms in the problem domain. Their submissions are scored based on metrics decided upon by the challenge administrators to be reasonable quantitative evaluations of the fitness of the algorithm, and the combined score is used to rank each submission in a leaderboard.
+  </span>
+ </p>
+ <p>
+  <img alt="10.25.16-Resonant-Girder_Worker-01" class="alignnone size-large wp-image-16384" height="249" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-1024x249.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-1024x249.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-300x73.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-768x187.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-220x53.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-250x61.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-355x86.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-730x177.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01-90x22.png 90w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-01.png 1218w" width="1024"/>
+  <img alt="10.25.16-Resonant-Girder_Worker-02" class="alignnone size-large wp-image-16385" height="765" sizes="(max-width: 1024px) 100vw, 1024px" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-1024x765.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-1024x765.png 1024w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-300x224.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-768x574.png 768w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-220x164.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-250x187.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-355x265.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-730x546.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02-90x67.png 90w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-02.png 1219w" width="1024"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   It’s common for challenges to be divided into multiple phases. Each phase has two special datasets associated with it:
+  </span>
+ </p>
+ <ul>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    The
+   </span>
+   <i>
+    <span style="font-weight: 400">
+     input dataset
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    , which is a set of files such as 2D or 3D images on which participants should run their processing algorithm. These files are meant to span a variety of real-world cases in the challenge domain to ensure that the algorithms being developed work across as many real world cases as possible. We do not require any specific structure, format, or type for this dataset, it’s simply a set of files.
+   </span>
+  </li>
+  <li style="font-weight: 400">
+   <span style="font-weight: 400">
+    The
+   </span>
+   <i>
+    <span style="font-weight: 400">
+     ground truth
+    </span>
+   </i>
+   <span style="font-weight: 400">
+    dataset, which represents the ideal target results of the processing. The closer the submitted results are to the ground truth dataset, the higher the submitter’s score will be. The definition of “close” and the implementation of computing that similarity is defined on a per-challenge basis.
+   </span>
+  </li>
+ </ul>
+ <p>
+  <span style="font-weight: 400">
+   Often, a challenge will have an initial “training” phase in which the ground truth data is available to participants to give them more insight into how their algorithm should perform, and a second “testing” phase which is competitive, and in which the ground truth is not available for participants to view. Optionally, challenge administrators may disable even showing participants their scored results until the challenge is over so that participants can’t attempt to game the system by tuning their algorithm to maximize their score. In such a setup, it’s critical that the datasets of the two different phases are disjoint.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   With our partners at the Memorial Sloan Kettering Cancer Center, Kitware administered a set of grand challenges via our public-facing challenge hosting server at
+  </span>
+  <a href="https://challenge.kitware.com">
+   <span style="font-weight: 400">
+    https://challenge.kitware.com
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   . This challenge was open to participants at the International Symposium on Biomedical Imaging (ISBI) conference in 2016.
+  </span>
+  <a href="https://challenge.kitware.com/#challenge/560d7856cad3a57cfde481ba">
+   <span style="font-weight: 400">
+    The challenge
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   was composed of three individual sub-challenges in the field of dermoscopy.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The first sub-challenge asked participants to segment lesions from 2D color photographs of patients’ skin.
+  </span>
+ </p>
+ <p>
+  <img alt="10.25.16-Resonant-Girder_Worker-03" class="alignnone size-full wp-image-16386" height="217" sizes="(max-width: 375px) 100vw, 375px" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-03.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-03.png 375w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-03-300x174.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-03-220x127.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-03-250x145.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-03-355x205.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-03-90x52.png 90w" width="375"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The second sub-challenge required algorithms to automatically annotate clinically significant features in dermoscopic images along with provided lesion segmentation masks.
+  </span>
+ </p>
+ <p>
+  <img alt="10.25.16-Resonant-Girder_Worker-04" class="alignnone size-full wp-image-16387" height="222" sizes="(max-width: 730px) 100vw, 730px" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-04.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-04.png 730w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-04-300x91.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-04-220x67.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-04-250x76.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-04-355x108.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-04-90x27.png 90w" width="730"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The third sub-challenge involved automatically classifying color images containing lesions as either malignant or benign (the “holy grail” of dermoscopy).
+  </span>
+ </p>
+ <p>
+  <img alt="10.25.16-Resonant-Girder_Worker-05" class="alignnone size-full wp-image-16388" height="302" sizes="(max-width: 522px) 100vw, 522px" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-05.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-05.png 522w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-05-300x174.png 300w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-05-220x127.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-05-250x145.png 250w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-05-355x205.png 355w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-05-90x52.png 90w" width="522"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   During the conference week, 321 participants registered in the system, and 313 total submissions were made across all three challenges.
+  </span>
+ </p>
+ <h2>
+  <span style="font-weight: 400">
+   The Technology
+  </span>
+ </h2>
+ <p>
+  <span style="font-weight: 400">
+   The
+  </span>
+  <a href="https://github.com/girder/covalic">
+   <span style="font-weight: 400">
+    COVALIC application
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   is a Girder application, a plugin to the
+  </span>
+  <a href="http://girder.readthedocs.io/">
+   <span style="font-weight: 400">
+    Girder data management system
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   with its own custom front-end user interface. Due to its need for computationally intensive processing of user-submitted data, the COVALIC stack also uses the
+  </span>
+  <a href="http://girder-worker.readthedocs.io/en/latest/">
+   <span style="font-weight: 400">
+    Girder Worker
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   .
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The public-facing challenge site is hosted on Amazon Web Services, with the Girder server and the worker nodes deployed on EC2 instances, and using an S3 bucket as the backing assetstore for all the data managed by Girder. This stack is deployed across multiple machines using automated
+  </span>
+  <a href="http://docs.ansible.com/">
+   <span style="font-weight: 400">
+    Ansible
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   provisioning scripts divided into
+  </span>
+  <a href="https://github.com/girder/covalic/tree/master/ansible/roles">
+   <span style="font-weight: 400">
+    multiple roles
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   for flexible scaling.
+  </span>
+ </p>
+ <p>
+  <img alt="10.25.16-Resonant-Girder_Worker-AWS_Logo" class="alignnone size-full wp-image-16390" height="58" sizes="(max-width: 121px) 100vw, 121px" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-AWS_Logo.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-AWS_Logo.png 121w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-AWS_Logo-90x43.png 90w" width="121"/>
+  <img alt="10.25.16-Resonant-Girder_Worker-Ansible_Logo" class="alignnone size-full wp-image-16389" height="52" sizes="(max-width: 236px) 100vw, 236px" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-Ansible_Logo.png" srcset="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-Ansible_Logo.png 236w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-Ansible_Logo-235x52.png 235w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-Ansible_Logo-220x48.png 220w, https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-Ansible_Logo-90x20.png 90w" width="236"/>
+  <img alt="10.25.16-Resonant-Girder_Worker-Docker_Logo" class="alignnone size-full wp-image-16391" height="54" src="https://blog.kitware.com/wp-content/uploads/2016/10/10.25.16-Resonant-Girder_Worker-Docker_Logo.png" width="67"/>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   The use of Girder Worker affords a great deal of flexibility in the sorts of challenges we can host in the system. The worker nodes are provisioned with the
+  </span>
+  <a href="https://www.docker.com/">
+   <span style="font-weight: 400">
+    docker engine
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   and make use of the worker’s docker execution mode to run the scoring algorithms on user-submitted data. This execution mode provides a valuable abstraction of the data IO itself, such that supporting a new scoring algorithm becomes extremely simple for challenge administrators: all they have to do is construct a docker image that exposes an entry point (a command-line interface) that accepts a path to submission data, and the path to the ground truth data, runs the scoring on it, and writes the scores in a standard JSON format to standard output. The Girder Worker takes care of fetching the data, instantiating the docker container, mapping the data volume into the docker container, invoking the user’s command line executable using the path where the datasets are exposed in the container, reading the output from the task, and sending those results back to Girder in a secure manner. Since docker containers are entire machine images, there’s no need to worry about the environment it’s being deployed on, or what technology stack the scoring requires, and by using containers rather than hypervisor-based virtual machines, the images are much lighter and run much faster.
+  </span>
+ </p>
+ <p>
+  <span style="font-weight: 400">
+   Girder Worker also provides
+  </span>
+  <a href="http://girder-worker.readthedocs.io/en/latest/plugins.html#cache-configuration">
+   <span style="font-weight: 400">
+    local caching of fetched data
+   </span>
+  </a>
+  <span style="font-weight: 400">
+   . These caches have a high hit rate in the case of grand challenges, since the ground truth datasets are required every single time a submission is scored. By using its cache, the worker is able to avoid re-downloading ground truth data on most submissions.
+  </span>
+ </p>
+ <p>
+  To learn more about distributed data processing and Grand Challenge hosting, comment below or email
+  <a href="mailto:kitware@kitware.com">
+   kitware@kitware.com
+  </a>
+  .
+ </p>
+ <p>
+  Stay tuned for the next installment in this series on Geospatial Visualizations.
+ </p>
+</div>

@@ -1,0 +1,902 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Close your eyes… take a long breath in… and breathe out… clear up your mind… and think about your favorite application (it should be the one you are working on 😛 ). Keep your eyes closed and visualize all the graphical elements of the application: buttons, frames, panels, texts, scroll-bars, menus… how many do you count ? That’s a lot to think about, isn’t it? If you have scroll-bars, it probably means that there is not enough space to show all the widgets at once, and that you need extra space.
+ </p>
+ <p>
+  Now, put yourself in the shoes of someone who plays with your application for the first time… don’t you feel overwhelmed by the amount of visual information? Where to click ? What buttons are important ? Which ones are not ?
+ </p>
+ <p>
+  I’ll skip the pamphlet explaining why it’s a bad idea to have a heavy UI. You can open your eyes now and let me present you another way of showing useful widgets at the right time and hiding them when not needed:
+  <strong>
+   <a href="http://www.commontk.org/docs/html/classctkPopupWidget.html">
+    ctkPopupWidget
+   </a>
+  </strong>
+ </p>
+ <p>
+  <center>
+   <img alt="Slice view popup " src="https://blog.kitware.com/blog/files/168_472862135.gif" title="Popup to control a 2D view" width="320px"/>
+   <br/>
+   Popup to control a 2D view
+  </center>
+  As a result we managed to cleanup the UI of the Slicer main window:
+ </p>
+ <table align="center" border="0">
+  <tbody>
+   <tr>
+    <td>
+     <center>
+      <img alt="" src="https://blog.kitware.com/blog/files/168_1480712121.png" width="98%"/>
+      <br/>
+      Slicer3 with slice view controllers visible
+     </center>
+    </td>
+    <td>
+     <center>
+      <img alt="" src="https://blog.kitware.com/blog/files/168_510810568.png" width="98%"/>
+      <br/>
+      Slicer4 with slice view controllers as popups
+     </center>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+  As its name indicates, ctkPopupWidget is:
+ </p>
+ <ul>
+  <li>
+   part of
+   <a href="http://www.commontk.org/index.php/Main_Page">
+    CTK
+   </a>
+   (Apache 2 license), used in 3D Slicer
+  </li>
+  <li>
+   a popup: with full control over where and how to popup
+  </li>
+  <li>
+   a widget: respects all the properties of a Qt widget (e.g. parent/child relationship, background transparency)
+  </li>
+ </ul>
+ <p>
+  <center>
+   <img alt="Example of a semi transparent popup" src="https://blog.kitware.com/blog/files/168_40599145.gif" title="Semi transparent popup" width="238px"/>
+   <br/>
+   Popup to control the range of a slider
+  </center>
+  ctkPopupWidget is easy to use, let’s look at a line by line example:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e77dcd6c0109540777" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+QSpinBox* spinBox = new QSpinBox(parentWidget); // the spinbox is the parent of the popup, 
+ctkPopupWidget* popup = new ctkPopupWidget(spinBox); // the popup is placed relative to the spinbox
+QHBoxLayout* popupLayout = new QHBoxLayout(popup);
+// populate the popup with a vertical QSlider:
+QSlider* popupSlider = new QSlider(Qt::Vertical, popup);
+// add here the signal/slot connection between the slider and the spinbox
+popupLayout-&gt;addWidget(popupSlider); // Control where to display the the popup relative to the parent
+popupSlider-&gt;setAlignment(Qt::Left | Qt::Top); // at the top left corner
+popupSlider-&gt;setHorizontalDirection( Qt::RightToLeft ); // open outside the parent
+popupSlider-&gt;setVerticalDirection(ctkBasePopupWidget::TopToBottom); // at the left of the spinbox sharing the top border
+// Control the animation
+popupSlider-&gt;setAnimationEffect(ctkBasePopupWidget::ScrollEffect); // could also be FadeEffect
+popupSlider-&gt;setOrientation(Qt::Horizontal); // how to animate, could be Qt::Vertical or Qt::Horizontal|Qt::Vertical
+popupSlider-&gt;setEasingCurve(QEasingCurve::OutQuart); // how to accelerate the animation, QEasingCurve::Type
+popupSlider-&gt;setEffectDuration(100); // how long in ms.
+// Control the behavior
+popupSlider-&gt;setAutoShow(true); // automatically open when the mouse is over the spinbox
+popupSlider-&gt;setAutoHide(true); // automatically hide when the mouse leaves the popup or the spinbox.</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-3">
+        3
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-4">
+        4
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-5">
+        5
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-6">
+        6
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-7">
+        7
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-8">
+        8
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-9">
+        9
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-10">
+        10
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-11">
+        11
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-12">
+        12
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-13">
+        13
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-14">
+        14
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-15">
+        15
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-16">
+        16
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-17">
+        17
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6c0109540777-18">
+        18
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-1">
+        <span class="crayon-e ">
+         QSpinBox*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         spinBox
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         QSpinBox
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         parentWidget
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-c">
+         // the spinbox is the parent of the popup,
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-2">
+        <span class="crayon-e ">
+         ctkPopupWidget*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         popup
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ctkPopupWidget
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         spinBox
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // the popup is placed relative to the spinbox
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-3">
+        <span class="crayon-e ">
+         QHBoxLayout*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         popupLayout
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         QHBoxLayout
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         popup
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-4">
+        <span class="crayon-c">
+         // populate the popup with a vertical QSlider:
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-5">
+        <span class="crayon-e ">
+         QSlider*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         QSlider
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         Qt
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Vertical
+        </span>
+        <span class="crayon-sy">
+         ,
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         popup
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-6">
+        <span class="crayon-c">
+         // add here the signal/slot connection between the slider and the spinbox
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-7">
+        <span class="crayon-v">
+         popupLayout
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         addWidget
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // Control where to display the the popup relative to the parent
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-8">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setAlignment
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         Qt
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Left
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         |
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Qt
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Top
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // at the top left corner
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-9">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setHorizontalDirection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         Qt
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-i">
+         RightToLeft
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // open outside the parent
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-10">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setVerticalDirection
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         ctkBasePopupWidget
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         TopToBottom
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // at the left of the spinbox sharing the top border
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-11">
+        <span class="crayon-c">
+         // Control the animation
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-12">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setAnimationEffect
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         ctkBasePopupWidget
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         ScrollEffect
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // could also be FadeEffect
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-13">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setOrientation
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         Qt
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         Horizontal
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // how to animate, could be Qt::Vertical or Qt::Horizontal|Qt::Vertical
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-14">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setEasingCurve
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         QEasingCurve
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-v">
+         OutQuart
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // how to accelerate the animation, QEasingCurve::Type
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-15">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setEffectDuration
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-cn">
+         100
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // how long in ms.
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-16">
+        <span class="crayon-c">
+         // Control the behavior
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-17">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setAutoShow
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         true
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // automatically open when the mouse is over the spinbox
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6c0109540777-18">
+        <span class="crayon-v">
+         popupSlider
+        </span>
+        <span class="crayon-o">
+         -&gt;
+        </span>
+        <span class="crayon-e">
+         setAutoHide
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-t">
+         true
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // automatically hide when the mouse leaves the popup or the spinbox.
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0008 seconds] -->
+ <p>
+  See below the result of the previous code, the slider popup opens on the left of the spinbox.
+ </p>
+ <p>
+  <center>
+   <img alt="" src="https://blog.kitware.com/blog/files/168_2127820197.gif" width="256px"/>
+  </center>
+  Another example of use for a popup slider: as a view item delegate
+ </p>
+ <p>
+  <center>
+   <img alt="" src="https://blog.kitware.com/blog/files/168_1029693131.gif" width="256px"/>
+   <br/>
+   Popup in a custom QItemDelegate
+  </center>
+  Most of these properties have a good default value and don’t need to be manually set.
+  <br/>
+  <a href="http://www.commontk.org/docs/html/classctkPopupWidget.html">
+   Here
+  </a>
+  is the complete API for ctkPopupWidget.
+ </p>
+ <p>
+  See below more popup tuning:
+ </p>
+ <p>
+ </p>
+ <table border="0">
+  <tbody>
+   <tr>
+    <td>
+     <center>
+      <img alt="" src="https://blog.kitware.com/blog/files/168_768299479.gif" width="256px"/>
+      <br/>
+      Background fade effect
+     </center>
+    </td>
+    <td>
+     <center>
+      <img alt="" src="https://blog.kitware.com/blog/files/168_2109237564.gif" width="256px"/>
+      <br/>
+      Elastic easing curve
+     </center>
+    </td>
+   </tr>
+  </tbody>
+ </table>
+ <p>
+ </p>
+ <p>
+  Note that you can also design the popup UI using Qt Designer. All you then need to do is:
+ </p>
+ <!-- Crayon Syntax Highlighter v_2.7.2_beta -->
+ <div class="crayon-syntax crayon-theme-coy crayon-font-monaco crayon-os-pc print-yes notranslate" data-settings=" minimize scroll-mouseover" id="crayon-5c41e77dcd6ca794882347" style=" margin-top: 12px; margin-bottom: 12px; font-size: 16px !important; line-height: 25px !important;">
+  <div class="crayon-plain-wrap">
+   <textarea class="crayon-plain print-no" data-settings="dblclick" readonly="" style="-moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4; font-size: 16px !important; line-height: 25px !important;" wrap="soft">
+QSpinBox* spinBox = new QSpinBox(parentWidget);
+ctkPopupWidget* popup = new ctkPopupWidget(spinBox);
+Ui_myPopup::setupUi(popup); // sets the child widgets and the popup properties.</textarea>
+  </div>
+  <div class="crayon-main">
+   <table class="crayon-table">
+    <tr class="crayon-row">
+     <td class="crayon-nums " data-settings="show">
+      <div class="crayon-nums-content" style="font-size: 16px !important; line-height: 25px !important;">
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6ca794882347-1">
+        1
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6ca794882347-2">
+        2
+       </div>
+       <div class="crayon-num" data-line="crayon-5c41e77dcd6ca794882347-3">
+        3
+       </div>
+      </div>
+     </td>
+     <td class="crayon-code">
+      <div class="crayon-pre" style="font-size: 16px !important; line-height: 25px !important; -moz-tab-size:4; -o-tab-size:4; -webkit-tab-size:4; tab-size:4;">
+       <div class="crayon-line" id="crayon-5c41e77dcd6ca794882347-1">
+        <span class="crayon-e ">
+         QSpinBox*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         spinBox
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         QSpinBox
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         parentWidget
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6ca794882347-2">
+        <span class="crayon-e ">
+         ctkPopupWidget*
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-v">
+         popup
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-o">
+         =
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-r">
+         new
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-e">
+         ctkPopupWidget
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         spinBox
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+       </div>
+       <div class="crayon-line" id="crayon-5c41e77dcd6ca794882347-3">
+        <span class="crayon-v">
+         Ui_myPopup
+        </span>
+        <span class="crayon-o">
+         ::
+        </span>
+        <span class="crayon-e">
+         setupUi
+        </span>
+        <span class="crayon-sy">
+         (
+        </span>
+        <span class="crayon-v">
+         popup
+        </span>
+        <span class="crayon-sy">
+         )
+        </span>
+        <span class="crayon-sy">
+         ;
+        </span>
+        <span class="crayon-h">
+        </span>
+        <span class="crayon-c">
+         // sets the child widgets and the popup properties.
+        </span>
+       </div>
+      </div>
+     </td>
+    </tr>
+   </table>
+  </div>
+ </div>
+ <!-- [Format Time: 0.0002 seconds] -->
+ <p>
+  A popup widget follows its parent when moved, hides if the parent is hidden or disabled. Popups can be nested, pinned, unpinned, flattened (dynamically change from a popup mode into a regular widget).
+ </p>
+ <p>
+  <center>
+   <img alt="pin/unpin example" src="https://blog.kitware.com/blog/files/168_1519220286.gif" title="Pin and Unpin" width="320px"/>
+   <br/>
+   Pin and Unpin
+  </center>
+  There are still a few corner cases that can be improved, the fade effect is still a bit experimental and there are a few issues with dialogs or windows moved over the popup. Nonetheless, we started to add a “popup mode” to some widgets in CTK, e.g. ctkSliderWidget::setPopupSlider(bool).
+ </p>
+ <p>
+  As a side note, you can also consider
+  <a href="http://www.commontk.org/index.php/File:CtkCollapsibleWidget.png">
+   ctkCollapsibleButton
+  </a>
+  and
+  <a href="http://www.commontk.org/index.php/File:CtkCollapsibleGroupBox.png">
+   ctkCollapsibleGroupBox
+  </a>
+  as other alternatives to conveniently “show”/”hide” widgets.
+ </p>
+ <p>
+  Any question? let me know.
+ </p>
+</div>

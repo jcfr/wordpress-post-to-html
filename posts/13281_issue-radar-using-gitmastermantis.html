@@ -1,0 +1,197 @@
+<meta charset="utf-8">
+<div class="entry-content">
+ <p>
+  Kitware has a track record for applying agile software development processes to our projects. Since each project is unique in its needs and workflow, the same processes are not used for every project. We use mainstream development models like SCRUM [1] , Kanban [2] , and even waterfall [3], but we typically adapt the process that best suits the needs of a particular project. In this article, we will describe some of the tools we have used for a Kanban/SCRUM style project. The tools are open-source and available for all to use. A combination of git-master/next branchy workflow and the MANTIS [4] issue tracker have been used successfully to limit work in progress, and give developers and customers a realistic view  of where the project stands at any point in time with little overhead by the developers. We have called this project management system RADAR.
+ </p>
+ <p>
+  This article describes the process used, and provides some instruction on how to set-up MANTIS and git to implement this system for your project.
+ </p>
+ <p>
+  <span style="font-size: small; color: #003366;">
+   <strong>
+    Motivation
+   </strong>
+  </span>
+  <br/>
+  Transparency is key in software project management. It makes people more comfortable to know what is going on, and it makes it easier to manage expectations of everyone involved. Comfortable customers with realistic expectations are a joy to work with and often become repeat customers. Conversely, opaque project management styles frequently lead to muddled expectations and frustration for all involved.
+ </p>
+ <p>
+  One major way to increase transparency is to maintain an issue tracker that is visible to the customer. An issue tracker is a communication tool: it makes it easy to agree on lists of things to do; it is a platform for prioritizing tasks and adding notes; it provides a workflow infrastructure; and it is a forum for forming new ideas. This allows everyone involved to be informed and engaged.
+ </p>
+ <p>
+  An important benefit to maintaining a shared issue tracker is that it helps answer the question “should we start new work or completely finish some nearly-finished work?” This is important because it is easy and tempting to start work, and it is much more difficult to completely finish work. Completely finished work has been and is tested, documented, validated by the customer, merged into a releasable code base, and deployed. In the lingo of git, this means merging your topic branch into the master or release branch. This is a critical piece of agile processes like Kanban, but also an important question for any project style.
+ </p>
+ <p>
+  A growing backlog of nearly-finished work is problematic in a number of ways. First, it represents a significant amount of future work that must get done. It may appear obvious, but if you wait till the end of the project to start finishing work then you can find yourself in big trouble. Second, the cost of completely finishing work typically increases as it waits in a development branch; the code base will evolve and it will be harder for developers and customers to recall the details of a change. Third, nearly-finished issues often become dependent on each other in complicated ways, making merging branches and even starting new work more difficult and time consuming. Finally, it is not easy to explain why demoed work is not completely finished –”but you showed it to me…,” they might say– especially if there is no list of unfinished work. After a first demo, there is still a lot of work required before code is ready for release. Customers will have a better appreciation of focusing on unfinished work if they see it in the form of a growing list with a growing cost.
+ </p>
+ <p>
+  Bottom line: projects need a transparent way for organizing unfinished work and prioritizing it over new features.
+ </p>
+ <p>
+  Issue RADAR
+  <br/>
+  One obvious answer for enumerating unfinished work is to look at the status of the issues in the issue tracker. The key to using an issue tracker for a workflow is to define the states that work can be in. For the project described here, we use a typical system V workflow, as seen in Figure 1.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_983179811.jpg" style="border: 0pt none; display: block; margin-left: auto; margin-right: auto;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 1. A depiction of a V workflow from wikipedia.com
+  </em>
+ </p>
+ <p>
+  We have a master and a next branch, which is why there is a “to be merged” state; issues in this state have passed QA and their topic branches should be merged into the master branch. Roughly speaking, issues in the range of active development and “to be merged” represent unfinished work and resolved issues represent finished issues; this is a good first cut at quantifying unfinished work.
+ </p>
+ <p>
+  Things become more complicated when you introduce issue dependencies. If issue XXX depends on issue YYY, then it is important to know that and organize work so that issue YYY is merged to master before XXX is needed. How do you keep track of this? It is possible for some small groups to keep these dependencies in their heads; for larger groups, this ad hoc methodology falls apart. It is also possible to specify relationships between issues in most issue trackers; this is not enough, however, because it is not automatic—people only do it when they remember and sometimes they forget or enter the wrong information.
+ </p>
+ <p>
+  Luckily, the git master/next workflow gives us the opportunity to keep track of outstanding work. Even better, with a couple of Python scripts, the process is automatic. We use git and MANTIS to create a diagram called issue RADAR – a diagram of unfinished issues and inter-issue relationships. Figure 2 contains an example.
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_337072172.jpg" style="border: 0pt none; display: block; margin-left: auto; margin-right: auto;" width="400"/>
+ </p>
+ <p style="text-align: center;">
+  <em>
+   Figure 2. Issue RADAR diagram genetated by git and MANTIS
+  </em>
+ </p>
+ <p>
+  Here are the details of how the issue RADAR is produced:
+ </p>
+ <p>
+  <strong>
+   Find next-only commits:
+  </strong>
+  Create a list of all commits in next but not master. These commits represent all unfinished work; call these ‘next-only commits’.
+ </p>
+ <p>
+  <strong>
+   Translate commits to issues:
+  </strong>
+  For each next-only commit, find all issue numbers in the commit log. These numbers represent
+  <br/>
+  all unfinished issues; call these ‘unfinished issues’.
+ </p>
+ <p>
+  <strong>
+   Compute issue dependencies:
+  </strong>
+  For each unfinished issue, pretend to merge all of its next-only commits into master. This process will tell you what other commits, for different issues, must be merged before merging the current issue. Call these dependencies ‘issue merge dependencies’.
+ </p>
+ <p>
+  <strong>
+   Graph results:
+  </strong>
+  Create a directed graph where unfinished issues are nodes and issue merge dependencies are arrows. We look-up issue information such as lifecycle stage, issue summary, and priority from MANTIS in order to decorate the nodes of the graph, making it easier to comprehend. We also apply transitive reduction [5] to remove most of the relationship arrows (this means that if A depends on both B and C, and B depends on C, then simplify the graph by removing the A-&gt;C dependency; it is implied by A-&gt;B-&gt;C).
+ </p>
+ <p>
+  <strong>
+   Interpret graph:
+  </strong>
+  The obvious heuristics for interpreting the graph and creating an action plan are to minimize the number of nodes (unfinished issues) and the number of edges (issue dependencies). Priority, developer availability, etc. will dictate the details.
+ </p>
+ <p>
+  <strong>
+   Communicate:
+  </strong>
+  Send your customer (or developer) the graph and say: “I know you don’t think we should spend time on XXX, but you really want YYY soon and the way things have worked out (point to graph), XXX needs to be done first.”
+ </p>
+ <p>
+  The issue RADAR is not perfect. It requires you to add an issue number to every commit, which many projects do not do. On the other hand, we find that development teams that consistently organize branches and commits around issue numbers find the process to be lightweight and effective. Occasionally, we make mistakes with these messages and type the wrong number; we translate these issue numbers in the script that generates the daily RADAR. There are also some bad, old commits that we filter out of the process altogether. Also, it does not reveal “weak dependencies” where an issue XXX depends on a trivial part of issue YYY, for example, some basic refactoring early in a topic branch that could be merged to master without merging all of YYY.
+ </p>
+ <p>
+  <span style="font-size: small; color: #000080;">
+   <strong>
+    Technical Setup
+   </strong>
+  </span>
+  <br/>
+  We built issue RADAR using git, MANTIS, graphviz, and a few Python scripts to glue everything together. It would be easy to convert the process to another issue tracker that provides a programmatic (e.g., Python/SOAP) interface.
+ </p>
+ <p>
+  Git is a modern, distributed source code management tool that is similar in some ways to Subversion and CVS. One fundamental aspect of git is that it makes it easy to organize commits in branches and then merge that work into development or stable branches. The next-master workflow organizes work into separate topic branches that are merged into the next (development/testing) branch for demos and integration testing. After the work is completely finished, it is merged into the master (stable) branch.
+ </p>
+ <p>
+  MANTIS is a web-based, free, open-source issue tracker. It provides customization of workflow, issue information, as well as a secure login for customers and programmatic access via a SOAP interface. Using the programmatic interface, we decorate issues on issue RADAR with issue names, the workflow stage of issues, and issue assignments.
+ </p>
+ <p>
+  An example Python script is available at
+  <a href="http://www.vtk.org/%20Wiki/User:Davisb/IssueRadar">
+   http://www.vtk.org/ Wiki/User:Davisb/IssueRadar
+  </a>
+  .
+ </p>
+ <p>
+  <span style="font-size: small; color: #000080;">
+   <strong>
+    Conclusion
+   </strong>
+  </span>
+  <br/>
+  Issue RADAR has improved our ability to plan work, communicate with development teams, and communicate with customers. It is a good way to measure and be transparent about unfinished work, and it helps to motivate that work while keeping customers happily involved in the process.
+ </p>
+ <p>
+  <span style="font-size: small; color: #000080;">
+   <strong>
+    References
+   </strong>
+  </span>
+  <br/>
+  [1]
+  <a href="http://en.wikipedia.org/wiki/Scrum_(development)">
+   http://en.wikipedia.org/wiki/Scrum_(development)
+  </a>
+  <br/>
+  [2]
+  <a href="http://en.wikipedia.org/wiki/Kanban">
+   http://en.wikipedia.org/wiki/Kanban
+  </a>
+  <br/>
+  [3]
+  <a href="http://en.wikipedia.org/wiki/Waterfall_model">
+   http://en.wikipedia.org/wiki/Waterfall_model
+  </a>
+  <br/>
+  [4]
+  <a href="http://www.mantisbt.org/">
+   http://www.mantisbt.org/
+  </a>
+  <br/>
+  [5]
+  <a href="http://www.graphviz.org/">
+   http://www.graphviz.org/
+  </a>
+ </p>
+ <p>
+  <img alt="" src="https://blog.kitware.com/source/files/3_1028715310.jpg" style="float: left; border: 0pt none;" width="75"/>
+ </p>
+ <p>
+  <em>
+   <strong>
+    Brad Davis
+   </strong>
+   is a technical leader at Kitware where he contributes to commercial and academic R&amp;D efforts for the medical team
+  </em>
+ </p>
+ <p>
+  <p>
+   <p>
+    <em>
+    </em>
+   </p>
+   <p>
+    <img alt="" src="https://blog.kitware.com/source/files/3_851650048.JPG" style="float: left; border: 0pt none;" width="75"/>
+   </p>
+   <p>
+    <em>
+     <strong>
+      Bill Hoffman
+     </strong>
+     is currently Vice President and CTO for Kitware, Inc. He is a founder of Kitware, a lead architect of the CMake cross-platform build system and is involved in the development of the Kitware Quality Software Process and CDash, the software testing server.
+    </em>
+   </p>
+  </p>
+ </p>
+</div>

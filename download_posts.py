@@ -85,7 +85,7 @@ def posts_from_page_listing(page_number, verbose=0):
     if verbose >= 1:
         print("Fetching listing from %s" % page_url)
     soup = BeautifulSoup(requests.get(page_url).text, 'html.parser')
-    return [post_metadata_from_soup(article) for article in soup.find(id="contentcontainer").find_all("article")]
+    return soup.find(id="contentcontainer").find_all("article")
 
 
 def fetch_post_as_soup(post_id):
@@ -111,11 +111,11 @@ def save_content(html, filename):
 def page_range(last_page=1, first_page=1):
     return range(last_page, first_page - 1, -1)
 
-
 def save_posts(last_page=1, first_page=1, data_dir=".", verbose=0):
     for page_number in page_range(last_page=last_page, first_page=first_page):
         posts = posts_from_page_listing(page_number, verbose=verbose)
-        for metadata in posts:
+        for post in posts:
+            metadata = post_metadata_from_soup(post)
             basename = "{id}_{slug}".format(**metadata)
             
             soup = fetch_post_as_soup(metadata["id"]).find("article")
@@ -162,6 +162,35 @@ def parallel_save_post(n_jobs=10, last_page=1, first_page=1, data_dir=".", verbo
         )
 
 
+def list_post_with_default_feature_image(last_page=1, first_page=1, verbose=0):
+    for page_number in page_range(last_page=last_page, first_page=first_page):
+        if verbose >= 1:
+            print("Fetching listing from page %s" % page_number)
+        posts = posts_from_page_listing(page_number, verbose=verbose)
+        for post in posts:
+            metadata = post_metadata_from_soup(post)
+            if 'default_featured_image' in str(post) \
+               and 'available for download' not in metadata['title'] \
+               and 'released' not in metadata['title'] \
+               and 'ready for testing' not in metadata['title'] \
+               and 'Release Notes' not in metadata['title'] \
+               and not metadata['title'].startswith("ITK ") \
+               and not metadata['title'].startswith("VTK ") \
+               and 'Released' not in metadata['title']:
+                print("https://blog.kitware.com/?p=%s  %s" % (metadata['id'], metadata['title']))
+
+
+def parallel_list_post_with_default_feature_image(n_jobs=10, last_page=1, first_page=1, verbose=0):
+    r = Parallel(n_jobs=10, verbose=10)(
+            delayed(list_post_with_default_feature_image)(
+                last_page=page_number,
+                first_page=page_number,
+                verbose=verbose
+            )
+            for page_number in page_range(last_page=last_page, first_page=first_page)
+        )
+
+
 if __name__ == "__main__":
     # save_posts(last_page=190, first_page=190, data_dir="posts")
     # save_posts_fake(last_page=190, first_page=190, data_dir="posts")
@@ -173,13 +202,13 @@ if __name__ == "__main__":
     #save_content(html, "test3.html")
 
     from joblib import Parallel, delayed
-    last_page=195
+    last_page=51
 
     r = Parallel(n_jobs=10, verbose=10)(
-        delayed(save_posts)(
+        delayed(list_post_with_default_feature_image)(
             last_page=page_number,
             first_page=page_number,
-            data_dir="posts"
+            #data_dir="posts"
         )
         for page_number in page_range(last_page=last_page)
     )
